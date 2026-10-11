@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --color-primary: #0F9B84;
+  --color-primary-dark: #0B7A68;
+  --color-primary-light: #E4F5F1;
+  --color-background: #EFF3F1;
+  --color-surface: #FFFFFF;
+  --color-bg-secondary: #E3ECE8;
+  --color-accent: #F2B84B;
+  --color-text-primary: #152723;
+  --color-text-secondary: #486860;
+  --color-success: #22C55E;
+  --color-error: #E4572E;
+  --color-border: #C8D8D3;
+}
+
+.dark {
+  --color-primary: #2DD4B5;
+  --color-primary-dark: #10B981;
+  --color-primary-light: #164e43;
+  --color-background: #0B1311;
+  --color-surface: #13201C;
+  --color-bg-secondary: #192924;
+  --color-accent: #F2B84B;
+  --color-text-primary: #EAF5F2;
+  --color-text-secondary: #94B8B0;
+  --color-border: #263B34;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.font-chinese {
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.font-serif-chinese {
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}

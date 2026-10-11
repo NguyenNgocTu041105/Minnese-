@@ -1,0 +1,25 @@
+# Dockerfile.worker
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Cài đặt Chromium headless và dependencies của Playwright
+RUN playwright install --with-deps chromium
+
+COPY . .
+
+# Mặc định in thông tin hướng dẫn nếu chạy container mà không truyền lệnh
+CMD ["python", "-c", "print('Worker Image sẵn sàng. Vui lòng truyền lệnh chạy script (run_ai_batch_once.py hoặc run_crawler_once.py).')"]

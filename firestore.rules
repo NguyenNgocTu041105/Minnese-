@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'admin@minnese.app' ||
+        request.auth.token.email == 'babysharkkk123@gmail.com' ||
+        ('role' in request.auth.token && request.auth.token.role == 'admin') ||
+        ('admin' in request.auth.token && request.auth.token.admin == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isTeacher() {
+      return isSignedIn() && (
+        isAdmin() ||
+        ('role' in request.auth.token && request.auth.token.role == 'teacher') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher')
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update, write: if true;
+      allow delete: if isAdmin();
+    }
+
+    // System Config Collection (Admins List, Settings)
+    match /system_config/{configId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Classes Collection
+    match /classes/{classId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Decks Collection
+    match /decks/{deckId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Flashcards Collection
+    match /flashcards/{cardId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Assignments Collection
+    match /assignments/{assignmentId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Assignment Submissions Collection
+    match /assignment_submissions/{submissionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Quizzes Collection
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Prompt Templates Collection
+    match /prompt_templates/{templateId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // File Search Stores Collection
+    match /file_search_stores/{storeId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Workbooks Collection (Workbook & Exam Remixer)
+    match /workbooks/{workbookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Online Exams Collection (Online Exam Rooms)
+    match /online_exams/{examId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
+
+

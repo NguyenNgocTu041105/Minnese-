@@ -1,0 +1,268 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with learning statistics, HSK level, class_id, and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["user", "teacher", "admin"] },
+        "hsk_target": { "type": "number" },
+        "current_level": { "type": "number" },
+        "current_level_updated_at": { "type": "string" },
+        "current_level_updated_by": { "type": "string" },
+        "class_id": { "type": "string", "maxLength": 128 },
+        "class_joined_at": { "type": "string" },
+        "words_per_day": { "type": "number" },
+        "streak_count": { "type": "number" },
+        "last_study_date": { "type": "string" },
+        "exp_points": { "type": "number" },
+        "badges": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "role", "current_level", "hsk_target"]
+    },
+    "Class": {
+      "title": "Class Room",
+      "description": "A specific class group with teacher assignment and unique class code",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "class_name": { "type": "string", "maxLength": 200 },
+        "class_code": { "type": "string", "maxLength": 32 },
+        "hsk_level": { "type": "number" },
+        "teacher_id": { "type": "string", "maxLength": 128 },
+        "created_by": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string" },
+        "student_count": { "type": "number" },
+        "is_active": { "type": "boolean" }
+      },
+      "required": ["id", "class_name", "class_code", "hsk_level", "teacher_id"]
+    },
+    "Deck": {
+      "title": "Deck",
+      "description": "A collection of flashcards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "owner_id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 500 },
+        "card_count": { "type": "number" },
+        "is_official_content": { "type": "boolean" },
+        "hsk_level": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "owner_id", "name", "is_official_content", "hsk_level"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "Individual flashcard with SRS spaced repetition metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "deck_id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "hanzi": { "type": "string", "maxLength": 64 },
+        "pinyin": { "type": "string", "maxLength": 128 },
+        "han_viet": { "type": "string", "maxLength": 128 },
+        "meaning_vi": { "type": "string", "maxLength": 256 },
+        "example_sentence": { "type": "string", "maxLength": 500 },
+        "example_translation": { "type": "string", "maxLength": 500 },
+        "source_citation": { "type": "string", "maxLength": 256 },
+        "audio_url": { "type": "string", "maxLength": 500 },
+        "stroke_order_ref": { "type": "string", "maxLength": 64 },
+        "srs_data": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "deck_id", "user_id", "hanzi", "pinyin", "meaning_vi"]
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "Homework or task created by teacher/admin for specific class or level",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "target_type": { "type": "string", "enum": ["class", "level"] },
+        "target_class_id": { "type": "string", "maxLength": 128 },
+        "hsk_level": { "type": "number" },
+        "content_type": { "type": "string", "enum": ["quiz", "deck"] },
+        "content_ref_id": { "type": "string", "maxLength": 128 },
+        "due_date": { "type": "string" },
+        "created_by": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string" },
+        "is_active": { "type": "boolean" }
+      },
+      "required": ["id", "title", "target_type", "hsk_level", "content_type", "created_by"]
+    },
+    "AssignmentSubmission": {
+      "title": "Assignment Submission",
+      "description": "Student homework submission status and score",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "assignment_id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["not_started", "in_progress", "completed", "overdue"] },
+        "score": { "type": "number" },
+        "completed_at": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "assignment_id", "user_id", "status"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "Practice or assessment quiz record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "hsk_level": { "type": "number" },
+        "type": { "type": "string" },
+        "questions": { "type": "array" },
+        "score": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "user_id", "hsk_level", "questions", "score"]
+    },
+    "PromptTemplate": {
+      "title": "Prompt Template",
+      "description": "Admin AI system prompt templates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "system_prompt": { "type": "string", "maxLength": 5000 },
+        "variables": { "type": "array" },
+        "target_store_names": { "type": "array" },
+        "version": { "type": "number" },
+        "is_active": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "system_prompt", "is_active"]
+    },
+    "FileSearchStore": {
+      "title": "File Search Store Metadata",
+      "description": "Metadata for Gemini File Search RAG stores",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "store_name": { "type": "string", "maxLength": 200 },
+        "display_name": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "enum": ["vocab", "grammar"] },
+        "hsk_level": { "type": "number" },
+        "files_uploaded": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "store_name", "display_name", "category", "hsk_level"]
+    },
+    "Workbook": {
+      "title": "Workbook Exercise Bank",
+      "description": "Uploaded exercise book or scanned material bank with parsed questions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "hsk_level": { "type": "number" },
+        "raw_text": { "type": "string" },
+        "total_questions": { "type": "number" },
+        "parsed_questions": { "type": "array" },
+        "created_by": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "title", "hsk_level", "created_by"]
+    },
+    "OnlineExam": {
+      "title": "Online Exam & AI Remixed Assessment",
+      "description": "Online exams and AI remixed quiz assessments generated from workbooks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "exam_code": { "type": "string", "maxLength": 32 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "hsk_level": { "type": "number" },
+        "duration_minutes": { "type": "number" },
+        "target_class_id": { "type": "string", "maxLength": 128 },
+        "target_type": { "type": "string", "enum": ["all", "class", "level"] },
+        "questions": { "type": "array" },
+        "total_points": { "type": "number" },
+        "remix_mode": { "type": "string" },
+        "source_workbook_id": { "type": "string", "maxLength": 128 },
+        "created_by": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string" },
+        "is_active": { "type": "boolean" }
+      },
+      "required": ["id", "exam_code", "title", "hsk_level", "questions", "created_by"]
+    },
+    "SystemConfig": {
+      "title": "System Configuration",
+      "description": "Global application configuration including dynamic admin lists and feature flags",
+      "type": "object",
+      "properties": {
+        "admin_emails": { "type": "array" },
+        "updatedAt": { "type": "string" },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    }
+  },
+  "firestore": {
+    "/system_config/{configId}": {
+      "schema": "SystemConfig",
+      "description": "System configuration and administrators directory"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with HSK level, class_id, and stats"
+    },
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "Classrooms with unique class code and teacher"
+    },
+    "/decks/{deckId}": {
+      "schema": "Deck",
+      "description": "Official or personal flashcard decks"
+    },
+    "/flashcards/{cardId}": {
+      "schema": "Flashcard",
+      "description": "Individual flashcard items with SRS data"
+    },
+    "/assignments/{assignmentId}": {
+      "schema": "Assignment",
+      "description": "Assignments targeted to class or HSK level"
+    },
+    "/assignment_submissions/{submissionId}": {
+      "schema": "AssignmentSubmission",
+      "description": "Student assignment submissions"
+    },
+    "/quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "User quiz attempt history"
+    },
+    "/prompt_templates/{templateId}": {
+      "schema": "PromptTemplate",
+      "description": "Admin AI prompt templates"
+    },
+    "/file_search_stores/{storeId}": {
+      "schema": "FileSearchStore",
+      "description": "RAG File Search Store registry"
+    },
+    "/workbooks/{workbookId}": {
+      "schema": "Workbook",
+      "description": "Workbook materials and parsed exercise banks"
+    },
+    "/online_exams/{examId}": {
+      "schema": "OnlineExam",
+      "description": "Online exams and AI remixed tests"
+    }
+  }
+}

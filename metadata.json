@@ -1,0 +1,6 @@
+{
+  "name": "Minnese",
+  "description": "Full-stack Chinese learning platform with Gemini AI RAG tutor, SM-2 Spaced Repetition flashcards, HSK dictionary, stroke guides, interactive quizzes, Workbook Studio OCR & AI exam remixer, and admin dashboard.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

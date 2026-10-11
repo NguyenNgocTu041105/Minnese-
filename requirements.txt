@@ -1,0 +1,25 @@
+﻿# Core API & Server
+fastapi>=0.110.0
+uvicorn>=0.28.0
+python-dotenv>=1.0.0
+
+# Database & Cache
+psycopg2-binary>=2.9.9
+redis>=5.0.0
+
+# Firebase Admin SDK
+firebase-admin>=6.5.0
+
+# Crawler & Scraping
+playwright>=1.42.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+cloudinary>=1.40.0
+
+# Chinese NLP (100% Offline)
+opencc-python-reimplemented>=0.1.7
+pypinyin>=0.51.0
+jieba>=0.42.1
+
+# Background Scheduler
+apscheduler>=3.10.4

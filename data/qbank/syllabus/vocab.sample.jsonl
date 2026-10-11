@@ -1,0 +1,10 @@
+{"word": "学校", "pinyin": "xuéxiào", "pos": "n", "level": 1, "topics": ["education"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "老师", "pinyin": "lǎoshī", "pos": "n", "level": 1, "topics": ["education"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "学生", "pinyin": "xuéshēng", "pos": "n", "level": 1, "topics": ["education"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "朋友", "pinyin": "péngyou", "pos": "n", "level": 1, "topics": ["relationship"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "图书", "pinyin": "túshū", "pos": "n", "level": 2, "topics": ["education"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "运动", "pinyin": "yùndòng", "pos": "v", "level": 2, "topics": ["health"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "准备", "pinyin": "zhǔnbèi", "pos": "v", "level": 2, "topics": ["action"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "借书", "pinyin": "jièshū", "pos": "v", "level": 3, "topics": ["daily"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "环境", "pinyin": "huánjìng", "pos": "n", "level": 3, "topics": ["nature"], "source": "self-authored", "license_status": "self-authored"}
+{"word": "侵权词", "pinyin": "qīnquáncí", "pos": "n", "level": 3, "topics": ["test"], "source": "unverified_third_party", "license_status": "unknown"}

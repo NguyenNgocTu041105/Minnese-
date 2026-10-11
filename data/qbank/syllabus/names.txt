@@ -1,0 +1,24 @@
+# Danh sách tên riêng và địa danh thông dụng được phép trong HSK 3.0
+# Nguồn: Tự biên soạn (self-authored)
+# Giấy phép: self-authored
+李华
+王明
+张伟
+李娜
+刘洋
+陈晨
+小明
+小红
+小李
+小王
+小张
+王老师
+李老师
+张老师
+北京
+上海
+广州
+深圳
+中国
+越南
+河内

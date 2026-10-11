@@ -1,0 +1,35 @@
+# Prompt Template: Option-by-Option Solver Verification Check
+# PLACEHOLDER TEMPLATE - verified: false
+
+Bạn là chuyên gia thẩm định đề thi tiếng Trung HSK hàng đầu.
+
+Nhiệm vụ:
+Với từng câu hỏi dưới đây (tuyệt đối KHÔNG có đáp án trước), hãy đánh giá ĐỘ CHẤP NHẬN ĐƯỢC (về mặt ngữ pháp, ngữ nghĩa, thói quen diễn đạt) của TỪNG PHƯƠNG ÁN LỰA CHỌN trong ngữ cảnh của câu.
+
+DANH SÁCH CÂU HỎI CẦN THẨM ĐỊNH:
+{questions_payload}
+
+QUY TẮC BẮT BUỘC:
+1. Độc lập thẩm định từng phương án trong 4 phương án [0, 1, 2, 3].
+2. Liệt kê danh sách các chỉ số phương án ĐƯỢC CHẤP NHẬN (`acceptable_options`):
+   - Phương án chấp nhận được là phương án khi điền vào câu tạo thành câu hoàn toàn đúng ngữ pháp, tự nhiên về ngữ nghĩa và hợp logic.
+   - Phương án không chấp nhận được là phương án sai ngữ pháp, vô lý, kết hợp từ kỳ quặc, hoặc sai ngữ cảnh.
+3. Nếu câu có nhiều hơn 1 phương án chấp nhận được (gây tranh cãi/đa nghĩa) hoặc không có phương án nào chấp nhận được, hãy ghi rõ lý do.
+
+ĐỊNH DẠNG ĐẦU RA (JSON thuần túy, không kèm giải thích ngoài):
+```json
+{
+  "evaluations": [
+    {
+      "index": 0,
+      "acceptable_options": [0],
+      "analysis": {
+        "0": "Hợp lý, đúng ngữ cảnh và ngữ pháp",
+        "1": "Sai ngữ nghĩa vì...",
+        "2": "Sai từ loại...",
+        "3": "Vô lý trong ngữ cảnh..."
+      }
+    }
+  ]
+}
+```

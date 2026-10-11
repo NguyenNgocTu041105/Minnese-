@@ -1,0 +1,40 @@
+# Prompt Template: Reading Fill in the Blank (HSK {level})
+# PLACEHOLDER TEMPLATE - verified: false
+
+Bạn là chuyên gia ngôn ngữ tiếng Trung biên soạn câu hỏi luyện thi HSK {level} theo chuẩn HSK 3.0.
+
+Nhiệm vụ:
+Tạo {batch_size} câu hỏi trắc nghiệm dạng ĐIỀN TỪ VÀO CHỖ TRỐNG (Reading Fill-in-the-blank) cho trình độ HSK {level}.
+
+QUY TẮC BẮT BUỘC:
+1. Độ khó và từ vựng: Chỉ sử dụng các từ vựng thuộc trình độ HSK {level} trở xuống. Danh sách từ vựng mục tiêu cần lồng ghép và kiểm tra:
+{vocab_list}
+2. CÂU DẪN (STEM) - QUY TẮC DỨT KHOÁT:
+   - Câu dẫn (stem) CHỈ ĐƯỢC CHỨA ĐÚNG MỘT CÂU TIẾNG TRUNG hoàn chỉnh với đúng một chỗ trống dùng 4 dấu gạch dưới: "____".
+   - TUYỆT ĐỐI KHÔNG chứa bản dịch, ghi chú, phiên âm pinyin, gợi ý trong ngoặc đơn/ngoặc vuông (như "(gợi ý)", "(cái này...)"), hoặc bất kỳ ký tự nào không phải tiếng Trung (không có chữ Latin, tiếng Anh hay tiếng Việt trong stem).
+   - Tuyệt đối KHÔNG để từ đáp án đúng xuất hiện trong câu dẫn (stem).
+3. PHƯƠNG ÁN LỰA CHỌN (OPTIONS) - QUY TẮC NHIỄU DỨT KHOÁT:
+   - Phải có đúng 4 phương án [A, B, C, D] hoàn toàn khác nhau.
+   - CHỈ ĐƯỢC chứa chữ Hán, không chứa chữ cái Latin, không có ghi chú trong ngoặc.
+   - MỌI PHƯƠNG ÁN PHẢI CÙNG TỪ LOẠI (cùng là danh từ, cùng là động từ, cùng là tính từ...).
+   - Đảm bảo CHỈ CÓ ĐÚNG MỘT PHƯƠNG ÁN HỢP LÝ VỀ NGỮ NGHĨA VÀ NGỮ PHÁP trong ngữ cảnh của câu.
+   - MỖI PHƯƠNG ÁN NHIỄU PHẢI SAI RÕ RÀNG trong ngữ cảnh của câu, không phương án nào có thể chấp nhận được ở bất kỳ cách hiểu hợp lý nào (tránh triệt để các trường hợp đa nghĩa hoặc gây tranh cãi như cùng điền được cả '看' lẫn '写' với '书').
+4. GIẢI THÍCH (explanation_vi): Viết bằng tiếng Việt, giải thích rõ ràng tại sao đáp án đó đúng và dịch nghĩa của câu.
+5. TỪ KHÓA VOCAB TAGS: Trường "vocab_tags" phải liệt kê chính xác các từ vựng trọng tâm trong câu được kiểm tra (ví dụ: các từ thuộc danh sách từ mục tiêu hoặc các phương án lựa chọn).
+6. Bản quyền: Tự sáng tác hoàn toàn, KHÔNG sao chép từ bất kỳ đề thi có sẵn nào của bên thứ ba.
+
+ĐỊNH DẠNG ĐẦU RA (JSON thuần túy, không kèm giải thích ngoài):
+```json
+{
+  "questions": [
+    {
+      "stem": "今天天气很好，我想去____借两本书。",
+      "options": ["图书馆", "医院", "银行", "机场"],
+      "answer_index": 0,
+      "explanation_vi": "Ngữ cảnh đi mượn sách thì địa điểm phù hợp duy nhất là '图书馆' (thư viện).",
+      "topic": "daily_life",
+      "vocab_tags": ["图书馆", "借", "书"]
+    }
+  ]
+}
+```

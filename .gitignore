@@ -10,3 +10,11 @@ dist/
 __pycache__/
 *.pyc
 data/*.db
+data/hsk_exam.db*
+data/qbank/*.db*
+*.backup_*
+.pytest_cache/
+data/qbank/syllabus/vocab.jsonl
+data/qbank/syllabus/vocab_rejected.csv
+data/qbank/syllabus/*.backup_*
+

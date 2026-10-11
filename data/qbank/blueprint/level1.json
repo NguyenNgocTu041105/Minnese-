@@ -1,0 +1,19 @@
+{
+  "hsk_version": "3.0",
+  "level": 1,
+  "verified": false,
+  "_notice": "CẢNH BÁO: ĐÂY CHỈ LÀ FILE BLUEPRINT PLACEHOLDER MẪU ĐỂ CHẠY TEST. KHÔNG PHẢI ĐỀ CHÍNH THỨC.",
+  "sections": {
+    "reading": {
+      "name": "Reading (Đọc hiểu)",
+      "parts": {
+        "reading_1": {
+          "type": "multiple_choice",
+          "n_questions": 5,
+          "n_options": 4,
+          "time_min": 5
+        }
+      }
+    }
+  }
+}

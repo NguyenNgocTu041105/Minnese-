@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Duyệt Câu Hỏi (Human Review) - QBank{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span>Danh Sách Câu Hỏi Chờ Xem Xét (needs_review)</span>
+        <span class="badge-local" style="background: var(--warning);">{{ count }} câu hiển thị</span>
+    </div>
+
+    <!-- Filter by level -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+        <a href="/review" class="btn {% if not current_level %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">Tất cả</a>
+        {% for lvl in range(1, 7) %}
+        <a href="/review?level={{ lvl }}" class="btn {% if current_level == lvl %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+            HSK {{ lvl }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if not questions %}
+    <div style="text-align: center; padding: 3rem 0; color: var(--text-muted);">
+        <p style="font-size: 1.25rem;">🎉 Tuyệt vời! Không còn câu hỏi nào ở trạng thái chờ xem xét.</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Hãy chuyển sang mục <a href="/sync" style="color: var(--primary);">Đồng bộ & Retire</a> để đồng bộ câu đã duyệt sang đề thi.</p>
+    </div>
+    {% else %}
+    {% for q in questions %}
+    <div class="card" style="border-left: 4px solid var(--warning); margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div>
+                <span style="background: #e0e7ff; color: #3730a3; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.85rem;">HSK {{ q.level }}</span>
+                <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 0.5rem;">ID: <code>{{ q.question_id }}</code></span>
+                <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 0.5rem;">Batch: <code>{{ q.provenance.batch_id }}</code></span>
+            </div>
+            <div>
+                <span style="font-size: 0.8rem; background: #fef08a; color: #854d0e; padding: 0.15rem 0.4rem; border-radius: 4px;">{{ q.status }}</span>
+            </div>
+        </div>
+
+        <div style="font-size: 1.2rem; font-weight: 600; margin: 0.75rem 0; color: #1e293b;">
+            {{ q.stem }}
+        </div>
+
+        <!-- 4 Options -->
+        <div class="grid-2" style="margin: 1rem 0; gap: 0.5rem;">
+            {% for opt in q.options %}
+            <div style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; {% if loop.index0 == q.answer_index %}background: #f0fdf4; border-color: #86efac; font-weight: 600;{% endif %}">
+                <span>{{ ['A', 'B', 'C', 'D'][loop.index0] }}. {{ opt }}</span>
+                {% if loop.index0 == q.answer_index %}
+                <span style="color: var(--success); font-size: 0.8rem;">✓ Đáp án đúng</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Explanation & QA Notes -->
+        <div style="background: #f8fafc; padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; margin-bottom: 1rem;">
+            <p><strong>Giải thích:</strong> {{ q.explanation_vi }}</p>
+            {% if q.qa.notes %}
+            <p style="color: #b45309; margin-top: 0.35rem;">
+                <strong>Ghi chú QA:</strong> {{ q.qa.notes | join('; ') }}
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Action Form -->
+        <form action="/review" method="POST" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="question_id" value="{{ q.question_id }}">
+
+            <button type="submit" name="action" value="approve" class="btn btn-success" style="padding: 0.4rem 1rem;">
+                ✓ Duyệt (Approved)
+            </button>
+            <button type="submit" name="action" value="reject" class="btn btn-danger" style="padding: 0.4rem 1rem;">
+                ✗ Từ Chối (Reject)
+            </button>
+            <button type="submit" name="action" value="skip" class="btn btn-secondary" style="padding: 0.4rem 0.8rem;">
+                Bỏ qua
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

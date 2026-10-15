@@ -114,6 +114,28 @@ python -m qbank.cli import-vocab data/raw_vocab.xlsx --source "Danh mục Giáo 
    python -m qbank.cli import-vocab data/qbank/syllabus/vocab_rejected.csv --source "Sửa lỗi thủ công" --license-status self-authored --mode merge --execute
    ```
 
+### Giao diện Web Quản trị Cục bộ (qbank/admin/)
+Giao diện Web trực quan chạy nội bộ phục vụ quản trị đề thi và từ vựng HSK 3.0:
+
+```bash
+# Khởi động máy chủ web quản trị cục bộ (mặc định cổng 8080):
+python -m qbank.admin
+
+# Hoặc chỉ định cổng tùy chọn:
+python -m qbank.admin --port 8088
+```
+
+> **CẢNH BÁO AN TOÀN TUYỆT ĐỐI**:
+> - Trang quản trị **CHỈ BIND VÀO 127.0.0.1 (localhost)** và từ chối mọi kết nối từ địa chỉ IP khác.
+> - **TUYỆT ĐỐI KHÔNG MỞ RA MẠNG INTERNET HOẶC BIND `0.0.0.0`**.
+> - Hệ thống kích hoạt kiểm tra Host header nghiêm ngặt, Origin/Referer check, Cookie `HttpOnly; SameSite=Strict`, token CSRF cho mọi thao tác ghi, và tự động che giấu mọi thông tin nhạy cảm (API key, DATABASE_URL) nếu có lỗi.
+
+**5 Màn hình chức năng:**
+1. **Nạp Từ Vựng (`/vocab`)**: Kéo thả file CSV/TSV/XLSX/PDF (tối đa 15MB, lưu tạm và xóa ngay sau xử lý), form bắt buộc `--source` và `--license-status`, hỗ trợ chọn sheet và `--map`. Chế độ xem trước (Dry-run) và nút "Xác nhận ghi" (sao lưu tự động).
+2. **Sinh Đề (`/generate`)**: Cấu hình level, số lượng câu, bật/tắt solver. Chạy nền một luồng với tiến độ thời gian thực, có cờ khóa chống bấm đúp, hiển thị cảnh báo nếu đang dùng từ điển mẫu.
+3. **Duyệt Câu Hỏi (`/review`)**: Duyệt các câu `needs_review` theo level, hiển thị câu dẫn, 4 phương án, đáp án đúng, giải thích và ghi chú QA; thao tác 1-click Duyệt / Từ chối / Bỏ qua.
+4. **Đồng Bộ & Retire (`/sync`)**: Mặc định Dry-run; ghi thật bắt buộc gõ lại chính xác số lượng câu cần đồng bộ; chặn PostgreSQL trừ khi tick xác nhận đã sao lưu; hỗ trợ vô hiệu hóa câu hỏi theo `batch_id`.
+5. **Thống Kê (`/`)**: Báo cáo tổng thể kho câu hỏi theo trạng thái, cấp độ, tình trạng từ điển Syllabus và số lượt báo lỗi.
 
 ## 3. Lưu ý Hạn Mức Free Tier Google Gemini
 
@@ -123,4 +145,5 @@ python -m qbank.cli import-vocab data/raw_vocab.xlsx --source "Danh mục Giáo 
 ## 4. Lưu ý PostgreSQL Backend
 - **Nhánh PostgreSQL**: Nhánh kết nối PostgreSQL trong `db/connection.py` chưa được kiểm chứng trực tiếp do môi trường local dùng SQLite, không có test suite PostgreSQL tự động.
 - Lệnh `--execute` trên môi trường phát hiện PostgreSQL bắt buộc phải truyền thêm cờ xác nhận sao lưu: `--i-have-backed-up-postgres`.
+
 

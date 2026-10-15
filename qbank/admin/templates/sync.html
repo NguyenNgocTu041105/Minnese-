@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Đồng Bộ & Retire Câu Hỏi - QBank{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+    <!-- SECTION 1: SYNC TO LEGACY DATABASE -->
+    <div class="card">
+        <div class="card-header">Đồng Bộ Câu Hỏi Sang DB Cũ</div>
+
+        {% if is_postgres %}
+        <div class="alert alert-danger" style="font-size: 0.85rem;">
+            <strong>⚠️ ĐANG KẾT NỐI POSTGRESQL PRODUCTION:</strong>
+            Đồng bộ ghi thật vào PostgreSQL bắt buộc phải xác nhận bạn đã tự sao lưu dữ liệu.
+        </div>
+        {% endif %}
+
+        {% if dry_res %}
+        <div class="stat-card" style="margin-bottom: 1.25rem;">
+            <div class="val">{{ dry_res.synced_count }}</div>
+            <div class="label">Câu Đủ Điều Kiện Đồng Bộ (Approved Chưa Sync)</div>
+        </div>
+
+        <table>
+            <tbody>
+                <tr><td>Tổng câu duyệt chưa sync:</td><td><strong>{{ dry_res.total_eligible }}</strong> câu</td></tr>
+                <tr><td>Số câu dự kiến sẽ ghi:</td><td><strong style="color: var(--success);">{{ dry_res.synced_count }}</strong> câu</td></tr>
+                <tr><td>Bỏ qua do trùng content_hash:</td><td>{{ dry_res.skipped_duplicate_hash }} câu</td></tr>
+                <tr><td>Bỏ qua do nghi trùng 4-gram:</td><td>{{ dry_res.skipped_near_duplicate }} câu</td></tr>
+            </tbody>
+        </table>
+
+        {% if dry_res.synced_count > 0 %}
+        <form action="/sync" method="POST" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="action" value="sync_execute">
+            <input type="hidden" name="expected_count" value="{{ dry_res.synced_count }}">
+
+            <div class="form-group">
+                <label>Xác nhận số câu cần đồng bộ: <span style="color: red;">*</span></label>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+                    Để chống nhầm lẫn, vui lòng nhập chính xác số <strong>{{ dry_res.synced_count }}</strong> vào ô bên dưới:
+                </p>
+                <input type="text" name="confirm_count" class="form-control" placeholder="Gõ lại chính xác: {{ dry_res.synced_count }}" required>
+            </div>
+
+            {% if is_postgres %}
+            <div class="form-group" style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                <input type="checkbox" id="pgCheck" name="confirm_pg" required style="margin-top: 0.25rem;">
+                <label for="pgCheck" style="font-size: 0.85rem; font-weight: normal; cursor: pointer;">
+                    Tôi xác nhận đã tự sao lưu cơ sở dữ liệu PostgreSQL trước khi thực hiện ghi thật (--i-have-backed-up-postgres).
+                </label>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-success" style="width: 100%; padding: 0.75rem;">
+                🚀 Thực Thi Đồng Bộ Sang Database Cũ
+            </button>
+        </form>
+        {% else %}
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 1rem; text-align: center;">
+            Hiện không có câu hỏi approved nào mới cần đồng bộ.
+        </p>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- SECTION 2: RETIRE BATCH -->
+    <div class="card">
+        <div class="card-header">Vô Hiệu Hóa Đợt Câu Hỏi (Retire)</div>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Chuyển toàn bộ câu hỏi của một <code>batch_id</code> sang trạng thái <code>'rejected'</code> ở DB cũ (exam_service sẽ không bốc) và <code>'retired'</code> ở QBank.
+        </p>
+
+        <form action="/sync" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="action" value="retire_execute">
+
+            <div class="form-group">
+                <label>Mã Batch ID cần vô hiệu hóa: <span style="color: red;">*</span></label>
+                <input type="text" name="batch_id" class="form-control" placeholder="Ví dụ: batch_20261011_..." required>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                <input type="checkbox" id="retireCheck" name="confirm_retire" required style="margin-top: 0.25rem;">
+                <label for="retireCheck" style="font-size: 0.85rem; font-weight: normal; cursor: pointer;">
+                    Tôi hiểu rằng hành động này sẽ chuyển trạng thái các câu hỏi thành 'rejected' ở DB cũ.
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-danger" style="width: 100%; padding: 0.75rem;">
+                🛑 Vô Hiệu Hóa Đợt Câu Hỏi
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

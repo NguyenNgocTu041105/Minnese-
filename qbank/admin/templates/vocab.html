@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Nạp Từ Vựng Syllabus - QBank{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span>Nạp Từ Vựng HSK 3.0 (CSV / TSV / Excel XLSX / PDF)</span>
+        {% if preview %}
+        <a href="/vocab?clear=1" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Tải Lên File Khác</a>
+        {% endif %}
+    </div>
+
+    {% if not preview %}
+    <form action="/vocab" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="action" value="preview">
+
+        <div class="form-group">
+            <label>Chọn hoặc kéo thả file nguồn (.csv, .tsv, .xlsx, .pdf): <span style="color: red;">*</span></label>
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                <p id="fileNameDisplay" style="font-size: 1.1rem; color: #475569;">Kéo & Thả file từ vựng vào đây, hoặc <span style="color: var(--primary); text-decoration: underline;">chọn từ máy tính</span></p>
+                <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">Giới hạn dung lượng tối đa 15MB &bull; PDF phải có lớp văn bản (không OCR)</p>
+            </div>
+            <input type="file" id="fileInput" name="file" accept=".csv,.tsv,.xlsx,.pdf" style="display: none;" onchange="updateFileName(this)">
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Tên Nguồn Tài Liệu (--source): <span style="color: red;">*</span></label>
+                <input type="text" name="source" class="form-control" placeholder="Ví dụ: Danh mục Giáo dục HSK hoặc Tự biên soạn" required>
+            </div>
+
+            <div class="form-group">
+                <label>Trạng Thái Bản Quyền (--license-status): <span style="color: red;">*</span></label>
+                <select name="license_status" class="form-control" required>
+                    <option value="" disabled selected>-- Chọn trạng thái giấy phép (Bắt buộc) --</option>
+                    <option value="official">official (Nguồn chính thức, có điều khoản cho phép)</option>
+                    <option value="permitted">permitted (Nguồn được cấp phép sử dụng)</option>
+                    <option value="self-authored">self-authored (Dữ liệu tự biên soạn nội bộ)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Cấp độ mặc định (Tùy chọn):</label>
+                <select name="level" class="form-control">
+                    <option value="">Tự động nhận diện từ file</option>
+                    {% for lvl in range(1, 7) %}
+                    <option value="{{ lvl }}">HSK {{ lvl }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Chế độ nhập (--mode):</label>
+                <select name="mode" class="form-control">
+                    <option value="merge" selected>merge (Gộp thêm từ mới, từ trùng giữ level thấp nhất)</option>
+                    <option value="replace">replace (Thay thế toàn bộ từ điển bằng file này)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Tên Sheet (Nếu là file Excel XLSX):</label>
+                <input type="text" name="sheet_name" class="form-control" placeholder="Để trống nếu lấy Sheet hiện hành">
+            </div>
+
+            <div class="form-group">
+                <label>Ánh xạ cột tùy chỉnh (--map, tùy chọn):</label>
+                <input type="text" name="column_map" class="form-control" placeholder="Ví dụ: word=Từ,pinyin=Phát_âm,level=Cấp_độ">
+            </div>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; padding: 0.75rem; font-size: 1rem;">🔍 Xem Trước (Dry-Run Không Ghi)</button>
+    </form>
+    {% else %}
+    <!-- PREVIEW RESULTS -->
+    <div class="alert alert-info">
+        <strong>KẾT QUẢ XEM TRƯỚC (DRY-RUN):</strong> File chưa được lưu vào hệ thống. Vui lòng kiểm tra kỹ các thông số bên dưới trước khi bấm <strong>Xác Nhận Ghi</strong>.
+    </div>
+
+    <div class="grid-3" style="margin-bottom: 1.5rem;">
+        <div class="stat-card">
+            <div class="val">{{ preview.valid_count }}</div>
+            <div class="label">Từ Hợp Lệ Sẵn Sàng Nạp</div>
+        </div>
+        <div class="stat-card">
+            <div class="val" style="color: var(--danger);">{{ preview.rejected_count }}</div>
+            <div class="label">Dòng Bị Loại Bỏ</div>
+        </div>
+        <div class="stat-card">
+            <div class="val" style="color: var(--primary);">{{ preview.mode.upper() }}</div>
+            <div class="label">Chế Độ Nạp</div>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <div>
+            <h4>Phân Bổ Từ Vựng Theo Level</h4>
+            <table>
+                <thead><tr><th>Cấp độ</th><th>Số lượng</th></tr></thead>
+                <tbody>
+                    {% for lvl in range(1, 7) %}
+                    <tr>
+                        <td>HSK {{ lvl }}</td>
+                        <td>{{ preview.by_level.get(lvl, 0) }} từ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+            <h4>Lý Do Bị Loại Bỏ</h4>
+            {% if preview.rejected_by_reason %}
+            <table>
+                <thead><tr><th>Lý do</th><th>Số dòng</th></tr></thead>
+                <tbody>
+                    {% for reason, cnt in preview.rejected_by_reason.items() %}
+                    <tr>
+                        <td style="color: var(--danger);">{{ reason }}</td>
+                        <td>{{ cnt }} dòng</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: var(--success); margin-top: 1rem;">Không có dòng nào bị loại bỏ!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h4>10 Dòng Đầu Tiên Xem Trước</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Từ Hán</th>
+                <th>Pinyin</th>
+                <th>Từ Loại</th>
+                <th>Cấp Độ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in preview.first_10 %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ item.word }}</strong></td>
+                <td>{{ item.pinyin }}</td>
+                <td>{{ item.pos }}</td>
+                <td>HSK {{ item.level }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <form action="/vocab" method="POST" style="margin-top: 2rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="action" value="execute">
+        <input type="hidden" name="source" value="{{ preview.source }}">
+        <input type="hidden" name="license_status" value="{{ preview.license_status }}">
+        <input type="hidden" name="level" value="{{ preview.default_level or '' }}">
+        <input type="hidden" name="mode" value="{{ preview.mode }}">
+        <input type="hidden" name="column_map" value="{{ preview.column_map or '' }}">
+        <input type="hidden" name="sheet_name" value="{{ preview.sheet_name or '' }}">
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-success" style="flex: 2; padding: 0.8rem; font-size: 1.05rem;">
+                💾 Xác Nhận Ghi Vào vocab.jsonl (Tự Động Sao Lưu)
+            </button>
+            <a href="/vocab?clear=1" class="btn btn-secondary" style="flex: 1; text-align: center; padding: 0.8rem;">
+                Hủy Bỏ
+            </a>
+        </div>
+    </form>
+    {% endif %}
+</div>
+
+<script>
+function updateFileName(input) {
+    if (input.files && input.files[0]) {
+        document.getElementById('fileNameDisplay').innerHTML = '📄 <strong>' + input.files[0].name + '</strong> (' + Math.round(input.files[0].size / 1024) + ' KB)';
+    }
+}
+const dropzone = document.getElementById('dropzone');
+if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('dragover'); });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            updateFileName(document.getElementById('fileInput'));
+        }
+    });
+}
+</script>
+{% endblock %}

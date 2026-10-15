@@ -17,4 +17,5 @@ data/qbank/*.db*
 data/qbank/syllabus/vocab.jsonl
 data/qbank/syllabus/vocab_rejected.csv
 data/qbank/syllabus/*.backup_*
+data/inbox/
 

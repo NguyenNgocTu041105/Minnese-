@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Bảng Điều Khiển & Thống Kê - QBank{% endblock %}
+
+{% block content %}
+{% if is_sample_syllabus %}
+<div class="alert alert-warning" style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <strong>⚠️ CẢNH BÁO TỪ ĐIỂN:</strong> Hệ thống đang sử dụng danh sách từ vựng mẫu (<code>vocab.sample.jsonl</code>).
+        <p style="margin-top: 0.25rem; font-size: 0.9rem;">File <code>vocab.jsonl</code> chưa được nạp trên máy này. Hãy truy cập <strong>Nạp Từ Vựng</strong> để nạp danh sách chuẩn HSK trước khi sinh đề thực tế.</p>
+    </div>
+    <a href="/vocab" class="btn btn-warning" style="white-space: nowrap;">Nạp Từ Vựng Ngay</a>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">Tổng Quan Kho Câu Hỏi QBank</div>
+    <div class="grid-3">
+        <div class="stat-card">
+            <div class="val">{{ stats.total_questions }}</div>
+            <div class="label">Tổng Câu Hỏi Trong Kho</div>
+        </div>
+        <div class="stat-card">
+            <div class="val" style="color: var(--success);">{{ stats.by_status.get('approved', 0) }}</div>
+            <div class="label">Đã Duyệt (Approved)</div>
+        </div>
+        <div class="stat-card">
+            <div class="val" style="color: var(--warning);">{{ stats.by_status.get('needs_review', 0) }}</div>
+            <div class="label">Cần Xem Xét (Needs Review)</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">Phân Bổ Câu Hỏi Theo Cấp Độ HSK</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Cấp độ</th>
+                    <th>Số lượng câu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lvl in range(1, 7) %}
+                <tr>
+                    <td><strong>HSK {{ lvl }}</strong></td>
+                    <td>{{ stats.by_level.get(lvl, 0) }} câu</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span>Từ Điển Syllabus HSK 3.0</span>
+            {% if is_sample_syllabus %}
+            <span style="font-size: 0.75rem; background: #fef08a; color: #854d0e; padding: 0.1rem 0.4rem; border-radius: 4px;">Danh sách mẫu</span>
+            {% else %}
+            <span style="font-size: 0.75rem; background: #bbf7d0; color: #166534; padding: 0.1rem 0.4rem; border-radius: 4px;">Chính thức</span>
+            {% endif %}
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">File: <code>{{ vocab_file }}</code></p>
+        <p style="margin-bottom: 0.5rem;"><strong>Tổng từ vựng hợp lệ:</strong> {{ syll_stats.total_valid_items }} từ</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Cấp độ</th>
+                    <th>Số lượng từ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lvl in range(1, 7) %}
+                <tr>
+                    <td>HSK {{ lvl }}</td>
+                    <td>{{ syll_stats.by_level.get(lvl, 0) }} từ</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

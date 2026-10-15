@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Sinh Câu Hỏi HSK 3.0 - QBank{% endblock %}
+
+{% block content %}
+{% if is_sample %}
+<div class="alert alert-warning">
+    <strong>⚠️ CẢNH BÁO TỪ ĐIỂN:</strong> Đang dùng danh sách từ vựng mẫu (<code>vocab.sample.jsonl</code>).
+    Các câu hỏi sinh ra sẽ bị giới hạn trong vốn từ mẫu. Hãy nạp file từ điển chính thức nếu muốn sinh đề quy mô đầy đủ.
+</div>
+{% endif %}
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">Cấu Hình Sinh Câu Hỏi Tự Động</div>
+        <form action="/generate" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="form-group">
+                <label>Cấp độ HSK: <span style="color: red;">*</span></label>
+                <select name="level" class="form-control" required {% if is_running %}disabled{% endif %}>
+                    {% for lvl in range(1, 7) %}
+                    <option value="{{ lvl }}">HSK {{ lvl }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Số lượng câu hỏi cần sinh (1 - 50): <span style="color: red;">*</span></label>
+                <input type="number" name="count" class="form-control" value="5" min="1" max="50" required {% if is_running %}disabled{% endif %}>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                <input type="checkbox" id="solverCheck" name="solver" checked {% if is_running %}disabled{% endif %}>
+                <label for="solverCheck" style="margin: 0; font-weight: normal; cursor: pointer;">
+                    Bật kiểm tra đối soát độc lập bằng LLM Solver (Khuyến nghị)
+                </label>
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; padding: 0.75rem; margin-top: 1rem;" {% if is_running %}disabled style="opacity: 0.6; cursor: not-allowed;"{% endif %}>
+                {% if is_running %}⏳ Đang Chạy Tác Vụ...{% else %}⚡ Bắt Đầu Sinh Câu Hỏi{% endif %}
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span>Trạng Thái Tiến Độ</span>
+            <span id="badgeStatus" class="badge-local" style="background: {% if is_running %}var(--warning){% elif progress.status == 'completed' %}var(--success){% elif progress.status == 'error' %}var(--danger){% else %}#64748b{% endif %};">
+                {{ progress.status.upper() }}
+            </span>
+        </div>
+
+        <div style="background: #e2e8f0; border-radius: 9999px; height: 12px; overflow: hidden; margin-bottom: 1rem;">
+            <div id="progressBar" style="background: var(--primary); height: 100%; width: {{ progress.percent }}%; transition: width 0.3s;"></div>
+        </div>
+
+        <p id="progressMsg" style="color: #475569; font-size: 0.95rem; margin-bottom: 1rem;">{{ progress.message }}</p>
+
+        {% if progress.summary %}
+        <div id="summaryBox" style="background: #f1f5f9; padding: 1rem; border-radius: 6px; font-size: 0.9rem;">
+            <p><strong>Batch ID:</strong> <code>{{ progress.summary.batch_id }}</code></p>
+            <p><strong>Yêu cầu / Đạt chuẩn:</strong> {{ progress.summary.requested }} / {{ progress.summary.saved }} câu</p>
+            <p><strong>Tự động duyệt (Approved):</strong> <span style="color: var(--success); font-weight: 600;">{{ progress.summary.approved }}</span></p>
+            <p><strong>Cần xem xét (Needs Review):</strong> <span style="color: var(--warning); font-weight: 600;">{{ progress.summary.needs_review }}</span></p>
+            <p><strong>Bị loại bỏ / Trùng:</strong> <span style="color: var(--danger);">{{ progress.summary.rejected }}</span></p>
+            {% if progress.summary.stopped_reason %}
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">Lý do dừng: {{ progress.summary.stopped_reason }}</p>
+            {% endif %}
+            <div style="margin-top: 1rem;">
+                <a href="/review" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">Đi đến màn hình duyệt câu hỏi &rarr;</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+let isRunning = {{ 'true' if is_running else 'false' }};
+if (isRunning) {
+    const timer = setInterval(() => {
+        fetch('/generate/status')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('progressBar').style.width = data.percent + '%';
+                document.getElementById('progressMsg').innerText = data.message;
+                document.getElementById('badgeStatus').innerText = data.status.toUpperCase();
+                if (data.status !== 'running') {
+                    clearInterval(timer);
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+            })
+            .catch(() => clearInterval(timer));
+    }, 2000);
+}
+</script>
+{% endblock %}

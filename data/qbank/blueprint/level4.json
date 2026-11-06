@@ -1,0 +1,130 @@
+{
+  "hsk_version": "3.0",
+  "level": 4,
+  "name": "HSK 4 (四级) 考试大纲与试卷结构",
+  "verification": {
+    "verified_fields": [
+      "total_questions",
+      "time_limit_minutes"
+    ],
+    "unverified_fields": [
+      "section_breakdown",
+      "part_detail",
+      "skill_duration",
+      "scoring"
+    ],
+    "verification_sources": [
+      {
+        "field": "total_questions",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      },
+      {
+        "field": "time_limit_minutes",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      }
+    ],
+    "last_verified_at": "2026-10-26T00:00:00Z"
+  },
+  "total_questions": 79,
+  "total_time_min": 85,
+  "max_score": 300,
+  "passing_score": 180,
+  "has_pinyin": false,
+  "audio_playback": 1,
+  "sections": {
+    "listening": {
+      "name": "听力 (Listening)",
+      "skill": "listening",
+      "total_questions": 32,
+      "time_min": 25,
+      "score_weight": 100,
+      "parts": {
+        "listening_1": {
+          "name": "第一部分：听短对话/单句选答案",
+          "type": "listen_dialogue_qa_4opt",
+          "skill": "listening",
+          "n_questions": 14,
+          "n_options": 4,
+          "time_min": 10,
+          "description": "听短对话或单句加问句选答案（1-7题1轮对话，8-14题2轮长对话），4个选项。"
+        },
+        "listening_2": {
+          "name": "第二部分：听长对话/短文选答案",
+          "type": "listen_talks_qa_4opt",
+          "skill": "listening",
+          "n_questions": 18,
+          "n_options": 4,
+          "time_min": 15,
+          "description": "听短文/长文及问句选答案（15-19题5段单题短文，20-32题6段长文多题：5篇各2题+1篇3题），4个选项。"
+        }
+      }
+    },
+    "reading": {
+      "name": "阅读 (Reading)",
+      "skill": "reading",
+      "total_questions": 32,
+      "time_min": 30,
+      "score_weight": 100,
+      "parts": {
+        "reading_1": {
+          "name": "第一部分：选词填空",
+          "type": "read_fill_blank_word_bank_split",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 6,
+          "time_min": 8,
+          "description": "选词填空，33-37题单句填空（6选5，1个干扰项），38-42题对话填空（6选5，1个干扰项）。"
+        },
+        "reading_2": {
+          "name": "第二部分：短文单题阅读理解",
+          "type": "read_comprehension_passages_4opt",
+          "skill": "reading",
+          "n_questions": 15,
+          "n_options": 4,
+          "time_min": 14,
+          "description": "短文与篇章阅读理解（43-50题8篇短文各1题，51-57题3篇长文：2题+2题+3题），4个选项。"
+        },
+        "reading_3": {
+          "name": "第三部分：选句填空 / 篇章结构填空",
+          "type": "read_cloze_passage_sentence_insertion",
+          "skill": "reading",
+          "n_questions": 7,
+          "n_options": 4,
+          "time_min": 8,
+          "description": "篇章选句填空，58-60题一段3空（选A-C），61-64题一段4空（选A-D）。"
+        }
+      }
+    },
+    "writing": {
+      "name": "书写 (Writing)",
+      "skill": "writing",
+      "total_questions": 15,
+      "time_min": 25,
+      "score_weight": 100,
+      "parts": {
+        "writing_1": {
+          "name": "第一部分：连词成句",
+          "type": "write_sentence_reorder_4opt",
+          "skill": "writing",
+          "n_questions": 10,
+          "n_options": 4,
+          "time_min": 15,
+          "description": "连词成句，将给出的打乱顺序的词语排列成一句语法正确、结构通顺的完整句子（第86-95题，10道题）。"
+        },
+        "writing_2": {
+          "name": "第二部分：看图用词造句",
+          "type": "write_sentence_from_picture_word",
+          "skill": "writing",
+          "n_questions": 5,
+          "n_options": 0,
+          "time_min": 10,
+          "description": "看图用词造句，观察5张图片并使用指定的5个词语分别造出完整句子（第96-100题，5道题）。"
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 # Prompt Template: Reading Comprehension (HSK {level})
-# PLACEHOLDER TEMPLATE - verified: false
+# verified: true
 
 Bạn là chuyên gia ngôn ngữ tiếng Trung biên soạn câu hỏi luyện thi HSK {level} theo chuẩn HSK 3.0.
 
@@ -7,26 +7,44 @@ Nhiệm vụ:
 Tạo {batch_size} câu hỏi trắc nghiệm ĐỌC HIỂU ĐOẠN VĂN NGẮN cho trình độ HSK {level}.
 
 QUY TẮC BẮT BUỘC:
-1. Đoạn văn (passage): Ngắn gọn (2-4 câu đối với HSK 1-3, 3-6 câu đối với HSK 4-6), sử dụng từ vựng thuộc trình độ HSK {level}.
-2. Từ vựng gợi ý:
+1. ĐOẠN VĂN (PASSAGE) - CĂN CỨ VĂN BẢN RÕ RÀNG (LITERAL EVIDENCE):
+   - Độ dài: Ngắn gọn (2-4 câu đối với HSK 1-3, 3-6 câu đối với HSK 4-6).
+   - Nội dung: Tự nhiên, gắn với đời sống hàng ngày, học tập, công việc.
+   - Tập trung sử dụng các từ vựng mục tiêu gợi ý:
 {vocab_list}
-3. Câu hỏi (stem): Đặt câu hỏi trực tiếp về chi tiết hoặc ý chính của đoạn văn.
-4. Phương án lựa chọn (options):
-   - Đúng 4 phương án [A, B, C, D] không trùng lặp.
-   - Chỉ có 1 phương án đúng dựa theo đoạn văn.
-5. Giải thích (explanation_vi): Tiếng Việt, dịch nghĩa và chỉ ra dẫn chứng trong bài.
+   - QUY TẮC CẤP ĐỘ CHỮ HÁN: Mọi chữ Hán trong đoạn văn, câu dẫn và phương án lựa chọn BẮT BUỘC PHẢI THUỘC danh sách chữ Hán được phép của HSK {level} sau đây:
+{allowed_chars_list}
+   - Tuyệt đối KHÔNG sử dụng bất kỳ chữ Hán nào vượt ngoài danh sách trên.
+   - Tuyệt đối KHÔNG chứa phiên âm pinyin, bản dịch tiếng Việt, tiếng Anh hoặc ký tự nhiễu.
+
+2. CÂU HỎI (STEM) - QUY TẮC TỪ NEO & BẰNG CHỨNG XÁC ĐỊNH (ANCHOR CLUES & EVIDENCE):
+   - Câu hỏi phải bám sát trực tiếp vào thông tin có căn cứ rõ ràng (literal evidence) trong đoạn văn.
+   - Tuyệt đối KHÔNG đặt câu hỏi suy diễn mơ hồ, không đòi hỏi kiến thức ngoài bài đọc.
+   - Người làm bài chỉ cần đọc hiểu đoạn văn là xác định được ngay phương án đúng duy nhất.
+
+3. PHƯƠNG ÁN LỰA CHỌN (OPTIONS) - QUY TẮC THIẾT KẾ PHƯƠNG ÁN NHIỄU (DISTRACTOR DESIGN):
+   - Đúng 4 phương án [A, B, C, D] hoàn toàn khác nhau.
+   - CHỈ ĐƯỢC chứa chữ Hán, không chứa chữ cái Latin, không có ghi chú trong ngoặc.
+   - ĐỘ DÀI TƯƠNG ĐƯƠNG (OPTION LENGTH PARITY): Các phương án phải có độ dài tương đương nhau (cùng 2 chữ, cùng 3 chữ, hoặc cụm từ tương đương), không để phương án đúng dài hoặc ngắn bất thường.
+   - DUY NHẤT MỘT ĐÁP ÁN ĐÚNG (SINGLE UNAMBIGUOUS ANSWER): Chỉ có đúng 1 phương án hoàn toàn chính xác dựa theo đoạn văn.
+   - QUY TẮC PHƯƠNG ÁN NHIỄU (DISTRACTORS):
+     * Phương án sai phải hợp lý về mặt ngôn ngữ nhưng sai lệch dứt khoát so với thông tin trong đoạn văn (ví dụ: nhầm lẫn đối tượng, sai mốc thời gian, hành động chưa xảy ra hoặc trái ngược nội dung bài đọc).
+     * Tuyệt đối tránh các phương án đúng một phần hoặc có thể diễn giải là đúng.
+
+4. GIẢI THÍCH (explanation_vi): Viết bằng tiếng Việt ngắn gọn (TỐI ĐA 2 CÂU), chỉ rõ căn cứ trong đoạn văn dẫn tới đáp án đúng và dịch nghĩa. Tuyệt đối không sinh thêm các trường thừa ngoài schema mẫu.
+5. TỪ KHÓA VOCAB TAGS: Trường "vocab_tags" chỉ chứa các từ khóa trọng tâm được kiểm tra trong đoạn văn và câu hỏi.
 6. Bản quyền: Tự sáng tác 100%, không sao chép đề thi cũ.
 
-ĐỊNH DẠNG ĐẦU RA (JSON thuần túy):
+ĐỊNH DẠNG ĐẦU RA (JSON thuần túy, không kèm giải thích ngoài):
 ```json
 {
   "questions": [
     {
       "passage": "小李每天早上六点起床跑步。他觉得跑步可以让身体更健康。",
       "stem": "小李每天早上做什么？",
-      "options": ["跑步", "看书", "睡觉", "游泳"],
+      "options": ["跑步", "看书", "睡觉", "做饭"],
       "answer_index": 0,
-      "explanation_vi": "Đoạn văn nêu rõ '小李每天早上六点起床跑步' nên đáp án là '跑步' (chạy bộ).",
+      "explanation_vi": "Đoạn văn nêu rõ '小李每天早上六点起床跑步' nên đáp án đúng là '跑步' (chạy bộ).",
       "topic": "sports",
       "vocab_tags": ["跑步", "健康"]
     }

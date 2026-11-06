@@ -27,13 +27,7 @@ def get_comparable_stem(
     """
     if options and answer_index is not None and 0 <= answer_index < len(options):
         ans = options[answer_index].strip()
-        return (
-            stem
-            .replace("____", ans)
-            .replace("___", ans)
-            .replace("（ ）", ans)
-            .replace("( )", ans)
-        )
+        return re.sub(r"_{3,}|（\s*）|\(\s*\)", ans, stem, count=1)
     return stem
 
 

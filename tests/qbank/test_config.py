@@ -8,7 +8,11 @@ def test_config_only_reads_qbank_llm_api_key():
     with patch.dict(os.environ, {
         "QBANK_LLM_API_KEY": "specific-qbank-key-123",
         "GEMINI_API_KEY": "gemini-old-key",
-        "OPENAI_API_KEY": "openai-old-key"
+        "GOOGLE_API_KEY": "google-old-key",
+        "OPENAI_API_KEY": "openai-old-key",
+        "HUGGINGFACE_API_KEY": "hf-key-123",
+        "HF_TOKEN": "hf-token-123",
+        "QBANK_HF_API_KEY": "qbank-hf-key",
     }, clear=False):
         cfg = QbConfig()
         assert cfg.llm_api_key == "specific-qbank-key-123"
@@ -16,12 +20,15 @@ def test_config_only_reads_qbank_llm_api_key():
     with patch.dict(os.environ, {
         "QBANK_LLM_API_KEY": "",
         "GEMINI_API_KEY": "gemini-old-key",
-        "OPENAI_API_KEY": "openai-old-key"
+        "GOOGLE_API_KEY": "google-old-key",
+        "OPENAI_API_KEY": "openai-old-key",
+        "HUGGINGFACE_API_KEY": "hf-key-123",
+        "HF_TOKEN": "hf-token-123",
+        "QBANK_HF_API_KEY": "qbank-hf-key",
     }, clear=False):
         cfg = QbConfig()
         assert cfg.llm_api_key == "" or cfg.llm_api_key is None
-        assert cfg.llm_api_key != "gemini-old-key"
-        assert cfg.llm_api_key != "openai-old-key"
+        assert cfg.llm_api_key not in ("gemini-old-key", "google-old-key", "openai-old-key", "hf-key-123", "hf-token-123", "qbank-hf-key")
 
 
 def test_config_defaults():

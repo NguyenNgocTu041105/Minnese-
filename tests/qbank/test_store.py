@@ -115,3 +115,105 @@ def test_store_sync_log_unique_constraint(test_store, sample_question):
         )
 
 
+def test_store_save_and_get_grouped_question(test_store, sample_question):
+    # Create question with grouped fields
+    data = sample_question.model_dump()
+    data["question_id"] = "qb_grouped_001"
+    data["group_id"] = "grp_reading_hsk1"
+    data["group_passage"] = "大卫在学校学习汉语。他很喜欢中国文化。"
+    data["group_options"] = ["学校", "医院", "商店", "机场", "车站"]
+    data["content_hash"] = sample_question.compute_hash(data["stem"], data["options"], data["answer_index"])
+
+    grouped_q = sample_question.__class__.model_validate(data)
+    assert test_store.save_question(grouped_q) is True
+
+    fetched = test_store.get_question("qb_grouped_001")
+    assert fetched is not None
+    assert fetched.group_id == "grp_reading_hsk1"
+    assert fetched.group_passage == "大卫在学校学习汉语。他很喜欢中国文化。"
+    assert fetched.group_options == ["学校", "医院", "商店", "机场", "车站"]
+
+
+def test_store_idempotent_schema_migration(tmp_path):
+    import sqlite3
+    import json
+    from qbank.models import QbQuestion
+    from qbank.store import QbStore
+
+    db_file = str(tmp_path / "legacy_migration_test.db")
+
+    # 1. Create legacy schema table missing group_id, group_passage, group_options
+    conn = sqlite3.connect(db_file)
+    conn.execute("""
+        CREATE TABLE qb_questions (
+            question_id TEXT PRIMARY KEY,
+            level INTEGER NOT NULL,
+            skill TEXT NOT NULL,
+            part_type TEXT NOT NULL,
+            stem TEXT NOT NULL,
+            passage TEXT,
+            options TEXT NOT NULL,
+            answer_index INTEGER NOT NULL,
+            explanation_vi TEXT NOT NULL,
+            pinyin_stem TEXT,
+            vocab_tags TEXT,
+            topic TEXT,
+            difficulty TEXT,
+            display_label TEXT,
+            provenance TEXT NOT NULL,
+            qa TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'needs_review',
+            report_count INTEGER DEFAULT 0,
+            times_answered INTEGER DEFAULT 0,
+            times_wrong INTEGER DEFAULT 0,
+            content_hash TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    # Insert a legacy row
+    computed_hash = QbQuestion.compute_hash("测试题目", ["A", "B", "C", "D"], 0)
+    conn.execute("""
+        INSERT INTO qb_questions (
+            question_id, level, skill, part_type, stem, options, answer_index,
+            explanation_vi, provenance, qa, content_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    """, (
+        "leg_001", 1, "reading", "reading_fill_blank", "测试题目",
+        json.dumps(["A", "B", "C", "D"]), 0, "Giải thích bài học",
+        json.dumps({
+            "origin": "original_generated",
+            "batch_id": "b-leg",
+            "prompt_version": "v1",
+            "llm_model": "mock",
+            "created_at": "2026-10-17"
+        }),
+        json.dumps({"structure_ok": True, "level_ok": True, "out_of_level_words": [], "notes": []}),
+        computed_hash
+    ))
+    conn.commit()
+    conn.close()
+
+    # 2. Instantiate QbStore and run init_schema()
+    store = QbStore(db_path=db_file)
+    store.init_schema()
+
+    # Check columns after migration
+    with store.session() as c:
+        cur = c.cursor()
+        cur.execute("PRAGMA table_info(qb_questions);")
+        cols = {row[1] for row in cur.fetchall()}
+        assert "group_id" in cols
+        assert "group_passage" in cols
+        assert "group_options" in cols
+
+    # 3. Verify idempotency: calling init_schema again should not error
+    store.init_schema()
+
+    # 4. Verify existing row can be loaded cleanly with None grouped fields
+    loaded = store.get_question("leg_001")
+    assert loaded is not None
+    assert loaded.group_id is None
+    assert loaded.group_passage is None
+    assert loaded.group_options is None
+
+

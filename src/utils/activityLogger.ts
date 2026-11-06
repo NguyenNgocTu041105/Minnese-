@@ -140,9 +140,9 @@ export function get7DayActivityStats(todayCardsReviewed: number = 0): {
       newLessonCount = 0;
       reviewCount = Math.max(0, todayCardsReviewed);
     } else {
-      // Past day in current week without explicit logs -> fallback baseline
-      newLessonCount = fallbackNewLesson[offset] || 5;
-      reviewCount = fallbackReview[offset] || 6;
+      // Past day in current week without logs -> 0 activity
+      newLessonCount = 0;
+      reviewCount = 0;
     }
 
     // Always factor today's cardsReviewedToday into today's review count if greater

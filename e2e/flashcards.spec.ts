@@ -7,6 +7,10 @@ test.describe('Luồng Ôn tập Thẻ Ghi Nhớ Flashcards SM-2', () => {
     if (await flashcardsTabBtn.isVisible()) {
       await flashcardsTabBtn.click();
     } else {
+      const avatarBtn = page.locator('#navbar-user-avatar-btn');
+      if (await avatarBtn.isVisible()) {
+        await avatarBtn.click();
+      }
       await page.getByRole('button', { name: /Flashcards|Thẻ từ/i }).first().click();
     }
   });

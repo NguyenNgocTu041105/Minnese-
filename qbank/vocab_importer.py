@@ -16,7 +16,7 @@ from qbank.models import QbVocabItem
 
 logger = logging.getLogger("qbank.vocab_importer")
 
-HANZI_REGEX = re.compile(r"^[\u4e00-\u9fff\u3400-\u4dbf]+$")
+HANZI_REGEX = re.compile(r"^[\u4e00-\u9fff\u3400-\u4dbf\u3007]+$")
 
 ZH_NUM_MAP = {
     "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6,
@@ -51,6 +51,8 @@ class VocabImportSummary:
     warnings: List[str] = field(default_factory=list)
     by_level: Dict[int, int] = field(default_factory=dict)
     rejected_by_reason: Dict[str, int] = field(default_factory=dict)
+    merged_duplicates_count: int = 0
+    split_variants_count: int = 0
     backup_file: Optional[str] = None
     saved_count: int = 0
     mode: str = "merge"
@@ -74,6 +76,7 @@ class QbVocabImporter:
         column_map: Optional[str] = None,
         sheet_name: Optional[str] = None,
         mode: str = "merge",
+        split_variants: bool = False,
         target_vocab_path: Optional[str] = None,
         rejected_csv_path: Optional[str] = None
     ):
@@ -84,6 +87,7 @@ class QbVocabImporter:
         self.column_map_str = column_map
         self.sheet_name = sheet_name
         self.mode = mode.lower()
+        self.split_variants = split_variants
 
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if target_vocab_path is None:
@@ -430,6 +434,42 @@ class QbVocabImporter:
             return f"Pinyin '{user_pinyin}' có thể khác với pypinyin ('{expected}')"
         return None
 
+    @staticmethod
+    def _split_variants_helper(raw_word: str, raw_pinyin: str) -> List[Tuple[str, str]]:
+        """
+        Splits a word containing variants ('|', parentheses) into individual clean words and pinyin.
+        e.g. '爸爸|爸', 'bàba|bà' -> [('爸爸', 'bàba'), ('爸', 'bà')]
+        e.g. '第（第二）' -> [('第', pinyin), ('第二', pinyin)]
+        e.g. '有（一）点儿' -> [('有一点儿', pinyin), ('有点儿', pinyin)]
+        e.g. '称1' -> [('称', pinyin)]
+        e.g. '…极了' -> [('极了', pinyin)]
+        """
+        word = raw_word.replace("…", "").strip()
+        word = re.sub(r"\d+$", "", word).strip()
+
+        # 1. Pipe variant (|)
+        if "|" in word:
+            w_parts = [p.strip() for p in word.split("|") if p.strip()]
+            py_parts = [p.strip() for p in raw_pinyin.split("|") if p.strip()] if "|" in raw_pinyin else []
+            res = []
+            for i, wp in enumerate(w_parts):
+                py = py_parts[i] if i < len(py_parts) else raw_pinyin
+                res.append((wp, py))
+            return res
+
+        # 2. Parentheses variant
+        m = re.match(r"^([^\(（]+)[\(（]([^\)）]+)[\)）](.*)$", word)
+        if m:
+            pre, inside, post = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
+            if post:
+                # Infix e.g. 有（一）点儿 -> 有一点儿, 有点儿
+                return [(pre + inside + post, raw_pinyin), (pre + post, raw_pinyin)]
+            else:
+                # Suffix/example e.g. 第（第二） or 爸爸（爸）
+                return [(pre, raw_pinyin), (inside, raw_pinyin)]
+
+        return [(word, raw_pinyin)]
+
     def process(self, execute: bool = False) -> VocabImportSummary:
         """
         Executes full validation and import pipeline.
@@ -487,48 +527,57 @@ class QbVocabImporter:
             if level is None:
                 level = current_section_level
 
-            # Validation 1: Word must be strictly Hanzi
-            if not word:
-                self._reject_row(summary, line_idx, row, word, pinyin, level, "Từ bị để trống")
-                continue
-
-            if not HANZI_REGEX.match(word):
-                self._reject_row(summary, line_idx, row, word, pinyin, level, f"Từ chứa ký tự không phải chữ Hán: '{word}'")
-                continue
-
             # Validation 2: Level must be 1..6
             if level is None or not (1 <= level <= 6):
                 self._reject_row(summary, line_idx, row, word, pinyin, level, f"Thiếu hoặc sai cấp độ HSK (1-6), nhận được: '{raw_level_str or level}'")
                 continue
 
-            # Validation 3: Pinyin verification
-            if pinyin:
-                py_warn = self._verify_pinyin(word, pinyin)
-                if py_warn:
-                    summary.warnings.append(f"Dòng {line_idx} ({word}): {py_warn}")
+            # Variant expansion if enabled
+            if self.split_variants:
+                candidates = self._split_variants_helper(word, pinyin)
+                if len(candidates) > 1:
+                    summary.split_variants_count += len(candidates) - 1
             else:
-                # If pinyin is empty, generate default tone marks from pypinyin
-                py_tokens = pypinyin.pinyin(word, style=pypinyin.Style.TONE)
-                pinyin = " ".join([t[0] for t in py_tokens if t])
+                candidates = [(word, pinyin)]
 
-            item = QbVocabItem(
-                word=word,
-                pinyin=pinyin,
-                pos=pos,
-                level=level,
-                topics=[],
-                source=self.source,
-                license_status=self.license_status  # type: ignore
-            )
+            for sub_word, sub_pinyin in candidates:
+                # Validation 1: Word must be strictly Hanzi
+                if not sub_word:
+                    self._reject_row(summary, line_idx, row, sub_word, sub_pinyin, level, "Từ bị để trống")
+                    continue
 
-            # RULE: Duplicate words -> keep the LOWEST level
-            if word in parsed_items_by_word:
-                existing = parsed_items_by_word[word]
-                if item.level < existing.level:
-                    # Update to lowest level
-                    parsed_items_by_word[word] = item
-            else:
-                parsed_items_by_word[word] = item
+                if not HANZI_REGEX.match(sub_word):
+                    self._reject_row(summary, line_idx, row, sub_word, sub_pinyin, level, f"Từ chứa ký tự không phải chữ Hán: '{sub_word}'")
+                    continue
+
+                # Validation 3: Pinyin verification
+                if sub_pinyin:
+                    py_warn = self._verify_pinyin(sub_word, sub_pinyin)
+                    if py_warn:
+                        summary.warnings.append(f"Dòng {line_idx} ({sub_word}): {py_warn}")
+                else:
+                    # If pinyin is empty, generate default tone marks from pypinyin
+                    py_tokens = pypinyin.pinyin(sub_word, style=pypinyin.Style.TONE)
+                    sub_pinyin = " ".join([t[0] for t in py_tokens if t])
+
+                item = QbVocabItem(
+                    word=sub_word,
+                    pinyin=sub_pinyin,
+                    pos=pos,
+                    level=level,
+                    topics=[],
+                    source=self.source,
+                    license_status=self.license_status  # type: ignore
+                )
+
+                # RULE: Duplicate words -> keep the LOWEST level
+                if sub_word in parsed_items_by_word:
+                    summary.merged_duplicates_count += 1
+                    existing = parsed_items_by_word[sub_word]
+                    if item.level < existing.level:
+                        parsed_items_by_word[sub_word] = item
+                else:
+                    parsed_items_by_word[sub_word] = item
 
         # Deduplicated batch valid items
         batch_items = list(parsed_items_by_word.values())

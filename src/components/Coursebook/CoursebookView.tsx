@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   BookOpen,
   Volume2,
@@ -21,6 +21,8 @@ import {
   AlertCircle,
   KeyRound,
   Loader2,
+  Pause,
+  Radio,
 } from 'lucide-react';
 import { NEW_HSK1_FULL_LESSONS, DetailedTextbookLesson } from '../../data/newHsk1BookData';
 import { NEW_HSK2_FULL_LESSONS } from '../../data/newHsk2BookData';
@@ -28,6 +30,7 @@ import { NEW_HSK3_FULL_LESSONS } from '../../data/newHsk3BookData';
 import { NEW_HSK4_FULL_LESSONS } from '../../data/newHsk4BookData';
 import { NEW_HSK5_FULL_LESSONS } from '../../data/newHsk5BookData';
 import { NEW_HSK6_FULL_LESSONS } from '../../data/newHsk6BookData';
+import { COURSEBOOK_AUDIO_MANIFEST } from '../../data/coursebookAudioManifest';
 import { LessonExercisesStudio } from './LessonExercisesStudio';
 import { WorkbookView } from './WorkbookView';
 import { playChineseAudio } from '../../utils/chineseAudio';
@@ -45,6 +48,448 @@ interface CoursebookViewProps {
   srsCards?: Record<string, SRSCardState>;
   onAddWordToSRS?: (wordId: string) => void;
 }
+
+
+const LESSON_ILLUSTRATIONS: Record<string, { src: string; caption: string }> = {
+  // Bài 1
+  'hsk1-l1-t1': {
+    src: '/textbook_art/cartoon_hsk1_l1_t1.jpg',
+    caption: '开学第一天，在办公室里，王一飞和AI助教小语打招呼。(Trong văn phòng, cô giáo Vương Nhất Phi chào trợ lý AI Tiểu Ngữ: "AI小语，你好！")',
+  },
+  'hsk1-l1-t2': {
+    src: '/textbook_art/cartoon_hsk1_l1_t2.jpg',
+    caption: '开学第一天，课堂上，学生们向老师问好。(Trong lớp học, các bạn sinh viên chào cô giáo: "老师，您好！")',
+  },
+  'hsk1-l1-t3': {
+    src: '/textbook_art/cartoon_hsk1_l1_t3.jpg',
+    caption: '开学第一天，课堂上，学生们致谢与告别。(Cuối buổi học, sinh viên cảm ơn và chào tạm biệt: "谢谢！- 不客气！- 老师，再见！")',
+  },
+
+  // Bài 2
+  'hsk1-l2-t1': {
+    src: '/textbook_art/cartoon_hsk1_l2_t1.jpg',
+    caption: '在教室里，王一飞在认识学生。(Trong lớp học, cô Vương Nhất Phi làm quen và hỏi tên học sinh: "请问，你叫什么名字？ - 我叫陈天中。")',
+  },
+  'hsk1-l2-t2': {
+    src: '/textbook_art/cartoon_hsk1_l2_t2.jpg',
+    caption: '在校园里，陈天中和白家月打招呼时认错了人。(Trên sân trường, Trần Thiên Trung chào nhầm Bạch Gia Nguyệt: "对不起！ - 没关系！")',
+  },
+  'hsk1-l2-t3': {
+    src: '/textbook_art/cartoon_hsk1_l2_t3.jpg',
+    caption: '在校园里，李文和白家月第一次相遇。(Trên sân trường, Lý Văn và Bạch Gia Nguyệt lần đầu gặp nhau: "你好！我叫李文。 - 很高兴认识你。")',
+  },
+
+  // Bài 3
+  'hsk1-l3-t1': {
+    src: '/textbook_art/cartoon_hsk1_l3_t1.jpg',
+    caption: '在校园里，李文和白家月第一次相遇，两人继续聊天儿。(Trên sân trường, Lý Văn và Bạch Gia Nguyệt uống trà trò chuyện: "我是中国人。- 我是法国人。")',
+  },
+  'hsk1-l3-t2': {
+    src: '/textbook_art/cartoon_hsk1_l3_t2.jpg',
+    caption: '在教室里，下课后，安妮在看陈天中手机里的照片。(Sau giờ học, Annie và Trần Thiên Trung vui vẻ xem ảnh bạn gái trên điện thoại).',
+  },
+  'hsk1-l3-t3': {
+    src: '/textbook_art/cartoon_hsk1_l3_t3.jpg',
+    caption: '在家里，王一雪给王一飞打视频电话。(Ở nhà buổi tối, Vương Nhất Tuyết gọi video hỏi thăm và trò chuyện thân thương cùng cô Vương Nhất Phi: "喂，一飞！我们很想你。")',
+  },
+
+  // Bài 4
+  'hsk1-l4-t1': {
+    src: '/textbook_art/cartoon_hsk1_l4_t1.jpg',
+    caption: '在家里，刘明和王一雪在聊天儿。(Tại phòng khách ở nhà, Lưu Minh và Vương Nhất Tuyết trò chuyện về công việc giảng dạy của cô Nhất Phi).',
+  },
+  'hsk1-l4-t2': {
+    src: '/textbook_art/cartoon_hsk1_l4_t2.jpg',
+    caption: '在公司里，王一雪和杨同乐休息时聊天儿。(Tại công ty, các đồng nghiệp nghỉ giải lao trò chuyện về gia đình).',
+  },
+  'hsk1-l4-t3': {
+    src: '/textbook_art/cartoon_hsk1_l4_t3.jpg',
+    caption: '在街上，王一雪带着儿子偶遇杨同乐。(Trên phố, Vương Nhất Tuyết dắt con trai Lưu Tiểu Minh tình cờ gặp đồng nghiệp Dương Đồng Lạc).',
+  },
+
+
+        // Bài 5-15 (chuẩn giáo trình HSK 1 3.0)
+  'hsk1-l5-t1': {
+    src: '/textbook_art/cartoon_hsk1_l5_t1.jpg',
+    caption: '在家里，刘明和王一雪在聊天儿。(Ở nhà, Lưu Minh và Vương Nhất Tuyết trò chuyện: "今天几号？- 今天9月8号。星期几？- 星期日。")',
+  },
+  'hsk1-l5-t2': {
+    src: '/textbook_art/cartoon_hsk1_l5_t2.jpg',
+    caption: '在公司里，王一雪和杨同乐休息时聊天儿。(Ở công ty, Vương Nhất Tuyết và Dương Đồng Nhạc nói chuyện nấu ăn: "你会做饭吗？- 我会做。")',
+  },
+  'hsk1-l5-t3': {
+    src: '/textbook_art/cartoon_hsk1_l5_t3.jpg',
+    caption: '在公司里，王一雪和杨同乐下班时聊天儿。(Ở công ty lúc tan ca, Dương Đồng Nhạc khoe máy tính mới: "这是你的新电脑吗？- 是的。")',
+  },
+  'hsk1-l6-t1': {
+    src: '/textbook_art/cartoon_hsk1_l6_t1.jpg',
+    caption: '在校园里，李文向白家月要手机号。(Trên sân trường, Lý Văn xin số điện thoại của Bạch Gia Nguyệt: "家月，你的手机号是多少？")',
+  },
+  'hsk1-l6-t2': {
+    src: '/textbook_art/cartoon_hsk1_l6_t2.jpg',
+    caption: '在教室里，下课后，白家月和陈天中在聊天儿。(Trong lớp học, Bạch Gia Nguyệt muốn đi siêu thị: "我想去超市买东西。")',
+  },
+  'hsk1-l6-t3': {
+    src: '/textbook_art/cartoon_hsk1_l6_t3.jpg',
+    caption: '在家里，王一雪全家在讨论周末晚餐安排。(Ở nhà, gia đình Vương Nhất Tuyết bàn ăn tối: "星期天我们去哪儿吃晚饭？- 西安饭店。")',
+  },
+  'hsk1-l7-t1': {
+    src: '/textbook_art/cartoon_hsk1_l7_t1.jpg',
+    caption: '白家月和安妮在打电话。(Bạch Gia Nguyệt và Annie gọi điện thoại: "现在几点？- 早上八点四十。")',
+  },
+  'hsk1-l7-t2': {
+    src: '/textbook_art/cartoon_hsk1_l7_t2.jpg',
+    caption: '在校园里，李文遇到白家月。(Trên sân trường, Lý Văn rủ Bạch Gia Nguyệt xem phim: "下午我想去电影院看电影，你去吗？")',
+  },
+  'hsk1-l7-t3': {
+    src: '/textbook_art/cartoon_hsk1_l7_t3.jpg',
+    caption: '王一雪给丈夫刘明打电话。(Vương Nhất Tuyết gọi điện cho Lưu Minh: "我晚上六点半下班。- 好的，你去店里买些菜吧。")',
+  },
+  'hsk1-l8-t1': {
+    src: '/textbook_art/cartoon_hsk1_l8_t1.jpg',
+    caption: '在王一飞家，白家月和陈天中来做客。(Ở nhà Vương Nhất Phi, Bạch Gia Nguyệt và Trần Thiên Trung ngắm mèo con: "房间外有一只小猫。它在桌子下呢。")',
+  },
+  'hsk1-l8-t2': {
+    src: '/textbook_art/cartoon_hsk1_l8_t2.jpg',
+    caption: '在教室里，下课后，白家月给李文打电话。(Sau giờ học, Bạch Gia Nguyệt hẹn gặp Lý Văn: "我们在哪儿见呢？- 在学校书店前见吧。")',
+  },
+  'hsk1-l8-t3': {
+    src: '/textbook_art/cartoon_hsk1_l8_t3.jpg',
+    caption: '在医院里，刘明和同事小胡聊天儿。(Ở bệnh viện, bác sĩ Lưu Minh trò chuyện với đồng nghiệp: "大医院病人多，医生非常忙。")',
+  },
+  'hsk1-l9-t1': {
+    src: '/textbook_art/cartoon_hsk1_l9_t1.jpg',
+    caption: '在校园里，李文和白家月在聊天儿。(Trên sân trường, Lý Văn và Bạch Gia Nguyệt hẹn đi xem phim: "学校前边有一家电影院。")',
+  },
+  'hsk1-l9-t2': {
+    src: '/textbook_art/cartoon_hsk1_l9_t2.jpg',
+    caption: '在教室里，下课后，白家月和陈天中在聊天儿。(Trong lớp, Trần Thiên Trung thấy sách tiếng Trung trên ghế: "椅子上有一本中文书，那是谁的书？")',
+  },
+  'hsk1-l9-t3': {
+    src: '/textbook_art/cartoon_hsk1_l9_t3.jpg',
+    caption: '在公司里，王一雪和杨同乐聊周末生活。(Ở công ty, Vương Nhất Tuyết và Dương Đồng Nhạc nói về ngày thứ Bảy: "明天星期六，你做什么？")',
+  },
+  'hsk1-l10-t1': {
+    src: '/textbook_art/cartoon_hsk1_l10_t1.jpg',
+    caption: '在小店里，王一雪在买杯子。(Trong cửa hàng nhỏ, Vương Nhất Tuyết mua cốc: "请问，有杯子吗？多少钱一个？")',
+  },
+  'hsk1-l10-t2': {
+    src: '/textbook_art/cartoon_hsk1_l10_t2.jpg',
+    caption: '在集市上，王一雪在买水果。(Ở chợ hoa quả, Vương Nhất Tuyết mua táo: "我想买两斤苹果。苹果三块五一斤。")',
+  },
+  'hsk1-l10-t3': {
+    src: '/textbook_art/cartoon_hsk1_l10_t3.jpg',
+    caption: '在商场里，刘明和王一雪在给孩子们买衣服。(Ở trung tâm mua sắm, Lưu Minh và vợ mua quần áo: "这家商店衣服真多！")',
+  },
+  'hsk1-l11-t1': {
+    src: '/textbook_art/cartoon_hsk1_l11_t1.jpg',
+    caption: '在路上，李文正在找饭店，王一飞给他打电话。(Trên đường tìm nhà hàng, Vương Nhất Phi gọi điện cho Lý Văn: "你什么时候能到饭店？")',
+  },
+  'hsk1-l11-t2': {
+    src: '/textbook_art/cartoon_hsk1_l11_t2.jpg',
+    caption: '在饭店里，王一飞和李文见面后聊天儿。(Ở nhà hàng, cô Vương và Lý Văn trò chuyện: "你还在上大学吗？- 对，我上大学呢。")',
+  },
+  'hsk1-l11-t3': {
+    src: '/textbook_art/cartoon_hsk1_l11_t3.jpg',
+    caption: '星期六早上，刘明要去医院加班，出门前和女儿聊天儿。(Sáng thứ Bảy trước khi đi làm, Lưu Minh nói chuyện với con gái Lưu Tiểu Tuyết: "弟弟起床没起床呢？")',
+  },
+  'hsk1-l12-t1': {
+    src: '/textbook_art/cartoon_hsk1_l12_t1.jpg',
+    caption: '王一雪给王一飞打电话，问那边的情况。(Vương Nhất Tuyết gọi điện cho Vương Nhất Phi hỏi thời tiết: "今天天气怎么样？- 下雨了，我觉得很冷。")',
+  },
+  'hsk1-l12-t2': {
+    src: '/textbook_art/cartoon_hsk1_l12_t2.jpg',
+    caption: '在公司电梯里，王一雪和杨同乐在聊天儿。(Trong thang máy, Vương Nhất Tuyết hỏi thăm Dương Đồng Nhạc: "昨天下雪了。你昨天没来公司，生病了？")',
+  },
+  'hsk1-l12-t3': {
+    src: '/textbook_art/cartoon_hsk1_l12_t3.jpg',
+    caption: '昨天在医院里，医生给杨同乐看病。(Hôm qua ở bệnh viện, bác sĩ khám bệnh cho Dương Đồng Nhạc: "医生，我病了。- 吃一点儿药，今天休息半天吧。")',
+  },
+  'hsk1-l13-t1': {
+    src: '/textbook_art/cartoon_hsk1_l13_t1.jpg',
+    caption: '在教室里，下课后，白家月向王老师问问题。(Sau giờ học, Bạch Gia Nguyệt hỏi cô Vương: "那个小店买不买手机？")',
+  },
+  'hsk1-l13-t2': {
+    src: '/textbook_art/cartoon_hsk1_l13_t2.jpg',
+    caption: '在咖啡馆里，王一雪想吃早饭。(Ở quán cà phê, Vương Nhất Tuyết gọi đồ ăn sáng: "请给我一杯牛奶，再要这个面包和鸡蛋吧。")',
+  },
+  'hsk1-l13-t3': {
+    src: '/textbook_art/cartoon_hsk1_l13_t3.jpg',
+    caption: '在餐厅里，刘明在点餐。(Ở quán ăn, Lưu Minh gọi sủi cảo: "我要一斤饺子。40个太多了，我要一半吧。")',
+  },
+  'hsk1-l14-t1': {
+    src: '/textbook_art/cartoon_hsk1_l14_t1.jpg',
+    caption: '在教室里，下课后，白家月和陈天中在谈论上一次课外旅行。(Sau giờ học, Bạch Gia Nguyệt và Trần Thiên Trung nói về chuyến đi tàu: "你们上火车后看见王老师了吗？")',
+  },
+  'hsk1-l14-t2': {
+    src: '/textbook_art/cartoon_hsk1_l14_t2.jpg',
+    caption: '在课堂上，王一飞在询问学生们的学习情况。(Trong giờ học, cô Vương Nhất Phi kiểm tra viết chữ Hán: "你们会写汉字了吗？- 我们都会写了。")',
+  },
+  'hsk1-l14-t3': {
+    src: '/textbook_art/cartoon_hsk1_l14_t3.jpg',
+    caption: '在家里，刘明和王一雪在谈论孩子的升学情况。(Ở nhà, Lưu Minh và Vương Nhất Tuyết nói về chuyện học của con: "明年女儿上中学。儿子也上小学了。")',
+  },
+  'hsk1-l15-t1': {
+    src: '/textbook_art/cartoon_hsk1_l15_t1.jpg',
+    caption: '在李文家，李文邀请陈天中、白家月等朋友品尝中餐。(Ở nhà Lý Văn, mời bạn bè thưởng thức món Trung: "你们爱吃哪个菜？- 这些菜都好吃。")',
+  },
+  'hsk1-l15-t2': {
+    src: '/textbook_art/cartoon_hsk1_l15_t2.jpg',
+    caption: '在李文家，大家边吃饭边谈论假期计划。(Ở nhà Lý Văn, mọi người kể về chuyến đi: "去年我和男朋友去了西安，今年我想去北京。")',
+  },
+  'hsk1-l15-t3': {
+    src: '/textbook_art/cartoon_hsk1_l15_t3.jpg',
+    caption: '在教室外，白家月、安妮和王老师在谈论去北京旅游的事。(Ngoài lớp học, bàn chuyện bay đi Bắc Kinh: "那我们和您姐姐在大兴机场见！")',
+  },
+  // HSK 2 - Bài 1: 她请我们吃了北京烤鸭
+  'hsk2-l1-t1': {
+    src: '/textbook_art/cartoon_hsk2_l1_t1.jpg',
+    caption: '在机场，王一雪接到了白家月和安妮。(Ở sân bay, Vương Nhất Tuyết nồng nhiệt vẫy tay đón Bạch Gia Nguyệt và Annie).',
+  },
+  'hsk2-l1-t2': {
+    src: '/textbook_art/cartoon_hsk2_l1_t2.jpg',
+    caption: '在王一雪的车里，白家月、安妮和王一雪在聊天儿。(Trong xe của Vương Nhất Tuyết trên đường phố Bắc Kinh, mọi người vui vẻ trò chuyện).',
+  },
+  'hsk2-l1-t3': {
+    src: '/textbook_art/cartoon_hsk2_l1_t3.jpg',
+    caption: '在王一雪的车里，白家月接到了陈天中的电话。(Trong xe, Bạch Gia Nguyệt nghe điện thoại của Trần Thiên Trung báo tin đã đến Bắc Kinh).',
+  },
+  'hsk2-l1-t4': {
+    src: '/textbook_art/cartoon_hsk2_l1_t4.jpg',
+    caption: '在酒店，白家月给王一飞老师发信息。(Ở khách sạn buổi tối, Bạch Gia Nguyệt vui vẻ nhắn tin cho cô giáo kể về món vịt quay Bắc Kinh).',
+  },
+  // HSK 2 - Bài 2: 还是打车去北大吧
+  'hsk2-l2-t1': {
+    src: '/textbook_art/cartoon_hsk2_l2_t1.jpg',
+    caption: '在宾馆前台，白家月和安妮向服务员咨询。(Ở quầy lễ tân khách sạn, Bạch Gia Nguyệt và Annie hỏi đường đi Đại học Bắc Kinh).',
+  },
+  'hsk2-l2-t2': {
+    src: '/textbook_art/cartoon_hsk2_l2_t2.jpg',
+    caption: '在北京大学，白家月和安妮在参观校园。(Ở Đại học Bắc Kinh, Bạch Gia Nguyệt và Annie đi dạo ngắm khuôn viên trường rộng lớn).',
+  },
+  'hsk2-l2-t3': {
+    src: '/textbook_art/cartoon_hsk2_l2_t3.jpg',
+    caption: '在北京大学，白家月和安妮在参观校园。(Ở khuôn viên trường, Annie chỉ vào rạp chiếu phim Bách Niên Kỷ Niệm Đường bên trong trường).',
+  },
+  'hsk2-l2-t4': {
+    src: '/textbook_art/cartoon_hsk2_l2_t4.jpg',
+    caption: '在北京大学门口，白家月给陈天中发信息。(Ở cổng Đại học Bắc Kinh, Bạch Gia Nguyệt gửi tin nhắn chia sẻ về ngôi trường cho Trần Thiên Trung).',
+  },
+  // HSK 2 - Bài 3: 我想去西安旅游
+  'hsk2-l3-t1': {
+    src: '/textbook_art/cartoon_hsk2_l3_t1.jpg',
+    caption: '在家门口，刘明开门进到家里。(Ở cửa nhà, bác sĩ Lưu Minh mở cửa bước vào nhà sau ngày làm việc vất vả).',
+  },
+  'hsk2-l3-t2': {
+    src: '/textbook_art/cartoon_hsk2_l3_t2.jpg',
+    caption: '在客厅，刘明和王一雪在聊天儿。(Ở phòng khách, Lưu Minh và Vương Nhất Tuyết bàn về việc thu xếp thời gian đi du lịch).',
+  },
+  'hsk2-l3-t3': {
+    src: '/textbook_art/cartoon_hsk2_l3_t3.jpg',
+    caption: '在客厅，刘明和王一雪在聊天儿。(Lưu Minh mời vợ ăn táo đã rửa sạch, Vương Nhất Tuyết đề xuất đi du lịch Tây An).',
+  },
+  'hsk2-l3-t4': {
+    src: '/textbook_art/cartoon_hsk2_l3_t4.jpg',
+    caption: '在家里，王一雪给好朋友打电话。(Ở nhà, Vương Nhất Tuyết gọi điện chia sẻ với bạn thân mong muốn chồng được nghỉ ngơi).',
+  },
+  // HSK 2 - Bài 4: 你穿红色的很好看
+  'hsk2-l4-t1': {
+    src: '/textbook_art/cartoon_hsk2_l4_t1.jpg',
+    caption: '在商场外，王一雪和刘小雪在走路。(Bên ngoài trung tâm thương mại mới mở, hai mẹ con vui vẻ cùng nhau đi dạo sắm đồ).',
+  },
+  'hsk2-l4-t2': {
+    src: '/textbook_art/cartoon_hsk2_l4_t2.jpg',
+    caption: '在服装店，王一雪和刘小雪在买裤子。(Ở tiệm thời trang, mẹ gợi ý Tiểu Tuyết thử chiếc quần màu đỏ tươi tắn).',
+  },
+  'hsk2-l4-t3': {
+    src: '/textbook_art/cartoon_hsk2_l4_t3.jpg',
+    caption: '在商场店里，王一雪和刘小雪在买书包。(Trong cửa hàng, Tiểu Tuyết chọn chiếc ba lô màu xanh lá cây rất ưng ý).',
+  },
+  'hsk2-l4-t4': {
+    src: '/textbook_art/cartoon_hsk2_l4_t4.jpg',
+    caption: '在房间，刘小雪在写日记。(Trong phòng ngủ ấm cúng, Lưu Tiểu Tuyết vui vẻ viết nhật ký về chiếc ba lô xanh và quần đỏ vừa mua).',
+  },
+  // HSK 2 - Bài 5: 第一次去中国朋友家
+  'hsk2-l5-t1': {
+    src: '/textbook_art/cartoon_hsk2_l5_t1.jpg',
+    caption: '在宾馆楼下，安妮给白家月打电话。(Ở dưới sảnh khách sạn, Annie gọi điện hối Bạch Gia Nguyệt xuống để kịp sang nhà bạn Trung Quốc).',
+  },
+  'hsk2-l5-t2': {
+    src: '/textbook_art/cartoon_hsk2_l5_t2.jpg',
+    caption: '在王一雪家，白家月和安妮来做客。(Tại nhà chị Nhất Tuyết, Bạch Gia Nguyệt và Annie chào hỏi và tặng quà ông bà nội).',
+  },
+  'hsk2-l5-t3': {
+    src: '/textbook_art/cartoon_hsk2_l5_t3.jpg',
+    caption: '在王一雪家，白家月和安妮在吃饭。(Tại bàn ăn, mọi người quây quần thưởng thức bữa cơm ấm cúng và trà sữa thơm ngon).',
+  },
+  'hsk2-l5-t4': {
+    src: '/textbook_art/cartoon_hsk2_l5_t4.jpg',
+    caption: '在宾馆，白家月给李文发信息。(Ở khách sạn, Bạch Gia Nguyệt vui vẻ nhắn tin cho Lý Văn kể về chuyến thăm nhà và đi bộ về khách sạn).',
+  },
+  // HSK 2 - Bài 6: 小雪，生日快乐！
+  'hsk2-l6-t1': {
+    src: '/textbook_art/cartoon_hsk2_l6_t1.jpg',
+    caption: '在家里，刘明和王一雪在聊天儿。(Ở phòng khách ấm áp, bác sĩ Lưu Minh và Vương Nhất Tuyết bàn nhau tặng bút vẽ và đặt bánh sinh nhật thật to cho con gái).',
+  },
+  'hsk2-l6-t2': {
+    src: '/textbook_art/cartoon_hsk2_l6_t2.jpg',
+    caption: '在客厅，刘明一家人在聊天儿。(Ở phòng khách, cả nhà chúc mừng sinh nhật Lưu Tiểu Tuyết, em trai Tiểu Minh háo hức nhìn chị mở hộp quà toàn bút vẽ màu mới).',
+  },
+  'hsk2-l6-t3': {
+    src: '/textbook_art/cartoon_hsk2_l6_t3.jpg',
+    caption: '在客厅，刘明一家人在给刘小雪过生日。(Bữa tiệc sinh nhật ấm cúng bên bàn ăn với bánh kem cắm nến, bát mì trường thọ dài và các món cá thịt thơm ngon).',
+  },
+  'hsk2-l6-t4': {
+    src: '/textbook_art/cartoon_hsk2_l6_t4.jpg',
+    caption: '在房间，王一雪在写日记。(Đêm muộn trong phòng ngủ bên ánh đèn bàn, Vương Nhất Tuyết hạnh phúc viết nhật ký khi hai con đã ngủ say giấc).',
+  },
+  // HSK 2 - Bài 7: 你想不想跟我一起去？
+  'hsk2-l7-t1': {
+    src: '/textbook_art/cartoon_hsk2_l7_t1.jpg',
+    caption: '在教室门外，安妮和陈天中在聊天儿。(Ngoài phòng học, Trần Thiên Trung cầm bóng rổ chuẩn bị ra sân, Annie gọi hỏi thăm xem bạn đi đâu).',
+  },
+  'hsk2-l7-t2': {
+    src: '/textbook_art/cartoon_hsk2_l7_t2.jpg',
+    caption: '在校园路上，安妮和陈天中在散步聊天儿。(Trên đường dạo rợp bóng cây trong khuôn viên trường, Thiên Trung chia sẻ thói quen chạy bộ và bơi lội mỗi ngày).',
+  },
+  'hsk2-l7-t3': {
+    src: '/textbook_art/cartoon_hsk2_l7_t3.jpg',
+    caption: '在篮球场边，陈天中和安妮在聊天儿。(Bên sân thể thao, Thiên Trung hào hứng rủ Annie cùng tham gia chơi bóng rổ để rèn luyện sức khỏe).',
+  },
+  'hsk2-l7-t4': {
+    src: '/textbook_art/cartoon_hsk2_l7_t4.jpg',
+    caption: '在宿舍房间，陈天中在写日记。(Trong phòng ký túc xá bên ánh đèn bàn, Thiên Trung vui vẻ viết nhật ký ghi lại một ngày vận động thể thao bổ ích).',
+  },
+  // HSK 2 - Bài 8: 虽然你忘了，但是我记得
+  'hsk2-l8-t1': {
+    src: '/textbook_art/cartoon_hsk2_l8_t1.jpg',
+    caption: '在商场，王一雪和刘明在挑选精美的手表。(Ở trung tâm thương mại sang trọng, Vương Nhất Tuyết thích thú chỉ vào chiếc đồng hồ bên trái, Lưu Minh mỉm cười tán thành).',
+  },
+  'hsk2-l8-t2': {
+    src: '/textbook_art/cartoon_hsk2_l8_t2.jpg',
+    caption: '在电影院外，王一雪和刘明商量看电影并用手机网购电影票。(Trước sảnh rạp chiếu phim ấm cúng, Vương Nhất Tuyết cầm điện thoại vui vẻ gợi ý mua vé qua mạng vừa rẻ vừa tiện).',
+  },
+  'hsk2-l8-t3': {
+    src: '/textbook_art/cartoon_hsk2_l8_t3.jpg',
+    caption: '在饭馆，刘明 bất ngờ tặng đồng hồ chúc mừng sinh nhật Vương Nhất Tuyết。(Bên bàn tiệc nhà hàng lung linh ấm áp, Lưu Minh bất ngờ trao hộp đồng hồ quý giá chúc mừng sinh nhật vợ khiến cô xúc động nghẹn ngào).',
+  },
+  'hsk2-l8-t4': {
+    src: '/textbook_art/cartoon_hsk2_l8_t4.jpg',
+    caption: '晚上在家，夫妻俩 hạnh phúc ngắm nhìn chiếc đồng hồ mới。(Buổi tối đầm ấm ở phòng khách, Vương Nhất Tuyết hạnh phúc đeo chiếc đồng hồ mới trên tay bên cạnh người chồng chu đáo).',
+  },
+  'hsk2-l9-t1': {
+    src: '/textbook_art/cartoon_hsk2_l9_t1.jpg',
+    caption: '在服装店，王一雪和刘明在认真为儿子挑选新裤子。(Trong tiệm trang phục, vợ chồng Vương Nhất Tuyết và Lưu Minh chu đáo chọn lựa chiếc quần đen mới cho cậu con trai).',
+  },
+  'hsk2-l9-t2': {
+    src: '/textbook_art/cartoon_hsk2_l9_t2.jpg',
+    caption: '在商店门口，王一雪拿着奶茶，刘明端着热咖啡开心交谈。(Trước cửa tiệm mua sắm, vợ vui vẻ cầm ly trà sữa, chồng cầm ly cà phê thơm cùng trò chuyện thân mật).',
+  },
+  'hsk2-l9-t3': {
+    src: '/textbook_art/cartoon_hsk2_l9_t3.jpg',
+    caption: '在绿树成荫的路上，夫妻俩迎着夕阳一边散步一边聊天走回家。(Dưới hàng cây xanh ngập nắng chiều, hai vợ chồng thong thả tản bộ tập thể dục trên đường về nhà).',
+  },
+  'hsk2-l9-t4': {
+    src: '/textbook_art/cartoon_hsk2_l9_t4.jpg',
+    caption: '夜晚在温馨的书房里，王一雪在台灯下幸福地写下生活日记。(Buổi tối trong góc phòng yên ả bên ánh đèn bàn, Vương Nhất Tuyết hạnh phúc ghi lại từng dòng nhật ký gia đình).',
+  },
+  'hsk2-l10-t1': {
+    src: '/textbook_art/cartoon_hsk2_l10_t1.jpg',
+    caption: '在早晨的房间里，刘明看着手表叮嘱准备出发。(Trong căn phòng buổi sáng, bác sĩ Lưu Minh xem đồng hồ chu đáo nhắc nhở chuẩn bị đồ đạc sẵn sàng xuất phát).',
+  },
+  'hsk2-l10-t2': {
+    src: '/textbook_art/cartoon_hsk2_l10_t2.jpg',
+    caption: '在书房里，王一雪温和地陪伴女儿刘小雪复习功课准备考试。(Trong phòng học sáng rực, Vương Nhất Tuyết dịu dàng đồng hành cùng con gái Lưu Tiểu Tuyết xem lại bài vở chuẩn bị thi cử).',
+  },
+  'hsk2-l10-t3': {
+    src: '/textbook_art/cartoon_hsk2_l10_t3.jpg',
+    caption: '在餐厅里，妈妈端出奶茶与饭菜，姐姐考完试开心回家，弟弟自豪地举起洗干净的双手。(Trong phòng ăn gia đình, mẹ dọn trà sữa và cơm nóng, con gái thi tốt về nhà, cậu em trai khoe đôi bàn tay đã rửa sạch tinh).',
+  },
+  'hsk2-l10-t4': {
+    src: '/textbook_art/cartoon_hsk2_l10_t4.jpg',
+    caption: '夜晚窗外月色皎洁，在书桌前静心写下一天的生活日记。(Đêm về dưới ánh trăng dịu êm qua khung cửa sổ, bên bàn học khẽ ghi lại từng khoảnh khắc gia đình yêu thương).',
+  },
+  'hsk2-l11-t1': {
+    src: '/textbook_art/cartoon_hsk2_l11_t1.jpg',
+    caption: '在明亮的教室里，老师和学生亲切交流，关切询问。(Trong lớp học ngập tràn ánh nắng, cô giáo ân cần trò chuyện và hỏi thăm học trò thân yêu).',
+  },
+  'hsk2-l11-t2': {
+    src: '/textbook_art/cartoon_hsk2_l11_t2.jpg',
+    caption: '在行驶的汽车上，大家一边看窗外风景一边通电话。(Trên chuyến xe ô tô êm ả, mọi người vừa ngắm phố xá vừa vui vẻ trao đổi qua điện thoại).',
+  },
+  'hsk2-l11-t3': {
+    src: '/textbook_art/cartoon_hsk2_l11_t3.jpg',
+    caption: '在老师温暖的家中，大家围坐在摆满中国美食的餐桌旁。(Tại phòng ăn ấm cúng nhà cô giáo, mọi người cùng quây quần bên bàn tiệc đầy ắp món ngon truyền thống).',
+  },
+  'hsk2-l11-t4': {
+    src: '/textbook_art/cartoon_hsk2_l11_t4.jpg',
+    caption: '夜晚在温馨的房间里，白家月在台灯下感动地写日记。(Đêm về trong căn phòng yên bình bên ánh đèn ấm áp, Bạch Gia Nguyệt xúc động ghi lại từng dòng nhật ký biết ơn cô giáo và bạn bè).',
+  },
+  'hsk2-l12-t1': {
+    src: '/textbook_art/cartoon_hsk2_l12_t1.jpg',
+    caption: '在阳光明媚的房间里，王一雪接听电话关切询问天气。(Bên khung cửa sổ ngập tràn nắng vàng Bắc Kinh, Vương Nhất Tuyết ấm áp nghe điện thoại hỏi han thời tiết).',
+  },
+  'hsk2-l12-t2': {
+    src: '/textbook_art/cartoon_hsk2_l12_t2.jpg',
+    caption: '雪花纷飞的窗前，王一飞老师手握电话温暖交谈。(Bên khung cửa sổ tuyết trắng lất phất bay, cô giáo Vương Nhất Phi ấm áp trò chuyện và dặn dò em gái).',
+  },
+  'hsk2-l12-t3': {
+    src: '/textbook_art/cartoon_hsk2_l12_t3.jpg',
+    caption: '阳光灿烂的公园小道上，李文手握手机开心地约朋友跑步。(Trên con đường công viên ngập nắng, Lý Văn tươi cười cầm điện thoại rủ bạn bè cùng chạy bộ).',
+  },
+  'hsk2-l12-t4': {
+    src: '/textbook_art/cartoon_hsk2_l12_t4.jpg',
+    caption: '绿树成荫的林荫道上，李文和白家月并肩快乐地跑步锻炼。(Dưới vòm cây xanh ngập tràn nắng mai, Lý Văn và Bạch Gia Nguyệt vui vẻ đồng hành chạy bộ bên nhau).',
+  },
+  'hsk2-l13-t1': {
+    src: '/textbook_art/cartoon_hsk2_l13_t1.jpg',
+    caption: '明亮的教室里，白家月和陈天中开心地商量为老师挑选新年花束。(Trong phòng học sáng rực ánh nắng, Bạch Gia Nguyệt và Trần Thiên Trung vui vẻ bàn nhau chọn hoa tươi tặng cô giáo dịp năm mới).',
+  },
+  'hsk2-l13-t2': {
+    src: '/textbook_art/cartoon_hsk2_l13_t2.jpg',
+    caption: '讲台前王老师悉心指导，同学们认真练习汉字笔画。(Trước bục giảng, cô giáo Vương Nhất Phi tận tình hướng dẫn, các bạn học sinh chăm chú nắn nót từng nét chữ Hán).',
+  },
+  'hsk2-l13-t3': {
+    src: '/textbook_art/cartoon_hsk2_l13_t3.jpg',
+    caption: '明亮的教室讲台前，王老师亲切微笑，白家月在课桌前认真听讲。(Tại phòng học ngập nắng, cô giáo Vương Nhất Phi mỉm cười thân thiện bên bục giảng, Bạch Gia Nguyệt chăm chú lắng nghe).',
+  },
+  'hsk2-l13-t4': {
+    src: '/textbook_art/cartoon_hsk2_l13_t4.jpg',
+    caption: '温馨的书房里，台灯散发柔和暖光，白家月在书桌前静静写下日记。(Trong căn phòng ấm áp, đèn bàn tỏa ánh sáng dịu nhẹ, Bạch Gia Nguyệt tĩnh lặng ghi nhật ký bên bình hoa tươi).',
+  },
+  'hsk2-l14-t1': {
+    src: '/textbook_art/cartoon_hsk2_l14_t1.jpg',
+    caption: '冬日黄昏的林荫道上，李文微笑着指向前方公寓楼下等待的身影，王老师惊喜地认出了男朋友杨同乐。(Trên đường phố mùa đông lúc hoàng hôn, Lý Văn chỉ tay về phía sảnh tòa nhà phía xa, cô giáo Vương Nhất Phi mỉm cười nhận ra bạn trai Dương Đồng Nhạc).',
+  },
+  'hsk2-l14-t2': {
+    src: '/textbook_art/cartoon_hsk2_l14_t2.jpg',
+    caption: '公寓楼下现代化的玻璃大堂门前，王老师亲切地把学生李文介绍给捧着公文包等待的男朋友杨同乐。(Trước sảnh kính tòa nhà chung cư, cô giáo Vương Nhất Phi vui vẻ giới thiệu học trò Lý Văn với bạn trai Dương Đồng Nhạc).',
+  },
+  'hsk2-l14-t3': {
+    src: '/textbook_art/cartoon_hsk2_l14_t3.jpg',
+    caption: '温馨雅致的客厅里，王老师和杨同乐坐在沙发上喝热茶吃橘子，愉快地聊起邻里家庭与新年请客。(Trong phòng khách ấm áp, cô giáo Vương và Dương Đồng Nhạc ngồi uống trà ăn quýt, vui vẻ trò chuyện về gia đình người hàng xóm).',
+  },
+  'hsk2-l14-t4': {
+    src: '/textbook_art/cartoon_hsk2_l14_t4.jpg',
+    caption: '静谧的书房里，台灯映照着书桌上的热茶与合影，王老师满怀幸福地在日记本里记录甜蜜的心意。(Trong phòng làm việc tĩnh lặng, đèn bàn chiếu sáng tách trà nóng và bức ảnh chụp chung, cô giáo Vương hạnh phúc ghi lại tâm tư ngọt ngào).',
+  },
+  'hsk2-l15-t1': {
+    src: '/textbook_art/cartoon_hsk2_l15_t1.jpg',
+    caption: '明亮的大学考场里期末考试顺利结束，王老师在讲台前欣慰收卷，白家月与陈天中如释重负，开心讨论假期。(Trong phòng thi sáng rực ánh nắng, cô giáo Vương vui mừng thu bài thi, Bạch Gia Nguyệt và Trần Thiên Trung vui vẻ bàn về kế hoạch kỳ nghỉ).',
+  },
+  'hsk2-l15-t2': {
+    src: '/textbook_art/cartoon_hsk2_l15_t2.jpg',
+    caption: '阳光洒入温馨的咖啡店，白家月开心地拿出手机向李文展示买好的颐和园门票，期待品尝北京烤鸭与奶茶。(Trong quán cà phê ngập tràn nắng ấm, Bạch Gia Nguyệt khoe Lý Văn vé Di Hòa Viên đã đặt trên mạng, hào hứng nói về vịt quay và trà sữa).',
+  },
+  'hsk2-l15-t3': {
+    src: '/textbook_art/cartoon_hsk2_l15_t3.jpg',
+    caption: '咖啡馆明亮的落地窗前，白家月和李文围着平板电脑查看周五飞往北京的航班，满心欢喜准备一同回家过年。(Bên khung cửa kính quán cà phê, Bạch Gia Nguyệt và Lý Văn cùng xem lịch bay thứ Sáu về Bắc Kinh, hân hoan chuẩn bị về quê ăn Tết).',
+  },
+  'hsk2-l15-t4': {
+    src: '/textbook_art/cartoon_hsk2_l15_t4.jpg',
+    caption: '静谧的书房卧室里，李文收拾好回北京过年的行李箱，望向窗外夜空，满怀深情地记下与好友一同飞向北京的喜悦。(Trong phòng ngủ tĩnh lặng, Lý Văn xếp xong vali đồ ấm về quê ăn Tết, hướng mắt nhìn bầu trời đêm đầy xúc động ghi lại niềm vui cùng bay về Bắc Kinh).',
+  },
+};
 
 export const CoursebookView: React.FC<CoursebookViewProps> = ({
   userProfile,
@@ -83,6 +528,117 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
   });
   const [activeTab, setActiveTab] = useState<'text' | 'grammar' | 'vocab' | 'exercises' | 'workbook' | 'culture'>('text');
   const [playingLineId, setPlayingLineId] = useState<string | null>(null);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
+  const [activePlayingTextId, setActivePlayingTextId] = useState<string | null>(null);
+  const coursebookAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (coursebookAudioRef.current) {
+        coursebookAudioRef.current.pause();
+        coursebookAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (coursebookAudioRef.current) {
+      coursebookAudioRef.current.pause();
+      coursebookAudioRef.current = null;
+    }
+    setActivePlayingTextId(null);
+    setPlayingLineId(null);
+  }, [selectedLessonIndex, selectedHskLevel, activeTab]);
+
+  const stopAllCoursebookAudio = () => {
+    if (coursebookAudioRef.current) {
+      coursebookAudioRef.current.pause();
+      coursebookAudioRef.current = null;
+    }
+    setActivePlayingTextId(null);
+    setPlayingLineId(null);
+  };
+
+  const handleToggleFullAudio = (textId: string, fallbackText: string) => {
+    if (activePlayingTextId === textId) {
+      stopAllCoursebookAudio();
+      return;
+    }
+
+    stopAllCoursebookAudio();
+    const manifestItem = COURSEBOOK_AUDIO_MANIFEST[textId];
+    if (manifestItem?.fullAudioUrl) {
+      const audio = new Audio(manifestItem.fullAudioUrl);
+      audio.playbackRate = playbackSpeed;
+      coursebookAudioRef.current = audio;
+      setActivePlayingTextId(textId);
+
+      audio.ontimeupdate = () => {
+        const cur = audio.currentTime;
+        const currentLine = manifestItem.lineTimings.find(
+          (t) => cur >= t.start && cur <= t.end
+        );
+        if (currentLine) {
+          setPlayingLineId(`${textId}-${currentLine.lineIndex}`);
+        }
+      };
+
+      audio.onended = () => {
+        setActivePlayingTextId(null);
+        setPlayingLineId(null);
+        coursebookAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setActivePlayingTextId(null);
+        setPlayingLineId(null);
+        coursebookAudioRef.current = null;
+      };
+
+      audio.play().catch(() => {
+        stopAllCoursebookAudio();
+      });
+    } else {
+      setActivePlayingTextId(textId);
+      playChineseAudio(fallbackText, playbackSpeed);
+      setTimeout(() => {
+        setActivePlayingTextId(null);
+        setPlayingLineId(null);
+      }, 4000);
+    }
+  };
+
+  const handlePlayLineAudio = (textId: string, lineIndex: number, fallbackHanzi: string) => {
+    stopAllCoursebookAudio();
+    const lineKey = `${textId}-${lineIndex}`;
+    setPlayingLineId(lineKey);
+
+    const manifestItem = COURSEBOOK_AUDIO_MANIFEST[textId];
+    const lineAudio = manifestItem?.lines?.[lineIndex];
+
+    if (lineAudio?.audioUrl) {
+      const audio = new Audio(lineAudio.audioUrl);
+      audio.playbackRate = playbackSpeed;
+      coursebookAudioRef.current = audio;
+
+      audio.onended = () => {
+        setPlayingLineId(null);
+        coursebookAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setPlayingLineId(null);
+        coursebookAudioRef.current = null;
+      };
+
+      audio.play().catch(() => {
+        setPlayingLineId(null);
+      });
+    } else {
+      playChineseAudio(fallbackHanzi, playbackSpeed);
+      setTimeout(() => setPlayingLineId(null), 2500);
+    }
+  };
 
   // Activation Screen State
   const [inputClassCode, setInputClassCode] = useState('');
@@ -580,80 +1136,205 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
           {/* TAB 1: TEXTS (BÀI KHÓA) */}
           {activeTab === 'text' && (
             <div className="space-y-6">
-              {currentLesson.texts.map((textItem) => (
-                <div
-                  key={textItem.id}
-                  className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-xs space-y-4"
-                >
-                  <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                    <div className="space-y-0.5">
-                      <h3 className="text-base font-bold text-[var(--color-text-primary)] font-chinese">
-                        {textItem.title}
-                      </h3>
-                      <p className="text-xs text-[var(--color-text-secondary)] italic">
-                        {textItem.context}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handlePlayAudio(
-                          textItem.lines.map((l) => `${l.speaker}：${l.hanzi}`).join('。 ')
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Volume2 className="w-4 h-4" />
-                      Nghe toàn đoạn
-                    </button>
+              {/* Studio Audio Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-xs">
+                    <Radio className="w-4 h-4 animate-pulse" />
                   </div>
-
-                  <div className="space-y-4 pt-1">
-                    {textItem.lines.map((line, lIdx) => {
-                      const lineKey = `${textItem.id}-${lIdx}`;
-                      const isPlaying = playingLineId === lineKey;
-                      return (
-                        <div
-                          key={lineKey}
-                          className={`p-3.5 rounded-xl border transition-all flex items-start justify-between gap-4 ${
-                            isPlaying
-                              ? 'bg-rose-50/80 border-rose-300 dark:bg-rose-950/30'
-                              : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
-                          }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="text-[11px] font-bold text-[var(--color-primary)]">
-                              {line.speaker}
-                            </div>
-                            <div className="text-base sm:text-lg font-bold font-chinese text-[var(--color-text-primary)]">
-                              {line.hanzi}
-                            </div>
-                            <div className="text-xs font-mono text-[var(--color-text-secondary)]">
-                              {line.pinyin}
-                            </div>
-                            <div className="text-xs text-[var(--color-text-primary)]/80 pt-0.5">
-                              {line.vietnamese}
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handlePlayAudio(line.hanzi, lineKey)}
-                            className="p-2 rounded-lg bg-[var(--color-surface)] hover:bg-[var(--color-primary-light)] text-[var(--color-primary)] transition-colors shadow-xs shrink-0 cursor-pointer"
-                            title="Nghe câu này"
-                          >
-                            <Volume2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <div>
+                    <div className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                      Giọng Đọc Studio Neural (Edge-TTS Bắc Kinh)
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        Đa vai đối thoại
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[var(--color-text-secondary)]">
+                      Phát âm tròn vành rõ chữ • Ngắt nghỉ tự nhiên giữa các nhân vật • Karaoke đồng bộ
+                    </div>
                   </div>
                 </div>
-              ))}
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--color-text-secondary)] font-medium">Tốc độ:</span>
+                  <div className="inline-flex rounded-xl p-0.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setPlaybackSpeed(0.8)}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        playbackSpeed === 0.8
+                          ? 'bg-rose-500 text-white font-bold shadow-xs'
+                          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                      title="Tốc độ 0.8x cho người mới luyện nghe rõ từng thanh điệu"
+                    >
+                      0.8x Chậm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlaybackSpeed(1.0)}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        playbackSpeed === 1.0
+                          ? 'bg-rose-500 text-white font-bold shadow-xs'
+                          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                      title="Tốc độ 1.0x bản xứ tự nhiên"
+                    >
+                      1.0x Chuẩn
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {currentLesson.texts.map((textItem) => {
+                const manifest = COURSEBOOK_AUDIO_MANIFEST[textItem.id];
+                const illustration = LESSON_ILLUSTRATIONS[textItem.id];
+                const isFullPlaying = activePlayingTextId === textItem.id;
+
+                return (
+                  <div
+                    key={textItem.id}
+                    className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-5 sm:p-6 shadow-xs space-y-5"
+                  >
+                    {/* Centered Scene Illustration (NO left-right split) */}
+                    {illustration && (
+                      <div className="w-full max-w-2xl mx-auto overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-sm bg-[var(--color-bg-secondary)]">
+                        <div className="relative aspect-video w-full overflow-hidden">
+                          <img
+                            src={illustration.src}
+                            alt={textItem.title}
+                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
+                            loading="lazy"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Text Header with Title & Full Audio Button */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3.5">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-[var(--color-text-primary)] font-chinese">
+                            {textItem.title}
+                          </h3>
+                          {manifest && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/40">
+                              {manifest.lines.length} lượt thoại
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[var(--color-text-secondary)] italic">
+                          {textItem.context}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleToggleFullAudio(
+                            textItem.id,
+                            textItem.lines.map((l) => l.hanzi).join('。 ')
+                          )
+                        }
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+                          isFullPlaying
+                            ? 'bg-rose-500 text-white animate-pulse'
+                            : 'bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-600 dark:hover:text-white'
+                        }`}
+                        title="Nghe toàn bộ hội thoại giữa các nhân vật với ngữ điệu tự nhiên"
+                      >
+                        {isFullPlaying ? (
+                          <>
+                            <Pause className="w-3.5 h-3.5" />
+                            Đang đọc (Bấm để dừng)
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5" />
+                            Nghe toàn đoạn ({playbackSpeed}x)
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Dialogue Lines with Persona and Karaoke Highlighting */}
+                    <div className="space-y-3 pt-1">
+                      {textItem.lines.map((line, lIdx) => {
+                        const lineKey = `${textItem.id}-${lIdx}`;
+                        const isSpeaking = playingLineId === lineKey;
+                        const lineManifest = manifest?.lines?.[lIdx];
+
+                        return (
+                          <div
+                            key={lineKey}
+                            className={`p-4 rounded-xl border transition-all duration-300 flex items-start justify-between gap-4 ${
+                              isSpeaking
+                                ? 'bg-rose-50/90 border-rose-400 dark:bg-rose-950/40 ring-2 ring-rose-400/40 shadow-sm scale-[1.008]'
+                                : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-rose-300/60 dark:hover:border-rose-700/50'
+                            }`}
+                          >
+                            <div className="space-y-1.5 flex-1">
+                              {/* Speaker & Persona Badge */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-base select-none">
+                                  {lineManifest?.avatar || (lIdx % 2 === 0 ? '👨' : '👩')}
+                                </span>
+                                <span className="text-xs font-bold text-[var(--color-primary)]">
+                                  {line.speaker}
+                                </span>
+                                {lineManifest?.persona && (
+                                  <span className="text-[10px] text-[var(--color-text-secondary)] font-normal px-1.5 py-0.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)]">
+                                    {lineManifest.persona}
+                                  </span>
+                                )}
+                                {isSpeaking && (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 animate-pulse ml-auto sm:ml-0">
+                                    <Sparkles className="w-3 h-3" />
+                                    Đang đọc
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Hanzi (Chinese Characters) */}
+                              <div className="text-lg sm:text-xl font-bold font-chinese text-[var(--color-text-primary)] tracking-wide">
+                                {line.hanzi}
+                              </div>
+
+                              {/* Pinyin */}
+                              <div className="text-xs sm:text-sm font-mono text-[var(--color-primary)]/80 font-medium">
+                                {line.pinyin}
+                              </div>
+
+                              {/* Vietnamese Translation */}
+                              <div className="text-xs text-[var(--color-text-secondary)] pt-0.5">
+                                {line.vietnamese}
+                              </div>
+                            </div>
+
+                            {/* Individual Line Voice Button */}
+                            <button
+                              type="button"
+                              onClick={() => handlePlayLineAudio(textItem.id, lIdx, line.hanzi)}
+                              className={`p-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer ${
+                                isSpeaking
+                                  ? 'bg-rose-500 text-white'
+                                  : 'bg-[var(--color-surface)] hover:bg-rose-50 hover:text-rose-600 text-[var(--color-text-secondary)] border border-[var(--color-border)]'
+                              }`}
+                              title={`Luyện nghe câu này (${lineManifest?.persona || 'Giọng nhân vật'})`}
+                            >
+                              <Volume2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* TAB 2: GRAMMAR (NGỮ PHÁP 小语讲堂) */}
+          {/* TAB 2: GRAMMAR (NGỮ PHÁP (NGỮ PHÁP 小语讲堂) */}
           {activeTab === 'grammar' && (
             <div className="space-y-6">
               {currentLesson.grammarPoints.map((gp) => (

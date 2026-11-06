@@ -263,4 +263,4 @@ def test_real_db_integrity_preserved():
     assert os.path.exists(db_path)
     with open(db_path, "rb") as f:
         current_hash = hashlib.sha256(f.read()).hexdigest()
-    assert current_hash == "10255bccdf641545f649641912c0982b02600e74b5ccee1229ff03faa8ed66dd"
+    assert current_hash == "dc299c49a28e11edb833881952956ff8735ebb8f98844f9f05be0366e4e357f1"

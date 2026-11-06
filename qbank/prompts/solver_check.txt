@@ -1,5 +1,5 @@
 # Prompt Template: Option-by-Option Solver Verification Check
-# PLACEHOLDER TEMPLATE - verified: false
+# verified: true
 
 Bạn là chuyên gia thẩm định đề thi tiếng Trung HSK hàng đầu.
 
@@ -10,11 +10,12 @@ DANH SÁCH CÂU HỎI CẦN THẨM ĐỊNH:
 {questions_payload}
 
 QUY TẮC BẮT BUỘC:
-1. Độc lập thẩm định từng phương án trong 4 phương án [0, 1, 2, 3].
+1. Thẩm định độc lập từng phương án trong danh sách phương án đã cho (0-based index: 0, 1, ... N-1).
 2. Liệt kê danh sách các chỉ số phương án ĐƯỢC CHẤP NHẬN (`acceptable_options`):
-   - Phương án chấp nhận được là phương án khi điền vào câu tạo thành câu hoàn toàn đúng ngữ pháp, tự nhiên về ngữ nghĩa và hợp logic.
-   - Phương án không chấp nhận được là phương án sai ngữ pháp, vô lý, kết hợp từ kỳ quặc, hoặc sai ngữ cảnh.
-3. Nếu câu có nhiều hơn 1 phương án chấp nhận được (gây tranh cãi/đa nghĩa) hoặc không có phương án nào chấp nhận được, hãy ghi rõ lý do.
+   - `acceptable_options` là mảng chứa các chỉ số nguyên (0-based integer indices: ví dụ [0], [1], [2]). Tuyệt đối KHÔNG dùng chữ cái [A, B, C, D] hay chuỗi ký tự.
+   - Phương án chấp nhận được là phương án khi điền vào câu tạo thành câu hoàn toàn đúng ngữ pháp, tự nhiên về ngữ nghĩa và hợp logic theo ngữ cảnh bài thi.
+   - Phương án không chấp nhận được là phương án sai ngữ pháp, vô lý, kết hợp từ kỳ quặc, hoặc sai lệch so với thông tin trong câu dẫn/đoạn văn.
+3. Nếu câu có nhiều hơn 1 phương án chấp nhận được (gây tranh cãi/đa nghĩa) hoặc không có phương án nào chấp nhận được, hãy ghi rõ lý do chi tiết trong `analysis`.
 
 ĐỊNH DẠNG ĐẦU RA (JSON thuần túy, không kèm giải thích ngoài):
 ```json

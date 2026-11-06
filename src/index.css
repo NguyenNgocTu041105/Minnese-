@@ -15,6 +15,9 @@
   --color-success: #22C55E;
   --color-error: #E4572E;
   --color-border: #C8D8D3;
+  --shadow-silk-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-silk-card: 0 4px 20px -2px rgba(15, 155, 132, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  --shadow-silk-hover: 0 12px 32px -4px rgba(15, 155, 132, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
 }
 
 .dark {
@@ -28,13 +31,39 @@
   --color-text-primary: #EAF5F2;
   --color-text-secondary: #94B8B0;
   --color-border: #263B34;
+  --shadow-silk-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-silk-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(45, 212, 181, 0.05);
+  --shadow-silk-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(45, 212, 181, 0.1);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Silky Touch & Click Feedback */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background-color: rgba(15, 155, 132, 0.25);
+  color: inherit;
+}
+
+.dark ::selection {
+  background-color: rgba(45, 212, 181, 0.3);
+  color: inherit;
 }
 
 .font-chinese {
@@ -45,7 +74,7 @@ body {
   font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
 }
 
-/* Custom modern scrollbars */
+/* Custom silky modern scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -56,7 +85,425 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 9999px;
+  transition: background-color 0.2s ease;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-secondary);
+}
+
+/* Silky interactive utility classes */
+.silk-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-silk-card);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.silk-card:hover {
+  border-color: rgba(15, 155, 132, 0.4);
+}
+
+.dark .silk-card:hover {
+  border-color: rgba(45, 212, 181, 0.4);
+}
+
+.silk-card-interactive {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-silk-subtle);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.silk-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-silk-hover);
+  border-color: var(--color-primary);
+}
+
+.silk-card-interactive:active {
+  transform: translateY(0.5px) scale(0.985);
+}
+
+.silk-btn {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.silk-btn:hover {
+  box-shadow: var(--shadow-silk-subtle);
+}
+
+.silk-btn:active {
+  transform: scale(0.96);
+}
+
+.silk-pill {
+  border-radius: 9999px;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.silk-pill:active {
+  transform: scale(0.95);
+}
+
+.silk-input {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: 0.75rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.silk-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(15, 155, 132, 0.15);
+}
+
+.dark .silk-input:focus {
+  box-shadow: 0 0 0 3px rgba(45, 212, 181, 0.2);
+}
+
+.silk-glass {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .silk-glass {
+  background-color: rgba(19, 32, 28, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Accessibility Focus Rings */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* ============================================================
+   ENHANCED SPINNER
+   ============================================================ */
+
+@keyframes spinSmooth {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinner {
+  border-radius: 9999px;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  animation: spinSmooth 0.7s linear infinite;
+  will-change: transform;
+}
+
+/* ============================================================
+   BADGE BOUNCE — for notification counts
+   ============================================================ */
+
+@keyframes badgePop {
+  0%   { transform: scale(0); }
+  70%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.badge-pop {
+  animation: badgePop 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============================================================
+   CARD HOVER LIFT — enhanced version
+   ============================================================ */
+
+.card-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-silk-hover);
+}
+
+.card-lift:active {
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   PROGRESS RING
+   ============================================================ */
+
+.progress-ring-track {
+  stroke: var(--color-border);
+}
+
+.progress-ring-fill {
+  stroke: var(--color-primary);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+  transform: rotate(-90deg);
+}
+
+/* ============================================================
+   PAGE & VIEW TRANSITIONS
+   ============================================================ */
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page view: fade + slide up */
+.view-enter {
+  animation: fadeSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Card/grid stagger — apply via JS or @starting-style */
+.stagger-item {
+  animation: fadeSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger-item:nth-child(1)  { animation-delay: 0ms; }
+.stagger-item:nth-child(2)  { animation-delay: 55ms; }
+.stagger-item:nth-child(3)  { animation-delay: 110ms; }
+.stagger-item:nth-child(4)  { animation-delay: 165ms; }
+.stagger-item:nth-child(5)  { animation-delay: 220ms; }
+.stagger-item:nth-child(6)  { animation-delay: 275ms; }
+.stagger-item:nth-child(n+7) { animation-delay: 320ms; }
+
+/* Modal/overlay enter */
+.modal-enter {
+  animation: scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Animate fade-in utility */
+.animate-fade-in {
+  animation: fadeIn 0.25s ease both;
+}
+
+/* Animate slide in from bottom */
+.animate-slide-up {
+  animation: slideInFromBottom 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============================================================
+   SKELETON SHIMMER
+   ============================================================ */
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-border) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* ============================================================
+   CLAYMORPHISM EXTRAS (EdTech playful style)
+   ============================================================ */
+
+.clay-card {
+  background-color: var(--color-surface);
+  border: 2.5px solid var(--color-border);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 4px 0 0 var(--color-border),
+    0 6px 20px -4px rgba(15, 155, 132, 0.1),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clay-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 7px 0 0 var(--color-border),
+    0 12px 28px -6px rgba(15, 155, 132, 0.15),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.clay-card:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 2px 0 0 var(--color-border),
+    0 4px 12px -4px rgba(15, 155, 132, 0.1),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.dark .clay-card {
+  border-color: var(--color-border);
+  box-shadow:
+    0 4px 0 0 rgba(0,0,0,0.5),
+    0 6px 20px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.dark .clay-card:hover {
+  box-shadow:
+    0 7px 0 0 rgba(0,0,0,0.5),
+    0 12px 28px -6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* ============================================================
+   BOTTOM NAV ACTIVE INDICATOR
+   ============================================================ */
+
+@keyframes navPillSlide {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+.nav-active-dot {
+  animation: navPillSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center;
+}
+
+/* ============================================================
+   ENHANCED BUTTON PRESS (60fps tactile)
+   ============================================================ */
+
+.silk-btn-press {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.12s ease,
+              filter 0.12s ease;
+  will-change: transform;
+}
+
+.silk-btn-press:hover {
+  filter: brightness(1.05);
+}
+
+.silk-btn-press:active {
+  transform: scale(0.94);
+  filter: brightness(0.95);
+}
+
+/* ============================================================
+   PROGRESS BAR ANIMATED
+   ============================================================ */
+
+@keyframes progressFill {
+  from { width: 0%; }
+}
+
+.progress-animate {
+  animation: progressFill 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============================================================
+   GLOW PULSE — for streaks, achievements
+   ============================================================ */
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(15, 155, 132, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(15, 155, 132, 0.2); }
+}
+
+.glow-pulse {
+  animation: glowPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.dark .glow-pulse {
+  animation: glowPulseDark 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes glowPulseDark {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 212, 181, 0); }
+  50%       { box-shadow: 0 0 0 8px rgba(45, 212, 181, 0.15); }
+}
+
+/* ============================================================
+   FLOATING ACTION BUTTON — enhanced
+   ============================================================ */
+
+@keyframes floatBob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-3px); }
+}
+
+.float-bob {
+  animation: floatBob 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   TOOLTIP FADE
+   ============================================================ */
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tooltip-enter {
+  animation: tooltipIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============================================================
+   Reduced Motion Override
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

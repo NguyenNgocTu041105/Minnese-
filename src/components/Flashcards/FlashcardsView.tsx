@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Layers,
@@ -46,6 +46,7 @@ interface FlashcardsViewProps {
   onUpdateStats: (newStats: Partial<UserStats>) => void;
   userProfile?: UserProfile;
   initialDeckId?: string | null;
+  initialStudyMode?: 'due_only' | 'all';
   onClearInitialDeckId?: () => void;
   onNavigateToCoursebook?: () => void;
 }
@@ -57,6 +58,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   onUpdateStats,
   userProfile,
   initialDeckId,
+  initialStudyMode,
   onClearInitialDeckId,
   onNavigateToCoursebook,
 }) => {
@@ -205,9 +207,26 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   // Automatically start deck if initialDeckId is passed
   useEffect(() => {
     if (initialDeckId) {
-      handleStartDeck(initialDeckId, 'due_only');
+      handleStartDeck(initialDeckId, initialStudyMode || 'due_only');
+      if (onClearInitialDeckId) {
+        onClearInitialDeckId();
+      }
     }
-  }, [initialDeckId]);
+  }, [initialDeckId, initialStudyMode]);
+
+  const handleStartDeckRef = useRef(handleStartDeck);
+  handleStartDeckRef.current = handleStartDeck;
+
+  // Support direct review launch from header widget event
+  useEffect(() => {
+    const handleExternalStart = (e: Event) => {
+      const customEvent = e as CustomEvent<{ deckId?: string; mode?: 'due_only' | 'all' }>;
+      const deckId = customEvent.detail?.deckId || 'deck-coursebook-progress';
+      handleStartDeckRef.current(deckId, customEvent.detail?.mode || 'due_only');
+    };
+    window.addEventListener('minnie_start_srs_review', handleExternalStart);
+    return () => window.removeEventListener('minnie_start_srs_review', handleExternalStart);
+  }, []);
 
   const handleAnswerRating = (quality: number) => {
     if (!currentWord) return;
@@ -366,7 +385,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   }, [allVocab, modalSearchTerm]);
 
   return (
-    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6" id="flashcards-container">
+    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 animate-fade-in" id="flashcards-container">
       {/* If no deck is selected, show Deck Overview list */}
       {!selectedDeckId ? (
         <div>
@@ -543,11 +562,11 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
                         return (
                           <div
                             key={lesson.lessonNumber}
-                            className={`bg-[var(--color-surface)] rounded-2xl p-5 border transition-all flex flex-col justify-between group ${
+                            className={`silk-card-interactive p-5 rounded-2xl flex flex-col justify-between group ${
                               isCurrent
-                                ? 'border-[var(--color-primary)] shadow-md ring-1 ring-[var(--color-primary)]/30'
+                                ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30 shadow-md'
                                 : isLearned
-                                ? 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 shadow-xs'
+                                ? 'border-[var(--color-border)] shadow-xs'
                                 : 'border-[var(--color-border)] opacity-85 hover:opacity-100'
                             }`}
                           >
@@ -650,7 +669,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleStartDeck(`deck-lesson-${selectedViewLevel}-${lesson.lessonNumber}`, 'all')}
-                                  className="px-2 py-1 rounded-lg bg-[var(--color-background)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-[11px] font-medium transition-all cursor-pointer"
+                                  className="silk-btn px-2.5 py-1 rounded-lg bg-[var(--color-background)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-[11px] font-medium transition-all cursor-pointer shadow-xs"
                                   title="Ôn tập toàn bộ từ vựng bài này"
                                 >
                                   Tất cả ({words.length})
@@ -661,7 +680,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
                                     logStudyActivity('review', `Bấm ôn tập bài học: HSK ${selectedViewLevel} - Bài ${lesson.lessonNumber}`);
                                     handleStartDeck(`deck-lesson-${selectedViewLevel}-${lesson.lessonNumber}`, 'due_only');
                                   }}
-                                  className="px-3 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                                  className="silk-btn px-3 py-1.5 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
                                 >
                                   <span>Ôn tập</span>
                                   <ChevronRight className="w-3.5 h-3.5" />

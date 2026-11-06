@@ -13,6 +13,9 @@ import {
   ArrowDown,
   PhoneCall,
   Headphones,
+  CheckCircle2,
+  Zap,
+  Key,
 } from 'lucide-react';
 import { ChatMessage, HSKLevel, UserProfile } from '../../types';
 import { playChineseAudio } from '../../utils/chineseAudio';
@@ -21,6 +24,8 @@ import { LiveVoiceCallModal } from '../LiveVoiceCall/LiveVoiceCallModal';
 import { CartoonLoader } from '../CartoonLoader';
 import { HSKReadingStudio } from './HSKReadingStudio';
 import { BookOpen } from 'lucide-react';
+import { BYOKModal } from '../BYOKModal';
+import { getGeminiKey, hasValidGeminiKey, BYOK_UPDATED_EVENT } from '../../utils/byokStorage';
 
 type TutorMode = 'general' | 'reading_studio';
 
@@ -76,6 +81,16 @@ export const AITutorView: React.FC<AITutorViewProps> = ({ userProfile }) => {
   const [activeMode, setActiveMode] = useState<TutorMode>('general');
   const [hskLevel, setHskLevel] = useState<HSKLevel>(2);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [hasBYOKKey, setHasBYOKKey] = useState<boolean>(() => hasValidGeminiKey());
+  const [showBYOKModal, setShowBYOKModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBYOKUpdate = () => {
+      setHasBYOKKey(hasValidGeminiKey());
+    };
+    window.addEventListener(BYOK_UPDATED_EVENT, handleBYOKUpdate);
+    return () => window.removeEventListener(BYOK_UPDATED_EVENT, handleBYOKUpdate);
+  }, []);
 
   // Chat conversation state
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -179,9 +194,16 @@ Ngoài ra, bạn có thể bấm **"Gọi Thoại Luyện Nói Ngay"** ở góc 
     setLoading(true);
 
     try {
+      const geminiKey = getGeminiKey();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (geminiKey) {
+        headers['X-BYOK-Gemini-Key'] = geminiKey;
+        headers['X-BYOK-Api-Key'] = geminiKey;
+      }
+
       const res = await fetch('/api/gemini/rag-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           message: query,
           mode: activeMode,
@@ -265,8 +287,8 @@ Ngoài ra, bạn có thể bấm **"Gọi Thoại Luyện Nói Ngay"** ở góc 
       {/* Top Header & Mode Switcher */}
       <div className="bg-[var(--color-surface)] rounded-2xl p-5 border border-[var(--color-border)] shadow-md mb-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] border border-[var(--color-primary)]/20 text-[var(--color-primary)] flex items-center justify-center shadow-xs">
                 <Sparkles className="w-4 h-4" />
               </div>
@@ -277,6 +299,44 @@ Ngoài ra, bạn có thể bấm **"Gọi Thoại Luyện Nói Ngay"** ở góc 
                 <span className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full animate-pulse"></span>
                 RAG HSK 3.0 Trực tuyến
               </span>
+            </div>
+
+            {/* BYOK Status Badge & Voice Call Action Buttons */}
+            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+              {hasBYOKKey ? (
+                <button
+                  type="button"
+                  onClick={() => setShowBYOKModal(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/20 transition-all cursor-pointer shadow-xs"
+                  title="Khóa API Google Gemini của bạn đang hoạt động. Bấm để quản lý hoặc đổi khóa."
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>✓ Key cá nhân đã kích hoạt</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowBYOKModal(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-medium hover:bg-amber-500/20 transition-all cursor-pointer shadow-xs"
+                  title="Học tập bình thường với RAG Offline. Bấm để thêm Google Gemini API Key miễn phí và mở khóa đàm thoại thoại trực tiếp."
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  <span>⚡ Chế độ Tiêu chuẩn / RAG Offline</span>
+                  <span className="ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 font-bold">
+                    Cấu hình AI Key (BYOK)
+                  </span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowVoiceModal(true)}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                title="Gọi thoại trực tiếp 2 chiều luyện khẩu ngữ cùng Gia sư AI"
+              >
+                <PhoneCall className="w-3 h-3" />
+                <span>Gọi Thoại Luyện Nói</span>
+              </button>
             </div>
           </div>
 
@@ -615,6 +675,13 @@ Ngoài ra, bạn có thể bấm **"Gọi Thoại Luyện Nói Ngay"** ở góc 
         onClose={() => setShowVoiceModal(false)}
         initialTopic="Trò chuyện giao tiếp tiếng Trung"
         userHskLevel={hskLevel}
+      />
+
+      {/* BYOK Key Configuration Modal */}
+      <BYOKModal
+        isOpen={showBYOKModal}
+        onClose={() => setShowBYOKModal(false)}
+        onSuccess={() => setHasBYOKKey(hasValidGeminiKey())}
       />
     </div>
   );

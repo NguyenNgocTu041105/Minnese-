@@ -1,4 +1,5 @@
 import json
+import httpx
 import pytest
 from qbank.llm import QbMockLLM, QbOpenAIClient
 
@@ -255,5 +256,269 @@ def test_openai_client_never_leaks_api_key(monkeypatch):
     err_str = str(exc_info.value)
     assert secret_key not in err_str
     assert "[REDACTED_API_KEY]" in err_str
+
+
+def test_openai_client_fallback_on_503_high_demand(monkeypatch):
+    from unittest.mock import MagicMock
+
+    client = QbOpenAIClient(
+        api_key="test_key",
+        model="gemini-2.5-flash",
+        fallback_models=["gemini-2.0-flash", "gemini-1.5-flash"],
+        max_retries=2
+    )
+
+    resp_503 = MagicMock()
+    resp_503.status_code = 503
+    resp_503.text = "This model is currently experiencing high demand. Please try again later."
+
+    resp_200 = MagicMock()
+    resp_200.status_code = 200
+    resp_200.json.return_value = {
+        "choices": [{"finish_reason": "stop", "message": {"content": "Success from fallback model"}}]
+    }
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.post.side_effect = [resp_503, resp_200]
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    res = client.generate_chat_completion([{"role": "user", "content": "test"}])
+    assert res == "Success from fallback model"
+    assert client.active_model == "gemini-2.0-flash"
+
+
+def test_openai_client_no_fallback_on_truncated_output(monkeypatch):
+    """Rule 1: Truncation (finish_reason='length') must NOT fallback model."""
+    from unittest.mock import MagicMock
+    from qbank.llm import QbTruncatedOutput
+
+    client = QbOpenAIClient(
+        api_key="test_key",
+        model="gemini-2.5-flash",
+        fallback_models=["gemini-2.0-flash"],
+        max_retries=1
+    )
+
+    resp_trunc = MagicMock()
+    resp_trunc.status_code = 200
+    resp_trunc.json.return_value = {
+        "choices": [{"finish_reason": "length", "message": {"content": "Partial..."}}]
+    }
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.post.return_value = resp_trunc
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    with pytest.raises(QbTruncatedOutput, match="finish_reason='length'"):
+        client.generate_chat_completion([{"role": "user", "content": "test"}])
+
+    # Should only call ONCE for the primary model, never fall back to gemini-2.0-flash!
+    assert mock_http_client.__enter__.return_value.post.call_count == 1
+    assert client.active_model == "gemini-2.5-flash"
+
+
+def test_openai_client_no_fallback_on_network_error(monkeypatch):
+    """Rule 3: Network errors must NOT fallback model."""
+    from unittest.mock import MagicMock
+    from qbank.llm import QbLLMNetworkError
+
+    client = QbOpenAIClient(
+        api_key="test_key",
+        model="gemini-2.5-flash",
+        fallback_models=["gemini-2.0-flash"],
+        max_retries=2
+    )
+
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.post.side_effect = httpx.ConnectError("Connection failed")
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    with pytest.raises(QbLLMNetworkError, match="Lỗi kết nối mạng"):
+        client.generate_chat_completion([{"role": "user", "content": "test"}])
+
+    # Should only retry on the primary model (2 times), never call fallback model
+    assert mock_http_client.__enter__.return_value.post.call_count == 2
+    assert client.active_model == "gemini-2.5-flash"
+
+
+def test_openai_client_list_models(monkeypatch):
+    """Rule 4: list_models calls GET /models and extracts IDs."""
+    from unittest.mock import MagicMock
+
+    client = QbOpenAIClient(api_key="test_key")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "data": [
+            {"id": "gemini-2.5-flash"},
+            {"id": "gemini-2.0-flash"},
+            {"id": "gemini-1.5-flash"}
+        ]
+    }
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.get.return_value = mock_resp
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    models = client.list_models()
+    assert models == ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash"]
+    mock_http_client.__enter__.return_value.get.assert_called_once()
+
+
+def test_openai_client_records_token_usage(monkeypatch):
+    """Rule 2: usage metrics from response are parsed and recorded."""
+    from unittest.mock import MagicMock
+
+    client = QbOpenAIClient(api_key="test_key")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "choices": [{"finish_reason": "stop", "message": {"content": "OK"}}],
+        "usage": {
+            "prompt_tokens": 150,
+            "completion_tokens": 300,
+            "total_tokens": 450,
+            "completion_tokens_details": {"reasoning_tokens": 120}
+        }
+    }
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.post.return_value = mock_resp
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    client.generate_chat_completion([{"role": "user", "content": "test"}])
+    assert client.last_usage.get("total_tokens") == 450
+    assert client.last_usage.get("completion_tokens_details", {}).get("reasoning_tokens") == 120
+
+
+def test_openai_client_fallback_on_404_model_not_found(monkeypatch):
+    from unittest.mock import MagicMock
+
+    client = QbOpenAIClient(
+        api_key="test_key",
+        model="gemini-deprecated-model",
+        fallback_models=["gemini-2.5-flash"],
+        max_retries=1
+    )
+
+    resp_404 = MagicMock()
+    resp_404.status_code = 404
+    resp_404.text = "Model not found"
+
+    resp_200 = MagicMock()
+    resp_200.status_code = 200
+    resp_200.json.return_value = {
+        "choices": [{"finish_reason": "stop", "message": {"content": "Found on fallback"}}]
+    }
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.post.side_effect = [resp_404, resp_200]
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    res = client.generate_chat_completion([{"role": "user", "content": "test"}])
+    assert res == "Found on fallback"
+    assert client.active_model == "gemini-2.5-flash"
+
+
+def test_openai_client_all_fallbacks_fail_raises_error(monkeypatch):
+    from unittest.mock import MagicMock
+    from qbank.llm import QbLLMError
+
+    client = QbOpenAIClient(
+        api_key="test_key",
+        model="m1",
+        fallback_models=["m2"],
+        max_retries=1
+    )
+
+    resp_503 = MagicMock()
+    resp_503.status_code = 503
+    resp_503.text = "Server overloaded"
+
+    mock_http_client = MagicMock()
+    mock_http_client.__enter__.return_value.post.return_value = resp_503
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http_client)
+
+    with pytest.raises(QbLLMError, match="Failed to generate LLM completion after trying candidate models"):
+        client.generate_chat_completion([{"role": "user", "content": "test"}])
+
+
+def test_normalize_model_name():
+    """Rule 1: normalize_model_name strips 'models/' prefix and whitespace."""
+    from qbank.llm import normalize_model_name
+
+    assert normalize_model_name("models/gemini-3.5-flash") == "gemini-3.5-flash"
+    assert normalize_model_name("gemini-3.5-flash") == "gemini-3.5-flash"
+    assert normalize_model_name("  models/gemini-2.0-flash  ") == "gemini-2.0-flash"
+    assert normalize_model_name("") == ""
+    assert normalize_model_name(None) == ""
+
+
+def test_openai_client_probe_model_success(monkeypatch):
+    """Rule 3: probe_model sends a single request and extracts latency, tokens, finish_reason."""
+    from unittest.mock import MagicMock
+
+    client = QbOpenAIClient(api_key="test_probe_key", model="gemini-3.5-flash")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "choices": [{"finish_reason": "stop", "message": {"content": "OK"}}],
+        "usage": {
+            "prompt_tokens": 15,
+            "completion_tokens": 2,
+            "total_tokens": 17,
+            "completion_tokens_details": {"reasoning_tokens": 0}
+        }
+    }
+
+    mock_http = MagicMock()
+    mock_http.__enter__.return_value.post.return_value = mock_resp
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http)
+
+    result = client.probe_model("gemini-3.5-flash", reasoning_effort="low")
+
+    assert result["ok"] is True
+    assert result["status_code"] == 200
+    assert result["finish_reason"] == "stop"
+    assert result["prompt_tokens"] == 15
+    assert result["completion_tokens"] == 2
+    assert result["reasoning_tokens"] == 0
+    assert result["total_tokens"] == 17
+    # Verify post was called exactly once (no retry, no fallback)
+    assert mock_http.__enter__.return_value.post.call_count == 1
+    # Verify reasoning_effort was in the payload
+    _, kwargs = mock_http.__enter__.return_value.post.call_args
+    assert kwargs["json"]["reasoning_effort"] == "low"
+    assert kwargs["json"]["model"] == "gemini-3.5-flash"
+
+
+def test_openai_client_probe_model_sanitizes_api_key_on_error(monkeypatch):
+    """Rule 3: probe_model masks API key when reporting errors."""
+    from unittest.mock import MagicMock
+
+    secret_key = "secret_super_api_key_999"
+    client = QbOpenAIClient(api_key=secret_key, model="gemini-3.5-flash")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 400
+    mock_resp.text = f"Invalid reasoning_effort for key {secret_key}"
+
+    mock_http = MagicMock()
+    mock_http.__enter__.return_value.post.return_value = mock_resp
+    monkeypatch.setattr("httpx.Client", lambda **kwargs: mock_http)
+
+    result = client.probe_model("gemini-3.5-flash", reasoning_effort="unsupported_effort")
+
+    assert result["ok"] is False
+    assert result["status_code"] == 400
+    assert result["error_type"] == "400 Lỗi tham số (Bad Request)"
+    assert secret_key not in result["error_message"]
+    assert "[REDACTED_API_KEY]" in result["error_message"]
+
 
 

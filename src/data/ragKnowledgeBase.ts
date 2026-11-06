@@ -393,18 +393,125 @@ Quy tắc Trùng điệp Lượng từ (Lượng từ lặp lại):
   }
 ];
 
+// ============================================================================
+// VIETNAMESE NORMALIZATION & SEARCH UTILITIES FOR RAG
+// ============================================================================
+
+/**
+ * Loại bỏ dấu tiếng Việt để chuyển chuỗi về dạng ký tự không dấu chuẩn ASCII.
+ */
+export function removeVietnameseTones(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Kiểm tra một từ đứng độc lập trong văn bản theo ranh giới từ Unicode
+ */
+export function containsWord(text: string, word: string): boolean {
+  if (!text || !word) return false;
+  return new RegExp('(^|[^\\p{L}\\p{N}])' + escapeRegExp(word) + '([^\\p{L}\\p{N}]|$)', 'ui').test(text);
+}
+
+/**
+ * Tập hợp các từ dừng giao tiếp phổ biến trong tiếng Việt nhằm tránh kích hoạt
+ * sai tài liệu ngữ pháp khi người học chỉ chào hỏi hoặc trò chuyện thông thường.
+ */
+export const VIETNAMESE_STOP_WORDS = new Set([
+  'chao', 'co', 'thay', 'giao', 'em', 'toi', 'minh', 'ban', 'chung',
+  'muon', 'hoc', 'mot', 'bai', 'moi', 'hom', 'nay', 'ngay', 'mai', 'thoi',
+  'tiet', 'dep', 'qua', 'la', 'va', 'cua', 'cho', 'trong', 'voi', 'cac',
+  'nhung', 'duoc', 'khong', 'the', 'nao', 'giup', 'xin', 'hay',
+  'hoi', 'gi', 'sao', 'nhe', 'a', 'oi', 'nhi', 'day', 'do', 'nua',
+  'rat', 'de', 'lam'
+]);
+
+/**
+ * Từ điển đồng nghĩa / thuật ngữ tương đương giữa tiếng Việt, tiếng Anh và HSK
+ */
+export const SEMANTIC_TERM_SYNONYMS: Record<string, string[]> = {
+  // Biến điệu & Thanh điệu (Tones & Sandhi)
+  'bien dieu thanh 3': ['tone sandhi', 'thanh 3'],
+  'third tone sandhi': ['tone sandhi', 'thanh 3'],
+  'bien dieu': ['tone sandhi', 'thanh 3', 'tones', 'bien am'],
+  'tone sandhi': ['tone sandhi', 'thanh 3'],
+  'thanh dieu': ['tone sandhi', 'thanh 3', 'tones', 'pinyin', 'pronunciation'],
+  'thanh ba': ['thanh 3', 'tone sandhi'],
+  'third tone': ['thanh 3', 'tone sandhi'],
+  'thanh mot': ['thanh 1', 'yi'],
+  'thanh hai': ['thanh 2'],
+  'thanh bon': ['thanh 4', 'bu'],
+
+  // Phát âm & Ngữ âm (Pronunciation & Phonetics)
+  'phat am': ['pronunciation', 'pinyin', 'tone sandhi'],
+  'pronunciation': ['pronunciation', 'pinyin', 'tone sandhi'],
+
+  // Từ vựng & Lượng từ & Thành ngữ (Vocabulary, Measure words, Idioms)
+  'tu vung': ['luong tu', 'liangci', 'measure words', 'chengyu', 'thanh ngu'],
+  'vocabulary': ['luong tu', 'liangci', 'measure words', 'chengyu', 'thanh ngu'],
+  'luong tu': ['luong tu', 'liangci', 'measure words'],
+  'liangci': ['luong tu', 'liangci', 'measure words'],
+  'measure words': ['luong tu', 'liangci', 'measure words'],
+  'thanh ngu': ['chengyu', 'thanh ngu'],
+  'chengyu': ['chengyu', 'thanh ngu'],
+  'idioms': ['chengyu', 'thanh ngu'],
+
+  // Ngữ pháp & Trợ từ & Cấu trúc câu (Grammar & Sentence Structures)
+  'grammar': ['ngu phap', 'ngu phap hsk3', 'ngu phap hsk4', 'cau truc'],
+  'tro tu': ['de', 'tro tu', 'de de de'],
+  'cau chu ba': ['ba', 'cau chu ba', 'ba sentence'],
+  'ba sentence': ['ba', 'cau chu ba', 'ba sentence'],
+  'cau chu bi': ['bei sentence', 'cau chu bi', 'bi dong'],
+  'bi dong': ['bei sentence', 'cau chu bi', 'bi dong'],
+  'passive': ['bei sentence', 'cau chu bi', 'bi dong'],
+  'so sanh': ['so sanh', 'cau so sanh', 'bijiaoju', 'bi'],
+  'comparison': ['so sanh', 'cau so sanh', 'bijiaoju'],
+  'bo ngu': ['bo ngu', 'bo ngu xu huong', 'bo ngu kha nang', 'bo ngu ket qua'],
+  'complements': ['bo ngu', 'bo ngu xu huong', 'bo ngu kha nang', 'bo ngu ket qua'],
+  'lien tu': ['lien tu', 'cau phuc', 'dinh thuc'],
+  'conjunctions': ['lien tu', 'cau phuc', 'dinh thuc']
+};
+
 /**
  * Local Semantic/Keyword RAG Search helper
- * Retrieves top matching documents based on user query
+ * Retrieves top matching documents based on user query with Vietnamese accent support,
+ * CJK Hanzi preservation, and boundary checking.
  */
 export function queryKnowledgeBase(query: string, limit: number = 4): RAGDocument[] {
-  const cleanQuery = query.toLowerCase();
-  const tokens = cleanQuery.split(/[\s,，。！？?]+/g).filter((t) => t.length > 0);
+  if (!query || !query.trim()) return [];
+
+  const rawClean = query.toLowerCase().replace(/\s+/g, ' ').trim();
+  const unaccentedQuery = removeVietnameseTones(rawClean);
+
+  // Tách tokens: giữ lại từ tiếng Việt, Pinyin, và các chữ Hán riêng lẻ
+  const rawTokens = rawClean.split(/[\s,，。！？?.,!?:;]+/g).filter((t) => t.length > 0);
+  const unaccentedTokens = rawTokens.map((t) => removeVietnameseTones(t));
+
+  // Phát hiện các chữ Hán đơn lẻ (ví dụ: 把, 被, 的, 得, 地, 比, 一, 不)
+  const hanziTokens = rawTokens.flatMap((t) => t.match(/[\u4e00-\u9fa5]/g) || []);
+  const hasChineseChar = hanziTokens.length > 0;
+  const hasChineseContext =
+    hasChineseChar ||
+    /(câu chữ|cau chu|ngữ pháp|ngu phap|tiếng trung|tieng trung|tiếng hoa|tieng hoa|tiếng hán|tieng han|chữ hán|chu han|hsk|cấu trúc|cau truc|trợ từ|tro tu|bổ ngữ|bo ngu|liên từ|lien tu|thành ngữ|thanh ngu|lượng từ|luong tu|phát âm|phat am|thanh điệu|thanh dieu|biến điệu|bien dieu|pinyin|grammar|chinese)/i.test(
+      rawClean
+    );
 
   const scoredDocs = INITIAL_RAG_DOCUMENTS.map((doc) => {
     let score = 0;
+    const docTitleLower = doc.title.toLowerCase();
+    const docTitleUnaccented = removeVietnameseTones(docTitleLower);
+
     const fullText = (
       doc.title +
+      ' ' +
+      (doc.category || '') +
       ' ' +
       doc.rulesSummary +
       ' ' +
@@ -412,32 +519,217 @@ export function queryKnowledgeBase(query: string, limit: number = 4): RAGDocumen
       ' ' +
       doc.tags.join(' ')
     ).toLowerCase();
+    const fullTextUnaccented = removeVietnameseTones(fullText);
 
-    // Check direct query match in title
-    if (doc.title.toLowerCase().includes(cleanQuery)) {
-      score += 20;
+    // 1. So khớp trực tiếp tiêu đề (Chính xác hoặc Bỏ dấu)
+    if (docTitleLower.includes(rawClean) || docTitleUnaccented.includes(unaccentedQuery)) {
+      score += 25;
     }
 
-    // Check tags match
-    for (const tag of doc.tags) {
-      if (cleanQuery.includes(tag.toLowerCase()) || tag.toLowerCase().includes(cleanQuery)) {
+    // 2. So khớp từ đồng nghĩa / thuật ngữ chuyên môn (Semantic Synonyms)
+    let synonymBonus = 0;
+    for (const [keyTerm, mappedTags] of Object.entries(SEMANTIC_TERM_SYNONYMS)) {
+      if (unaccentedQuery.includes(keyTerm)) {
+        for (const mTag of mappedTags) {
+          const docTagsLower = doc.tags.map((t) => t.toLowerCase());
+          if (docTagsLower.includes(mTag)) {
+            synonymBonus += 15;
+            break;
+          }
+        }
+      }
+    }
+    score += Math.min(synonymBonus, 20);
+
+    // 3. So khớp Tags (Có ranh giới từ để tránh lỗi substring như 'bi' trong 'biến')
+    const matchedTagTokens = new Set<string>();
+    for (const rawTag of doc.tags) {
+      const tagLower = rawTag.toLowerCase();
+      const tagUnaccented = removeVietnameseTones(tagLower);
+
+      // Nếu tag ngắn (<= 3 ký tự như 'ba', 'bi', 'bu', 'yi', 'de', 'bei'): Bắt buộc khớp nguyên từ / token
+      // Không khớp khi token gốc mang dấu tiếng Việt (rawToken !== unaccentedToken). Ví dụ 'để', 'đề', 'dễ', 'bị', 'bù' không khớp 'de', 'bi', 'bu'.
+      if (tagLower.length <= 3) {
+        const hasExactAsciiToken = rawTokens.some(
+          (rawTok, idx) => rawTok === tagLower && rawTok === unaccentedTokens[idx]
+        );
+        if (!hasExactAsciiToken) {
+          continue;
+        }
+
+        // Chống xung đột các từ đồng âm tiếng Việt phổ biến:
+        if (tagLower === 'ba') {
+          if (
+            unaccentedQuery.includes('ba me') ||
+            unaccentedQuery.includes('ba ma') ||
+            unaccentedQuery.includes('thu ba') ||
+            unaccentedQuery.includes('ong ba') ||
+            unaccentedQuery.includes('ba con')
+          ) {
+            continue;
+          }
+          const hasBaContext =
+            hasChineseChar ||
+            hasChineseContext ||
+            /(câu chữ ba|cau chu ba|chữ ba|chu ba|ba sentence)/i.test(rawClean);
+          if (!hasBaContext) {
+            continue;
+          }
+        }
+
+        if (tagLower === 'bi') {
+          // Tag 'bi' (chữ 比 trong câu so sánh): không kích hoạt khi ngữ cảnh là 'bị động' hoặc 'chuẩn bị'
+          if (
+            unaccentedQuery.includes('bi dong') ||
+            unaccentedQuery.includes('cau chu bi') ||
+            unaccentedQuery.includes('chuan bi')
+          ) {
+            continue;
+          }
+          const hasBiContext =
+            hasChineseChar ||
+            /(so sánh|so sanh|câu so sánh|cau so sanh|chữ bi|chu bi|bijiaoju|bǐ)/i.test(rawClean);
+          if (!hasBiContext) {
+            continue;
+          }
+        }
+
+        if (tagLower === 'de') {
+          const hasDeContext =
+            hasChineseChar ||
+            hasChineseContext ||
+            /(chữ de|chu de|trợ từ de|tro tu de|de de de|phân biệt de|phan biet de|trợ từ kết cấu)/i.test(
+              rawClean
+            );
+          if (!hasDeContext) {
+            continue;
+          }
+        }
+
+        if (tagLower === 'bu') {
+          const hasBuContext =
+            hasChineseChar ||
+            /(chữ bu|chu bu|biến điệu bu|bien dieu bu|phát âm bu|phat am bu|bù|bú)/i.test(rawClean);
+          if (!hasBuContext) {
+            continue;
+          }
+        }
+
+        if (tagLower === 'yi') {
+          const hasYiContext =
+            hasChineseChar ||
+            /(chữ yi|chu yi|biến điệu yi|bien dieu yi|phát âm yi|phat am yi|yī|yí|yì)/i.test(rawClean);
+          if (!hasYiContext) {
+            continue;
+          }
+        }
+
+        if (tagLower === 'bei') {
+          const hasBeiContext =
+            hasChineseChar ||
+            hasChineseContext ||
+            /(bị động|bi dong|câu bị động|cau bi dong|bèi)/i.test(rawClean);
+          if (!hasBeiContext) {
+            continue;
+          }
+        }
+
+        score += 15;
+        matchedTagTokens.add(tagLower);
+      } else {
+        // Tag dài (cụm từ như 'tone sandhi', 'thanh 3', 'cau chu ba', 'bo ngu')
+        const tagCompact = tagUnaccented.replace(/\s+/g, '');
+        const queryCompact = unaccentedQuery.replace(/\s+/g, '');
+        if (
+          rawClean.includes(tagLower) ||
+          unaccentedQuery.includes(tagUnaccented) ||
+          (tagCompact.startsWith('hsk') && queryCompact.includes(tagCompact))
+        ) {
+          score += 12;
+          tagLower.split(/\s+/).forEach((t) => matchedTagTokens.add(t));
+          tagUnaccented.split(/\s+/).forEach((t) => matchedTagTokens.add(t));
+        }
+      }
+    }
+
+    // 4. So khớp chữ Hán đặc thù (把, 被, 的, 得, 地, 比, v.v.)
+    for (const hz of hanziTokens) {
+      if (docTitleLower.includes(hz)) {
+        score += 15;
+      }
+      if (fullText.includes(hz)) {
         score += 10;
       }
     }
 
-    // Token frequency scoring
-    for (const token of tokens) {
-      if (token.length > 1 && fullText.includes(token)) {
-        score += 4;
+    // 5. So khớp Tokens từ vựng (bỏ qua stop words và các token đã khớp trong tag)
+    for (const token of rawTokens) {
+      const unaccentedToken = removeVietnameseTones(token);
+      if (
+        VIETNAMESE_STOP_WORDS.has(unaccentedToken) ||
+        matchedTagTokens.has(token) ||
+        matchedTagTokens.has(unaccentedToken)
+      ) {
+        continue;
+      }
+
+      // Khớp số thanh điệu / HSK đi kèm từ khóa (ví dụ: 'thanh 3' -> token '3')
+      if (token.length === 1 && /[1-6]/.test(token)) {
+        const num = Number(token);
+        const numWords = ['', 'mot', 'hai', 'ba', 'bon', 'nam', 'sau'];
+        if (
+          unaccentedQuery.includes(`thanh ${token}`) &&
+          (fullTextUnaccented.includes(`thanh ${token}`) || fullTextUnaccented.includes(`thanh ${numWords[num]}`))
+        ) {
+          score += 10;
+        }
+        if (
+          (unaccentedQuery.includes(`hsk ${token}`) || unaccentedQuery.includes(`hsk${token}`)) &&
+          (fullTextUnaccented.includes(`hsk ${token}`) || fullTextUnaccented.includes(`hsk${token}`))
+        ) {
+          score += 8;
+        }
+        continue;
+      }
+
+      if (token.length > 1) {
+        // Với token ngắn (<= 3 ký tự), yêu cầu ranh giới từ để tránh khớp chuỗi con giả tạo
+        if (token.length <= 3) {
+          if (containsWord(fullText, token)) {
+            score += 3;
+          } else if (token === unaccentedToken && containsWord(fullTextUnaccented, unaccentedToken)) {
+            score += 1;
+          }
+        } else {
+          // Token dài (> 3 ký tự)
+          if (fullText.includes(token)) {
+            score += 3;
+          } else if (fullTextUnaccented.includes(unaccentedToken)) {
+            score += 1;
+          }
+        }
       }
     }
 
     return { doc, score };
   });
 
-  return scoredDocs
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((item) => item.doc);
+  // Chỉ lấy các tài liệu đạt ngưỡng điểm liên quan tối thiểu và deduplicate theo doc.id
+  const MIN_SCORE_THRESHOLD = 15;
+  const seenDocIds = new Set<string>();
+  const finalDocs: RAGDocument[] = [];
+
+  const sortedScored = scoredDocs
+    .filter((item) => item.score >= MIN_SCORE_THRESHOLD)
+    .sort((a, b) => b.score - a.score);
+
+  for (const item of sortedScored) {
+    if (!seenDocIds.has(item.doc.id)) {
+      seenDocIds.add(item.doc.id);
+      finalDocs.push(item.doc);
+      if (finalDocs.length >= limit) break;
+    }
+  }
+
+  return finalDocs;
 }

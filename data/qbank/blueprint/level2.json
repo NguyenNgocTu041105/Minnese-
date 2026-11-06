@@ -1,17 +1,146 @@
 {
   "hsk_version": "3.0",
   "level": 2,
-  "verified": false,
-  "_notice": "CẢNH BÁO: ĐÂY CHỈ LÀ FILE BLUEPRINT PLACEHOLDER MẪU ĐỂ CHẠY TEST. KHÔNG PHẢI ĐỀ CHÍNH THỨC.",
+  "name": "HSK 2 (二级) 考试大纲与试卷结构",
+  "verification": {
+    "verified_fields": [
+      "total_questions",
+      "time_limit_minutes"
+    ],
+    "unverified_fields": [
+      "section_breakdown",
+      "part_detail",
+      "skill_duration",
+      "scoring"
+    ],
+    "verification_sources": [
+      {
+        "field": "total_questions",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      },
+      {
+        "field": "time_limit_minutes",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      }
+    ],
+    "last_verified_at": "2026-10-26T00:00:00Z"
+  },
+  "total_questions": 60,
+  "total_time_min": 60,
+  "max_score": 300,
+  "passing_score": 180,
+  "has_pinyin": true,
+  "audio_playback": 2,
   "sections": {
+    "listening": {
+      "name": "听力 (Listening)",
+      "skill": "listening",
+      "total_questions": 25,
+      "time_min": 20,
+      "score_weight": 100,
+      "parts": {
+        "listening_1": {
+          "name": "第一部分：看图选择",
+          "type": "listen_picture_match_3opt",
+          "skill": "listening",
+          "n_questions": 5,
+          "n_options": 3,
+          "time_min": 4,
+          "description": "听句子或对话（听两遍），从3张图片中选出相符的图片（第1-5题）。"
+        },
+        "listening_2": {
+          "name": "第二部分：听对话选图",
+          "type": "listen_dialogue_picture_match_split",
+          "skill": "listening",
+          "n_questions": 10,
+          "n_options": 6,
+          "time_min": 8,
+          "description": "听对话选图片，第6-10题6选5（含例子），第11-15题5选5（无例子）。"
+        },
+        "listening_3": {
+          "name": "第三部分：听短对话回答问题",
+          "type": "listen_dialogue_qa_3opt",
+          "skill": "listening",
+          "n_questions": 10,
+          "n_options": 3,
+          "time_min": 8,
+          "description": "听一轮对话加问句（听两遍），从3个文本选项中选择正确答案（第16-25题）。"
+        }
+      }
+    },
     "reading": {
-      "name": "Reading (Đọc hiểu)",
+      "name": "阅读 (Reading)",
+      "skill": "reading",
+      "total_questions": 25,
+      "time_min": 25,
+      "score_weight": 100,
       "parts": {
         "reading_1": {
-          "type": "multiple_choice",
+          "name": "第一部分：句子与图片匹配",
+          "type": "read_sentence_picture_match_6opt",
+          "skill": "reading",
           "n_questions": 5,
-          "n_options": 4,
-          "time_min": 5
+          "n_options": 6,
+          "time_min": 6,
+          "description": "阅读句子选图片，从6张图片中为5个句子配对（1张用于例子，第26-30题）。"
+        },
+        "reading_2": {
+          "name": "第二部分：选词填空",
+          "type": "read_fill_blank_word_bank_6opt",
+          "skill": "reading",
+          "n_questions": 5,
+          "n_options": 6,
+          "time_min": 6,
+          "description": "选词填空，从给出的6个词语（含虚词实词）为5个句子填空（1个用于例子，第31-35题）。"
+        },
+        "reading_3": {
+          "name": "第三部分：问答/对话配对",
+          "type": "read_dialogue_matching_split",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 6,
+          "time_min": 7,
+          "description": "对话配对，第36-40题6选5（含例子），第41-45题5选5（无例子）。"
+        },
+        "reading_4": {
+          "name": "第四部分：短文阅读理解",
+          "type": "read_comprehension_short_3opt",
+          "skill": "reading",
+          "n_questions": 5,
+          "n_options": 3,
+          "time_min": 6,
+          "description": "短文阅读理解，读1-2句短文，根据★问题从3个选项中选出正确答案（第46-50题）。"
+        }
+      }
+    },
+    "writing": {
+      "name": "书写 (Writing)",
+      "skill": "writing",
+      "total_questions": 10,
+      "time_min": 10,
+      "score_weight": 100,
+      "parts": {
+        "writing_1": {
+          "name": "第一部分：汉字部件/偏旁选择组字",
+          "type": "write_component_assembly_6opt",
+          "skill": "writing",
+          "n_questions": 5,
+          "n_options": 6,
+          "time_min": 5,
+          "description": "部件组合成字，从6个备选部件中选择正确部件与题干部件组合成汉字并组成词语（第51-55题）。"
+        },
+        "writing_2": {
+          "name": "第二部分：看拼音写汉字",
+          "type": "write_tianzige_from_pinyin",
+          "skill": "writing",
+          "n_questions": 5,
+          "n_options": 0,
+          "time_min": 5,
+          "description": "看拼音在田字格中写汉字，根据句子上下文和括号内拼音写出对应单字（第56-60题）。"
         }
       }
     }

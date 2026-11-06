@@ -7,6 +7,10 @@
  * 4. In-memory audio caching for zero-latency instant replays.
  */
 
+import { resolveChineseTtsPayload, sanitizeDialogueScript } from './pinyinConverter';
+
+export { resolveChineseTtsPayload, sanitizeDialogueScript };
+
 export interface VoiceOption {
   id: string;
   name: string;
@@ -92,6 +96,21 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   preferNeuralAI: false, // Default to instant zero-delay playback (no network latency)
 };
 
+/**
+ * CLEC Standard HSK Level Speed & Pitch Audio Pacing Matrix
+ * Lower HSK levels are articulated slower with slightly higher pitch for clarity,
+ * while advanced levels reflect authentic real-world native Mandarin speed.
+ */
+export const HSK_LEVEL_AUDIO_PACING: Record<number, { rate: number; pitch: number }> = {
+  1: { rate: 0.78, pitch: 1.05 },
+  2: { rate: 0.82, pitch: 1.03 },
+  3: { rate: 0.86, pitch: 1.00 },
+  4: { rate: 0.90, pitch: 1.00 },
+  5: { rate: 0.95, pitch: 0.98 },
+  6: { rate: 1.00, pitch: 0.98 },
+};
+
+
 // Eagerly preload browser voices on module initialization to eliminate first-click lag
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   try {
@@ -109,10 +128,12 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 // In-memory audio PCM cache for fast replays
 const audioCache = new Map<string, string>();
 let activeAudioSource: AudioBufferSourceNode | null = null;
+let activeHtmlAudio: HTMLAudioElement | null = null;
 let activeAudioContext: AudioContext | null = null;
 let geminiQuotaCooldownUntil = 0; // Temporary cooldown when cloud free quota is reached
 let activeUtterance: SpeechSynthesisUtterance | null = null; // Prevent Chrome garbage collection bug
 let speechKeepAliveTimer: any = null;
+let dialogueAbortController: AbortController | null = null;
 
 function clearKeepAliveTimer() {
   if (speechKeepAliveTimer) {
@@ -139,7 +160,7 @@ function startKeepAliveTimer() {
  * Loads saved voice settings from localStorage with automatic migration for snappy playback
  */
 export function getSavedVoiceSettings(): VoiceSettings {
-  if (typeof window === 'undefined') return DEFAULT_VOICE_SETTINGS;
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return DEFAULT_VOICE_SETTINGS;
   try {
     const raw = localStorage.getItem(VOICE_SETTINGS_STORAGE_KEY);
     if (raw) {
@@ -306,7 +327,18 @@ export function getAvailableChineseVoices(): Promise<VoiceOption[]> {
  * Stops any actively playing audio (both Web Audio API & Web Speech)
  */
 export function stopChineseAudio(): void {
+  if (dialogueAbortController) {
+    dialogueAbortController.abort();
+    dialogueAbortController = null;
+  }
   clearKeepAliveTimer();
+  if (activeHtmlAudio) {
+    try {
+      activeHtmlAudio.pause();
+      activeHtmlAudio.currentTime = 0;
+    } catch {}
+    activeHtmlAudio = null;
+  }
   if (activeAudioSource) {
     try {
       activeAudioSource.stop();
@@ -383,6 +415,208 @@ async function playPCMBase64(base64: string, sampleRate = 24000): Promise<void> 
   });
 }
 
+export interface DialogueTurn {
+  role: 'male' | 'female' | 'narrator';
+  text: string;
+}
+
+/**
+ * Parses structured dialogue transcripts into speaker turns (男, 女, 问, 甲, 乙, ★)
+ */
+export function parseDialogueTurns(raw: string): DialogueTurn[] | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const sanitized = sanitizeDialogueScript(raw);
+
+  const regex = /(?:^|\s|\n)(男|女|问|甲|乙|★)\s*[:：]\s*/g;
+  const matches = [...sanitized.matchAll(regex)];
+  if (matches.length === 0) {
+    return null;
+  }
+
+  // If only 1 match and it's not a question tag or star prompt, not a multi-role dialogue
+  if (matches.length === 1 && matches[0][1] !== '问' && matches[0][1] !== '★') {
+    return null;
+  }
+
+  const turns: DialogueTurn[] = [];
+
+  // Preamble before first role tag (e.g., short monologue before question)
+  if (matches[0].index! > 0) {
+    const preamble = sanitized.slice(0, matches[0].index!).trim();
+    if (preamble) {
+      turns.push({ role: 'narrator', text: preamble });
+    }
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const roleTag = m[1];
+    const startIdx = m.index! + m[0].length;
+    const endIdx = i + 1 < matches.length ? matches[i + 1].index! : sanitized.length;
+    let turnText = sanitized.slice(startIdx, endIdx).trim();
+
+    if (turnText) {
+      let role: DialogueTurn['role'] = 'narrator';
+      if (roleTag === '男' || roleTag === '甲') role = 'male';
+      else if (roleTag === '女' || roleTag === '乙') role = 'female';
+      else if (roleTag === '问') {
+        role = 'narrator';
+        if (!turnText.startsWith('问')) {
+          turnText = '问：' + turnText;
+        }
+      } else if (roleTag === '★') {
+        role = 'narrator';
+        if (!turnText.startsWith('★')) {
+          turnText = '★ ' + turnText;
+        }
+      }
+      turns.push({ role, text: turnText });
+    }
+  }
+
+  return turns.length > 0 ? turns : null;
+}
+
+function sleepWithAbort(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/**
+ * Plays dialogue turns sequentially with natural multi-role voice alternating,
+ * authentic pauses between turns (650ms), and 1200ms before question prompt.
+ */
+export async function playDialogueSequence(
+  turns: DialogueTurn[],
+  settings: VoiceSettings,
+  overrideRate?: number,
+  overridePitch?: number
+): Promise<void> {
+  stopChineseAudio();
+  const controller = new AbortController();
+  dialogueAbortController = controller;
+
+  for (let i = 0; i < turns.length; i++) {
+    if (controller.signal.aborted) break;
+
+    const turn = turns[i];
+    if (i > 0) {
+      const pauseDuration = turn.role === 'narrator' ? 1200 : 650;
+      await sleepWithAbort(pauseDuration, controller.signal);
+      if (controller.signal.aborted) break;
+    }
+
+    const cleanText = cleanAudioText(turn.text);
+    if (!cleanText) continue;
+
+    let turnPitch = overridePitch ?? settings.pitch ?? 1.0;
+    if (turn.role === 'male') {
+      turnPitch = overridePitch ? overridePitch * 0.88 : 0.88;
+    } else if (turn.role === 'female') {
+      turnPitch = overridePitch ? overridePitch * 1.12 : 1.12;
+    }
+
+    await playBrowserUtterance(cleanText, settings, overrideRate, turnPitch, turn.role, true);
+    if (controller.signal.aborted) break;
+  }
+
+  if (dialogueAbortController === controller) {
+    dialogueAbortController = null;
+  }
+}
+
+/**
+ * Ranks speech synthesis voices to prioritize high-fidelity Neural Natural Chinese voices
+ * (e.g. Xiaoxiao, Yunxi, Yunjian) over legacy robotic SAPI5 desktop voices (e.g. Huihui, Kangkang).
+ */
+export function rankVoice(
+  v: SpeechSynthesisVoice,
+  targetGender?: 'male' | 'female' | 'narrator'
+): number {
+  if (!v) return -1;
+  const n = (v.name || '').toLowerCase();
+  const lang = (v.lang || '').toLowerCase();
+
+  // Voice must support Chinese/Mandarin
+  const isChinese =
+    lang.startsWith('zh') ||
+    lang.includes('cmn') ||
+    lang.includes('mandarin') ||
+    n.includes('chinese') ||
+    n.includes('mandarin');
+
+  if (!isChinese) return -1;
+
+  let score = 10; // Baseline for any valid Chinese voice
+
+  // Major bonus for Neural / Natural / Online cloud-synthesized voices
+  if (n.includes('natural') || n.includes('neural') || n.includes('online')) {
+    score += 100;
+  }
+
+  if (targetGender === 'male') {
+    // Top male neural voices
+    if (n.includes('yunxi')) score += 60;
+    else if (n.includes('yunjian') || n.includes('yunyang')) score += 50;
+    else if (n.includes('male') || n.includes('danny') || n.includes('brian')) score += 20;
+    else if (n.includes('kangkang')) score += 5; // Legacy robotic SAPI5 fallback
+
+    // Heavily penalize female voices when searching for male
+    if (
+      n.includes('female') ||
+      n.includes('xiaoxiao') ||
+      n.includes('huihui') ||
+      n.includes('tingting') ||
+      n.includes('yaoyao') ||
+      n.includes('xiaoyi')
+    ) {
+      score -= 80;
+    }
+  } else if (targetGender === 'female') {
+    // Top female neural voices
+    if (n.includes('xiaoxiao')) score += 60;
+    else if (n.includes('xiaoyi') || n.includes('tingting')) score += 50;
+    else if (n.includes('female') || n.includes('google') || n.includes('meijia')) score += 20;
+    else if (n.includes('huihui') || n.includes('yaoyao')) score += 5; // Legacy robotic SAPI5 fallback
+
+    // Heavily penalize male voices when searching for female
+    if (
+      n.includes('male') ||
+      n.includes('yunxi') ||
+      n.includes('yunjian') ||
+      n.includes('yunyang') ||
+      n.includes('kangkang')
+    ) {
+      score -= 80;
+    }
+  } else {
+    // Narrator / default: Prioritize best natural neural voices (Xiaoxiao, Yunxi, etc.)
+    if (n.includes('xiaoxiao') || n.includes('yunxi')) score += 50;
+    else if (n.includes('yunjian') || n.includes('xiaoyi') || n.includes('tingting')) score += 40;
+    else if (n.includes('google')) score += 20;
+  }
+
+  // Bonus for modern non-local web service voices (Edge Natural voices have localService === false)
+  if (!v.localService) {
+    score += 5;
+  }
+
+  return score;
+}
+
 /**
  * Plays Chinese audio using browser Web Speech Synthesis as reliable fallback
  */
@@ -390,7 +624,9 @@ function playBrowserUtterance(
   cleanText: string,
   settings: VoiceSettings,
   overrideRate?: number,
-  overridePitch?: number
+  overridePitch?: number,
+  role?: 'male' | 'female' | 'narrator',
+  skipGlobalStop: boolean = false
 ): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -399,7 +635,30 @@ function playBrowserUtterance(
     }
 
     try {
-      stopChineseAudio();
+      if (!skipGlobalStop) {
+        stopChineseAudio();
+      } else {
+        if (activeHtmlAudio) {
+    try {
+      activeHtmlAudio.pause();
+      activeHtmlAudio.currentTime = 0;
+    } catch {}
+    activeHtmlAudio = null;
+  }
+  if (activeAudioSource) {
+          try {
+            activeAudioSource.stop();
+            activeAudioSource.disconnect();
+          } catch {}
+          activeAudioSource = null;
+        }
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          try {
+            window.speechSynthesis.cancel();
+          } catch {}
+        }
+        activeUtterance = null;
+      }
 
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
@@ -408,41 +667,38 @@ function playBrowserUtterance(
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';
       utterance.rate = overrideRate ?? settings.rate ?? 0.85;
-      utterance.pitch = overridePitch ?? settings.pitch ?? 1.0;
       utterance.volume = settings.volume ?? 1.0;
 
       const voices = window.speechSynthesis.getVoices();
       let selectedVoice: SpeechSynthesisVoice | undefined;
 
-      // 1. If user chose a specific browser voice ID
-      if (settings.voiceId && !settings.voiceId.startsWith('gemini-') && settings.voiceId !== 'default') {
+      // 0. If user chose a specific browser voice ID (and no role override)
+      if (!role && settings.voiceId && !settings.voiceId.startsWith('gemini-') && settings.voiceId !== 'default') {
         selectedVoice = voices.find((v) => (v.voiceURI || v.name) === settings.voiceId);
       }
 
-      // 2. If fallback from Gemini voice, match requested gender
+      // 1. Sort voices using rankVoice prioritizing Neural Natural Chinese voices
       if (!selectedVoice) {
-        const isMaleGemini = ['gemini-zephyr', 'gemini-charon', 'gemini-fenrir'].includes(settings.voiceId);
-
-        if (isMaleGemini) {
-          selectedVoice = voices.find((v) => {
-            const n = v.name.toLowerCase();
-            return (
-              (v.lang.startsWith('zh') || n.includes('chinese')) &&
-              (n.includes('yunxi') || n.includes('yunjian') || n.includes('male') || n.includes('kangkang'))
-            );
-          });
+        let targetGender: 'male' | 'female' | 'narrator' = 'narrator';
+        if (role === 'male') {
+          targetGender = 'male';
+        } else if (role === 'female') {
+          targetGender = 'female';
         } else {
-          selectedVoice = voices.find((v) => {
-            const n = v.name.toLowerCase();
-            return (
-              (v.lang.startsWith('zh') || n.includes('chinese')) &&
-              (n.includes('xiaoxiao') || n.includes('xiaoyi') || n.includes('tingting') || n.includes('female') || n.includes('google'))
-            );
-          });
+          const isMaleGemini = ['gemini-zephyr', 'gemini-charon', 'gemini-fenrir'].includes(settings.voiceId);
+          targetGender = isMaleGemini ? 'male' : 'narrator';
+        }
+
+        const candidateVoices = [...voices]
+          .filter((v) => rankVoice(v, targetGender) > 0)
+          .sort((a, b) => rankVoice(b, targetGender) - rankVoice(a, targetGender));
+
+        if (candidateVoices.length > 0) {
+          selectedVoice = candidateVoices[0];
         }
       }
 
-      // 3. Fallback to any high-quality standard Chinese voice
+      // 2. Fallback to any high-quality standard Chinese voice if still none selected
       if (!selectedVoice) {
         selectedVoice = voices.find(
           (v) =>
@@ -453,6 +709,16 @@ function playBrowserUtterance(
             v.name.includes('Mandarin')
         );
       }
+
+      // Pitch adjustment: If role is specified and no dedicated gender voice found on OS,
+      // shift pitch so male sounds deep and female sounds clear!
+      let effectivePitch = overridePitch ?? settings.pitch ?? 1.0;
+      if (role === 'male' && (!selectedVoice || (!selectedVoice.name.toLowerCase().includes('yun') && !selectedVoice.name.toLowerCase().includes('male')))) {
+        effectivePitch = overridePitch ? overridePitch * 0.88 : 0.88;
+      } else if (role === 'female' && (!selectedVoice || (!selectedVoice.name.toLowerCase().includes('xiao') && !selectedVoice.name.toLowerCase().includes('ting') && !selectedVoice.name.toLowerCase().includes('female')))) {
+        effectivePitch = overridePitch ? overridePitch * 1.12 : 1.12;
+      }
+      utterance.pitch = effectivePitch;
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
@@ -504,23 +770,48 @@ export function detectTextLanguage(text: string): 'zh' | 'en' | 'vi' {
   if (!text || !text.trim()) return 'zh';
   const trimmed = text.trim();
 
-  // If contains Chinese characters
+  // 1. If contains Chinese characters anywhere, it's Chinese
   if (/[\u4e00-\u9fa5]/.test(trimmed)) {
     return 'zh';
   }
 
-  // If contains Vietnamese specific diacritics
-  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed)) {
-    return 'vi';
-  }
+  // 2. Sanitize dialogue tags and non-Hanzi parenthetical annotations (e.g. "(ba quả táo)", "(Bạn có khỏe không?)")
+  const sanitized = sanitizeDialogueScript(trimmed);
 
-  // If contains Pinyin tone marks (ā, á, ǎ, à, etc.), definitely Chinese
-  if (/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/i.test(trimmed)) {
+  // If sanitized version now contains Hanzi (e.g. converted from dialogue tags or question prompt)
+  if (/[\u4e00-\u9fa5]/.test(sanitized)) {
     return 'zh';
   }
 
-  // Default to English if predominantly Latin alphabet without VN or Pinyin diacritics
-  if (/^[a-zA-Z0-9\s.,!?'"():;\-_/]+$/.test(trimmed)) {
+  // 3. Uniquely Pinyin tone marks: Macron (tone 1: ā, ē, ī, ō, ū, ǖ), Caron (tone 3: ǎ, ě, ǐ, ǒ, ǔ, ǚ), Umlaut (ü, ǖ, ǘ, ǚ, ǜ)
+  if (/[āēīōūǖǎěǐǒǔǚü]/.test(sanitized)) {
+    return 'zh';
+  }
+
+  // 4. Uniquely Vietnamese characters (NEVER used in standard Pinyin)
+  // Horn (ơ, ư), Circumflex tones (â, ê, ô with accents), Breve (ă), đ, dot below, hook above, tilde, y with accents
+  if (/[ạảãâầấậẩẫăằắặẳẵẹẻẽêềếệểễịỉĩọỏõôồốộổỗơờớợởỡụủũưừứựửữỳýỵỷỹđ]/i.test(sanitized)) {
+    return 'vi';
+  }
+
+  // 5. Shared acute/grave accents: á, à, é, è, í, ó, ò, ú, ù
+  // Check if it resolves to valid Chinese Hanzi via resolveChineseTtsPayload
+  if (/[áàéèíóòúù]/i.test(sanitized)) {
+    const resolved = resolveChineseTtsPayload(sanitized);
+    if (/[\u4e00-\u9fa5]/.test(resolved)) {
+      return 'zh';
+    }
+    return 'vi';
+  }
+
+  // 6. Check if pure unaccented Latin words are standard Pinyin (e.g. "ni hao", "xie xie", "ma", "ba")
+  const resolved = resolveChineseTtsPayload(sanitized);
+  if (/[\u4e00-\u9fa5]/.test(resolved)) {
+    return 'zh';
+  }
+
+  // 7. Default to English if predominantly Latin alphabet without diacritics
+  if (/^[a-zA-Z0-9\s.,!?'"():;\-_/]+$/.test(sanitized)) {
     return 'en';
   }
 
@@ -559,16 +850,36 @@ export async function playMultilingualVoice(
   const targetLang = lang === 'auto' ? detectTextLanguage(text) : lang;
   const settings = getSavedVoiceSettings();
 
+  // For Chinese speech: First check if text is a structured dialogue with turns (男, 女, 问, 甲, 乙)
+  let sourceText = text;
+  if (targetLang === 'zh') {
+    const turns = parseDialogueTurns(text);
+    if (turns && turns.length > 1) {
+      await playDialogueSequence(turns, settings, overrideRate, overridePitch);
+      return;
+    }
+
+    const resolved = resolveChineseTtsPayload(text);
+    if (resolved) {
+      sourceText = resolved;
+    } else if (/[\u4e00-\u9fa50-9]/.test(text)) {
+      sourceText = text;
+    } else {
+      // No speakable Chinese content (e.g. untranslatable Vietnamese/English note)
+      return;
+    }
+  }
+
   // Instant 0ms speech for real-time interactive live conversation
   if (preferInstantNative && targetLang === 'zh') {
-    const cleanText = cleanAudioText(text);
+    const cleanText = cleanAudioText(sourceText);
     await playBrowserUtterance(cleanText, settings, overrideRate, overridePitch);
     return;
   }
 
   // For Chinese with Neural Gemini Voices
   if (targetLang === 'zh') {
-    const cleanText = cleanAudioText(text);
+    const cleanText = cleanAudioText(sourceText);
     // Only use Gemini TTS if user explicitly enabled preferNeuralAI AND selected a gemini-* voice
     const isExplicitGemini = Boolean(settings.preferNeuralAI && settings.voiceId && settings.voiceId.startsWith('gemini-'));
     const isCooldown = Date.now() < geminiQuotaCooldownUntil;
@@ -695,3 +1006,59 @@ export async function playMultilingualVoice(
   });
 }
 
+/**
+ * Speaks a dialogue or listening script with automatic speaker turn detection,
+ * gender-alternating natural neural voices (Xiaoxiao/Yunxi), authentic CLEC pauses
+ * (650ms between turns, 1200ms before prompt), and HSK level-calibrated pacing.
+ */
+export async function speakDialogueScript(
+  script: string,
+  level: number = 3,
+  overrideRate?: number,
+  overridePitch?: number
+): Promise<void> {
+  if (!script || !script.trim()) return;
+
+  const turns = parseDialogueTurns(script);
+  const pacing = HSK_LEVEL_AUDIO_PACING[level] || { rate: 0.86, pitch: 1.0 };
+  const rate = overrideRate ?? pacing.rate;
+  const pitch = overridePitch ?? pacing.pitch;
+  const settings = getSavedVoiceSettings();
+
+  if (turns && turns.length > 1) {
+    await playDialogueSequence(turns, settings, rate, pitch);
+  } else {
+    const sanitized = sanitizeDialogueScript(script);
+    await playChineseAudio(sanitized, rate, pitch);
+  }
+}
+
+/**
+ * Plays an audio file from a URL with playback rate control and stops cleanly with stopChineseAudio.
+ */
+export function playAudioUrl(url: string, playbackRate = 1.0): Promise<void> {
+  stopChineseAudio();
+  return new Promise((resolve, reject) => {
+    try {
+      if (typeof window === "undefined") return resolve();
+      const audio = new Audio(url);
+      audio.playbackRate = playbackRate;
+      activeHtmlAudio = audio;
+      audio.onended = () => {
+        activeHtmlAudio = null;
+        resolve();
+      };
+      audio.onerror = (err) => {
+        activeHtmlAudio = null;
+        reject(err);
+      };
+      audio.play().catch((err) => {
+        activeHtmlAudio = null;
+        reject(err);
+      });
+    } catch (err) {
+      activeHtmlAudio = null;
+      reject(err);
+    }
+  });
+}

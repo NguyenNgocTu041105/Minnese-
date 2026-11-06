@@ -88,6 +88,16 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
 
   const allVocabularies = vocabList;
 
+  const levelCounts = useMemo(() => {
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    for (const w of allVocabularies) {
+      if (w.hskLevel >= 1 && w.hskLevel <= 6) {
+        counts[w.hskLevel] = (counts[w.hskLevel] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [allVocabularies]);
+
   // Helper for accent-insensitive & tone-insensitive search normalization
   const normalizeForSearch = (str: string | undefined | null) => {
     if (!str) return '';
@@ -333,7 +343,7 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6" id="dictionary-container">
+    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 animate-fade-in" id="dictionary-container">
       {/* Toast Notification */}
       {importStatus && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 text-xs font-semibold animate-in fade-in">
@@ -414,7 +424,7 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tra chữ Hán (学习), Pinyin (xuexi), Hán Việt hoặc nghĩa tiếng Việt (học tập, xin chào)..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] text-xs sm:text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+            className="silk-input w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm placeholder-[var(--color-text-secondary)]"
           />
         </div>
 
@@ -427,7 +437,7 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
           <button
             type="button"
             onClick={() => setSelectedLevel('all')}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+            className={`silk-pill px-3 py-1 text-xs font-semibold ${
               selectedLevel === 'all'
                 ? 'bg-[var(--color-primary)] text-white font-bold shadow-xs'
                 : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
@@ -441,13 +451,13 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
               key={lvl}
               type="button"
               onClick={() => setSelectedLevel(lvl)}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+              className={`silk-pill px-3 py-1 text-xs font-semibold ${
                 selectedLevel === lvl
                   ? 'bg-[var(--color-primary)] text-white font-bold shadow-xs'
                   : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
               }`}
             >
-              HSK {lvl}
+              HSK {lvl} ({levelCounts[lvl] || 0})
             </button>
           ))}
         </div>
@@ -472,7 +482,7 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
           <select
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
-            className="px-2.5 py-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+            className="silk-input px-2.5 py-1 text-xs font-semibold"
           >
             <option value={24}>24 từ</option>
             <option value={48}>48 từ</option>
@@ -487,7 +497,7 @@ export const DictionaryView: React.FC<DictionaryViewProps> = ({
           <div
             key={word.id}
             onClick={() => setSelectedWord(word)}
-            className="bg-[var(--color-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--color-border)] shadow-xs hover:border-[var(--color-primary)]/40 transition-all cursor-pointer flex flex-col justify-between group relative"
+            className="silk-card-interactive rounded-2xl p-4 sm:p-5 flex flex-col justify-between group relative"
           >
             <div>
               <div className="flex items-start justify-between">

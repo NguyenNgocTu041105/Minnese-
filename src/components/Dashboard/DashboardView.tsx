@@ -1,27 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Flame,
-  Trophy,
-  Target,
   Sparkles,
-  Calendar,
-  Layers,
   ArrowRight,
   BookOpen,
-  Award,
-  Zap,
   CheckCircle2,
   Clock,
   TrendingUp,
   FileText,
-  Play,
-  RotateCcw,
-  Shield,
-  Briefcase,
-  Sliders,
   GraduationCap,
   Volume2,
-  RotateCw,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -30,31 +17,30 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
   CartesianGrid,
   ReferenceLine,
 } from 'recharts';
 import { UserProfile, SRSCardState, UserStats, AssignmentDoc, AssignmentSubmissionDoc } from '../../types';
-import { INITIAL_VOCABULARY } from '../../data/hskVocabulary';
-import { playChineseAudio } from '../../utils/chineseAudio';
 import { NEW_HSK1_FULL_LESSONS } from '../../data/newHsk1BookData';
 import { NEW_HSK2_FULL_LESSONS } from '../../data/newHsk2BookData';
 import { NEW_HSK3_FULL_LESSONS } from '../../data/newHsk3BookData';
 import { NEW_HSK4_FULL_LESSONS } from '../../data/newHsk4BookData';
 import { getCoursebookDueStats } from '../../utils/coursebookVocab';
 import { TeacherVoicePlayer } from '../Feedback/TeacherVoicePlayer';
-import { get7DayActivityStats, DayActivityAggregate, logStudyActivity } from '../../utils/activityLogger';
+import { get7DayActivityStats, DayActivityAggregate } from '../../utils/activityLogger';
+import { getCalendarDayDiff } from '../../utils/streak';
 
 interface DashboardViewProps {
   userProfile: UserProfile;
   stats: UserStats;
   srsCards: Record<string, SRSCardState>;
   onNavigate: (tab: any) => void;
-  onStartReview: () => void;
+  onStartReview?: (mode?: 'due_only' | 'all') => void;
   assignments: AssignmentDoc[];
   submissions?: AssignmentSubmissionDoc[];
   onOpenVoiceCall?: () => void;
   onOpenJoinClass?: () => void;
+  onStartAssignment?: (asg: AssignmentDoc) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -67,9 +53,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   submissions = [],
   onOpenVoiceCall,
   onOpenJoinClass,
+  onStartAssignment,
 }) => {
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-
   const userLevel = (userProfile.current_level as 1 | 2 | 3 | 4) || 1;
   const levelLessons =
     userLevel === 1
@@ -105,10 +90,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return getCoursebookDueStats(userLevel, srsCards);
   }, [userLevel, srsCards, activeLessonIndex, completedLessonNums]);
 
-  const dueCardsList = coursebookDue.dueWords;
-  const dueWords = coursebookDue.dueWords;
-  const [playingHanzi, setPlayingHanzi] = useState<string | null>(null);
-
   // Student's graded submissions and voice feedback
   const mySubmissions = React.useMemo(() => {
     return submissions.filter(
@@ -122,15 +103,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const voiceFeedbackSubs = React.useMemo(() => {
     return mySubmissions.filter((s) => s.teacher_voice_url);
   }, [mySubmissions]);
-
-  const handlePlayWordAudio = (e: React.MouseEvent, hanzi: string) => {
-    e.stopPropagation();
-    setPlayingHanzi(hanzi);
-    playChineseAudio(hanzi);
-    setTimeout(() => {
-      setPlayingHanzi((prev) => (prev === hanzi ? null : prev));
-    }, 1200);
-  };
 
   useEffect(() => {
     const syncProgress = () => {
@@ -192,6 +164,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const isAdmin = userProfile.role === 'admin' || userProfile.email === 'babysharkkk123@gmail.com';
   const userAssignments = assignments.filter((a) => {
     if (!a.is_active) return false;
+    // Hide assignments that expired more than 7 days ago, but keep recent overdue ones visible for students
+    if (a.due_date) {
+      const dueTime = new Date(a.due_date).getTime();
+      const sevenDaysAgo = Date.now() - 7 * 86400000;
+      if (dueTime < sevenDaysAgo) return false;
+    }
     if (isAdmin) return true;
     if (a.target_type === 'class' && a.target_class_id) {
       return (
@@ -203,186 +181,94 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return a.hsk_level === userProfile.current_level || a.target_type === 'all';
   });
 
-  const totalMasteredWords = Object.values(srsCards).filter((c) => c.state === 'mastered').length;
+  // User's customizable daily goal
+  const [dailyGoalCards, setDailyGoalCards] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('minnie_daily_goal_cards');
+      if (saved) return parseInt(saved, 10);
+    } catch {}
+    return userProfile.words_per_day || 15;
+  });
+
+  const handleSetDailyGoalCards = (val: number) => {
+    setDailyGoalCards(val);
+    try {
+      localStorage.setItem('minnie_daily_goal_cards', String(val));
+    } catch {}
+  };
+
+  const cardsReviewedToday = stats.cardsReviewedToday || 0;
+  const dailyGoalPercent = Math.min(100, Math.round((cardsReviewedToday / dailyGoalCards) * 100));
 
   return (
-    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-8" id="dashboard-container">
-      {/* Header Welcome & Class Status Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] shadow-sm relative overflow-hidden">
+    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 sm:space-y-8 animate-fade-in" id="dashboard-container">
+      {/* Zone A: Header Welcome & Goal Status Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 silk-card p-5 sm:p-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-[var(--color-primary)]/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-2xl">👋</span>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
               Chào {userProfile.displayName || 'Học viên Minnie Chinese'}!
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-              Trình độ: HSK {userProfile.current_level || 1}
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 shadow-xs">
+              HSK {userProfile.current_level || 1}
             </span>
             {userProfile.class_code && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                Mã lớp: {userProfile.class_code}
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                Lớp {userProfile.class_code}
               </span>
             )}
           </div>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            {userProfile.class_code ? (
-              <strong className="text-[var(--color-text-primary)] font-medium">
-                Lớp học: {userProfile.class_code} · Trình độ: HSK {userProfile.current_level}{' '}
-              </strong>
-            ) : null}
-            {userProfile.class_code ? '— ' : ''}Hôm nay bạn có{' '}
-            <strong className="text-[var(--color-primary)]">{coursebookDue.dueCount} thẻ</strong> đến hạn ôn tập ({coursebookDue.scopeLabel}). Bạn có thể chủ động học và ôn luyện theo thời gian rảnh của mình.
+          <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
+            Chúc bạn một ngày học tiếng Trung hiệu quả và tràn đầy hứng khởi!
           </p>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 relative z-10 flex-wrap">
-          <button
-            type="button"
-            onClick={() => onNavigate('flashcards')}
-            className="px-5 py-2.5 text-xs font-semibold rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            <span>Bắt đầu ôn tập ngay</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3 Core Highlight Feature Banners: Coursebook (Crimson Red), Live Voice Call (Indigo/Violet), Gia sư AI (Deep Teal/Emerald) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Banner 1: Coursebook (Crimson Red) */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-red-700 via-rose-800 to-slate-950 border border-red-500/30 text-white shadow-md flex flex-col justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/30 text-white text-[11px] font-bold uppercase tracking-wider border border-red-300/40">
-              <BookOpen className="w-3 h-3 text-red-200" />
-              Giáo trình tương tác
+        {/* Daily Goal Mini Status Display & Selector */}
+        <div className="flex items-center gap-3 relative z-10 shrink-0 bg-[var(--color-background)] px-4 py-2.5 rounded-2xl border border-[var(--color-border)] shadow-xs">
+          <div className="relative w-10 h-10 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-[var(--color-border)]"
+                strokeWidth="3.5"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className="text-[var(--color-primary)] transition-all duration-500"
+                strokeDasharray={`${dailyGoalPercent}, 100`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+            <span className="absolute font-mono font-bold text-[10px] text-[var(--color-text-primary)]">
+              {dailyGoalPercent}%
+            </span>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-[var(--color-text-secondary)]">
+              <span>Mục tiêu ngày:</span>
+              <select
+                value={dailyGoalCards}
+                onChange={(e) => handleSetDailyGoalCards(Number(e.target.value))}
+                className="bg-transparent font-bold text-[var(--color-primary)] focus:outline-none cursor-pointer"
+                title="Thay đổi mục tiêu học mỗi ngày"
+              >
+                <option value={10}>10 thẻ</option>
+                <option value={15}>15 thẻ</option>
+                <option value={20}>20 thẻ</option>
+                <option value={30}>30 thẻ</option>
+              </select>
             </div>
-            <h2 className="text-base sm:text-lg font-black font-chinese tracking-tight text-white">
-              《新HSK教程》Trọn Bộ
-            </h2>
-            <p className="text-xs text-white/90 leading-relaxed font-medium line-clamp-2">
-              HSK 1 (15 bài), HSK 2 (15 bài) & HSK 3 (10 bài) chuẩn phân cấp có audio và trắc nghiệm.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onNavigate('coursebook')}
-            className="px-4 py-2.5 rounded-xl bg-white hover:bg-red-50 text-red-950 text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer self-start"
-          >
-            <span>Học giáo trình</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Banner 2: LIVE VOICE CALL (Electric Violet / Deep Indigo) */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-700 via-purple-800 to-slate-950 text-white shadow-md flex flex-col justify-between gap-4 relative overflow-hidden ring-2 ring-indigo-400/40 border border-indigo-500/30">
-          <div className="absolute -right-4 -bottom-4 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none" />
-          <div className="space-y-1.5 relative z-10">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/30 text-white text-[11px] font-bold uppercase tracking-wider border border-purple-300/40">
-              <Sparkles className="w-3 h-3 text-purple-200" />
-              Tính năng AI
+            <div className="text-xs font-bold text-[var(--color-text-primary)]">
+              {cardsReviewedToday} / {dailyGoalCards} thẻ ôn
             </div>
-            <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
-              Gọi Thoại Như Bạn Bè 📞
-            </h2>
-            <p className="text-xs text-white/90 leading-relaxed font-medium line-clamp-2">
-              Trò chuyện trực tiếp 2 chiều qua micro, nghe giọng nói chuẩn bản xứ, chấm điểm và phản xạ tự nhiên.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onOpenVoiceCall || (() => onNavigate('tutor'))}
-            className="px-4 py-2.5 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-95 cursor-pointer self-start relative z-10"
-          >
-            <span>Bắt đầu gọi thoại ngay</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Banner 3: AI Tutor & Gia sư AI (Deep Teal / Emerald) */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-800 via-emerald-900 to-slate-950 border border-teal-500/30 text-white shadow-md flex flex-col justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/30 text-white text-[11px] font-bold uppercase tracking-wider border border-purple-300/40">
-              <Sparkles className="w-3 h-3 text-purple-200" />
-              Gia sư AI
-            </div>
-            <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
-              Hỏi Đáp & Bác Sĩ Ngữ Pháp
-            </h2>
-            <p className="text-xs text-white/90 leading-relaxed font-medium line-clamp-2">
-              Chẩn đoán câu lỗi, tạo bài đọc hiểu phân cấp HSK và tra cứu giải thích ngữ pháp tức thì.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onNavigate('tutor')}
-            className="px-4 py-2.5 rounded-xl bg-white hover:bg-teal-50 text-teal-950 text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-sm transition-transform active:scale-95 cursor-pointer self-start"
-          >
-            <span>Mở Gia sư AI</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* 4 Core Stat Hero Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Streak Card */}
-        <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-            <Flame className="w-6 h-6 fill-amber-500" />
-          </div>
-          <div>
-            <p className="text-xs text-[var(--color-text-secondary)] font-medium">Chuỗi ngày học liên tiếp</p>
-            <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-              {stats.dailyStreak} <span className="text-xs font-normal text-[var(--color-text-secondary)]">ngày</span>
-            </p>
-          </div>
-        </div>
-
-        {/* EXP Points */}
-        <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-[var(--color-primary)]">
-            <Trophy className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-[var(--color-text-secondary)] font-medium">Điểm tích luỹ (EXP)</p>
-            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stats.xp || userProfile.exp_points} <span className="text-xs font-normal text-[var(--color-text-secondary)]">EXP</span></p>
-          </div>
-        </div>
-
-        {/* Mastered Words */}
-        <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-[var(--color-text-secondary)] font-medium">Từ vựng đã thuộc</p>
-            <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-              {coursebookDue.masteredCount} <span className="text-xs font-normal text-[var(--color-text-secondary)]">/ {coursebookDue.totalWordsCount} từ</span>
-            </p>
-            <p className="text-[10px] text-[var(--color-text-secondary)] truncate max-w-[170px] mt-0.5">
-              Theo bài đã học trong giáo trình
-            </p>
-          </div>
-        </div>
-
-        {/* Due Cards */}
-        <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-[var(--color-text-secondary)] font-medium">Cần ôn hôm nay</p>
-            <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-              {coursebookDue.dueCount} <span className="text-xs font-normal text-[var(--color-text-secondary)]">thẻ</span>
-            </p>
-            <p className="text-[10px] text-[var(--color-primary)] font-medium truncate max-w-[170px] mt-0.5">
-              {coursebookDue.scopeLabel}
-            </p>
           </div>
         </div>
       </div>
@@ -390,7 +276,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Main Grid: 7-Day Chart & Coursebook Level Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 7-Day Learning Chart */}
-        <div className="lg:col-span-2 bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] space-y-4">
+        <div className="lg:col-span-2 silk-card p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-[var(--color-primary)] shrink-0" />
@@ -558,7 +444,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => onNavigate('flashcards')}
+                onClick={() => {
+                  if (onStartReview) {
+                    onStartReview(coursebookDue.dueCount > 0 ? 'due_only' : 'all');
+                  } else {
+                    onNavigate('flashcards');
+                  }
+                }}
                 className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[11px] shrink-0 transition-colors cursor-pointer"
               >
                 Ôn ngay
@@ -575,7 +467,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Coursebook Level Progress & Current Lesson Widget */}
-        <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] flex flex-col justify-between space-y-5">
+        <div className="silk-card p-6 flex flex-col justify-between space-y-5">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -686,8 +578,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Homework / Assigned Tasks (Module 7 Feature) */}
-      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="silk-card p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-[var(--color-primary)]" />
             <h2 className="font-bold text-base text-[var(--color-text-primary)]">
@@ -695,101 +587,172 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </h2>
           </div>
           <span className="text-xs text-[var(--color-text-secondary)]">
-            Tự động đồng bộ theo cấp độ chính thức
+            Tự động đồng bộ theo cấp độ học viên
           </span>
         </div>
 
         {userAssignments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {userAssignments.map((assign) => (
-              <div
-                key={assign.id}
-                className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-primary)] transition-all flex flex-col justify-between gap-3 shadow-xs"
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-                      {assign.content_type === 'quiz'
-                        ? 'Trắc nghiệm & Đề thi'
-                        : assign.content_type === 'deck'
-                        ? 'Bộ thẻ Flashcards'
-                        : assign.content_type === 'reading'
-                        ? 'Luyện Đọc hiểu'
-                        : 'Luyện Viết chữ Hán'}
-                    </span>
-                    {assign.exam_code && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                        Mã: {assign.exam_code}
-                      </span>
-                    )}
-                    <span className="text-[11px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full ml-auto">
-                      Hạn: {new Date(assign.due_date).toLocaleDateString('vi-VN')}
-                    </span>
-                  </div>
+            {[...userAssignments]
+              .sort((a, b) => {
+                const aTime = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+                const bTime = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+                return aTime - bTime;
+              })
+              .map((assign) => {
+                const now = Date.now();
+                const dueTime = assign.due_date ? new Date(assign.due_date).getTime() : null;
+                const diffMs = dueTime ? dueTime - now : null;
+                const calDiffDays = assign.due_date
+                  ? getCalendarDayDiff(new Date().toISOString(), assign.due_date)
+                  : null;
 
-                  <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
-                    {assign.title}
-                  </h3>
+                const mySub = mySubmissions.find((s) => s.assignment_id === assign.id);
+                const isSubmitted = !!mySub;
 
-                  <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
-                    {assign.description}
-                  </p>
+                let dueBadge = null;
+                if (isSubmitted) {
+                  dueBadge = {
+                    text: mySub.score !== undefined ? `Đã nộp (${mySub.score}đ)` : 'Đã nộp bài',
+                    className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold',
+                  };
+                } else if (dueTime !== null && diffMs !== null && calDiffDays !== null) {
+                  if (diffMs < 0) {
+                    const overdueDays = Math.max(1, Math.abs(calDiffDays));
+                    dueBadge = {
+                      text: `Quá hạn ${overdueDays} ngày`,
+                      className: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25 font-bold',
+                    };
+                  } else if (diffMs <= 24 * 60 * 60 * 1000 || calDiffDays <= 0) {
+                    const hours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+                    dueBadge = {
+                      text: `Hạn chót: Còn ${hours}h`,
+                      className: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 font-bold',
+                    };
+                  } else {
+                    dueBadge = {
+                      text: `Hạn: Còn ${calDiffDays} ngày (${new Date(assign.due_date).toLocaleDateString('vi-VN')})`,
+                      className: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20 font-medium',
+                    };
+                  }
+                }
 
-                  {/* Attached Content Details */}
-                  <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--color-text-secondary)]">
-                    {assign.content_type === 'quiz' && (
-                      <span className="font-medium text-[var(--color-primary)] bg-[var(--color-primary-light)]/40 px-2 py-0.5 rounded">
-                        📝 {assign.question_count || 10} câu hỏi trắc nghiệm ({assign.duration_minutes || 15} phút)
-                      </span>
-                    )}
-                    {assign.content_type === 'deck' && (
-                      <span className="font-medium text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
-                        🗂️ {assign.vocab_words?.length || 15} từ vựng cần học thuộc
-                      </span>
-                    )}
-                    {assign.content_type === 'reading' && assign.reading_topic && (
-                      <span className="font-medium text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded">
-                        📖 Chủ đề: {assign.reading_topic}
-                      </span>
-                    )}
-                    {assign.content_type === 'writing' && (
-                      <span className="font-medium text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">
-                        ✍️ Viết tay nộp ảnh chấm nét OCR
-                      </span>
-                    )}
-                  </div>
-                </div>
+                // Disambiguate titles like EXAM-9380
+                const rawTitle = assign.title || '';
+                const isGenericExam = /^EXAM-\d+/i.test(rawTitle) || rawTitle.trim().toLowerCase() === 'bài tập mới';
+                const displayTitle = isGenericExam && assign.content_type === 'quiz'
+                  ? `Đề HSK ${assign.hsk_level || userLevel} • ${assign.question_count || 10} câu`
+                  : rawTitle;
 
-                <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-[var(--color-text-secondary)] flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-amber-500" />
-                    Chưa hoàn thành
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (assign.content_type === 'quiz') {
-                        if (assign.exam_code) {
-                          // update url param for direct exam launch
-                          const url = new URL(window.location.href);
-                          url.searchParams.set('exam', assign.exam_code);
-                          window.history.pushState({}, '', url.toString());
-                        }
-                        onNavigate('quizzes');
-                      } else if (assign.content_type === 'deck') {
-                        onNavigate('flashcards');
-                      } else {
-                        onNavigate('quizzes');
-                      }
-                    }}
-                    className="px-4 py-1.5 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] transition-all cursor-pointer shadow-xs whitespace-nowrap"
+                return (
+                  <div
+                    key={assign.id}
+                    className="silk-card-interactive p-4.5 rounded-2xl flex flex-col justify-between gap-3"
                   >
-                    Bắt đầu làm bài →
-                  </button>
-                </div>
-              </div>
-            ))}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                          {assign.content_type === 'quiz'
+                            ? 'Trắc nghiệm & Đề thi'
+                            : assign.content_type === 'deck'
+                            ? 'Bộ thẻ Flashcards'
+                            : assign.content_type === 'reading'
+                            ? 'Luyện Đọc hiểu'
+                            : 'Luyện Viết chữ Hán'}
+                        </span>
+                        {assign.exam_code && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            Mã: {assign.exam_code}
+                          </span>
+                        )}
+                        {dueBadge && (
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ml-auto ${dueBadge.className}`}>
+                            {dueBadge.text}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
+                        {displayTitle}
+                      </h3>
+
+                      {assign.description && (
+                        <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
+                          {assign.description}
+                        </p>
+                      )}
+
+                      {/* Attached Content Details */}
+                      <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--color-text-secondary)]">
+                        {assign.content_type === 'quiz' && (
+                          <span className="font-medium text-[var(--color-primary)] bg-[var(--color-primary-light)]/40 px-2 py-0.5 rounded">
+                            📝 {assign.question_count || 10} câu hỏi trắc nghiệm ({assign.duration_minutes || 15} phút)
+                          </span>
+                        )}
+                        {assign.content_type === 'deck' && (
+                          <span className="font-medium text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                            🗂️ {assign.vocab_words?.length || 15} từ vựng cần học thuộc
+                          </span>
+                        )}
+                        {assign.content_type === 'reading' && assign.reading_topic && (
+                          <span className="font-medium text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded">
+                            📖 Chủ đề: {assign.reading_topic}
+                          </span>
+                        )}
+                        {assign.content_type === 'writing' && (
+                          <span className="font-medium text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">
+                            ✍️ Viết tay nộp ảnh chấm nét OCR
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between gap-2">
+                      <span className={`text-[11px] flex items-center gap-1 ${
+                        isSubmitted
+                          ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                          : 'text-[var(--color-text-secondary)]'
+                      }`}>
+                        {isSubmitted ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            Đã hoàn thành
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3.5 h-3.5 text-amber-500" />
+                            Chưa hoàn thành
+                          </>
+                        )}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onStartAssignment) {
+                            onStartAssignment(assign);
+                          } else {
+                            if (assign.content_type === 'quiz') {
+                              onNavigate('quizzes');
+                            } else if (assign.content_type === 'deck') {
+                              onNavigate('flashcards');
+                            } else {
+                              onNavigate('quizzes');
+                            }
+                          }
+                        }}
+                        className={`silk-btn px-4 py-2 min-h-[44px] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap flex items-center justify-center ${
+                          isSubmitted
+                            ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200'
+                            : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)]'
+                        }`}
+                      >
+                        {isSubmitted ? 'Làm lại bài tập ↻' : 'Bắt đầu làm bài →'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         ) : (
           <div className="text-center py-6 text-[var(--color-text-secondary)] text-sm">
@@ -799,31 +762,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         )}
       </div>
 
-      {/* Teacher Voice Pronunciation & Homework Feedback Lab */}
-      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-rose-500/20 space-y-4 relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-rose-400 text-white flex items-center justify-center shadow-sm">
-              <Volume2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-bold text-base text-[var(--color-text-primary)] flex items-center gap-2">
-                <span>Voice Chữa Phát Âm & Nhận Xét Của Giáo Viên</span>
-                {voiceFeedbackSubs.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/15 text-rose-600">
-                    {voiceFeedbackSubs.length} bản nhận xét
-                  </span>
-                )}
+      {/* Teacher Voice Pronunciation & Homework Feedback Lab - Only shown when teacher has left voice feedback */}
+      {voiceFeedbackSubs.length > 0 && (
+        <div className="silk-card p-4 sm:p-5 space-y-3 relative overflow-hidden">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-rose-500" />
+              <h2 className="font-bold text-sm sm:text-base text-[var(--color-text-primary)]">
+                Voice Chữa Phát Âm Của Giáo Viên
               </h2>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                Lắng nghe cô giáo sửa lỗi thanh điệu, khẩu hình và hướng dẫn phát âm trực tiếp trên web
-              </p>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/15 text-rose-600">
+                {voiceFeedbackSubs.length} bản nhận xét
+              </span>
             </div>
           </div>
-        </div>
 
-        {voiceFeedbackSubs.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {voiceFeedbackSubs.map((sub) => (
               <TeacherVoicePlayer
                 key={sub.id}
@@ -838,166 +792,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               />
             ))}
           </div>
-        ) : (
-          <div className="p-4 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="space-y-1 text-center sm:text-left">
-              <p className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5 justify-center sm:justify-start">
-                <Sparkles className="w-4 h-4 text-rose-500" />
-                <span>Chưa có bản ghi âm chữa bài mới từ Giáo viên</span>
-              </p>
-              <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
-                Khi bạn nộp bài tập hoặc bài thi nói / viết, Giáo viên sẽ thu âm trực tiếp các lưu ý ngữ âm và gửi về đây để bạn nghe và nhại theo.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onNavigate('quizzes')}
-              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
-            >
-              Nộp bài tập để nhận Voice chữa →
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Due Flashcards List Preview */}
-      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-[var(--color-primary)]" />
-              <h2 className="font-bold text-base text-[var(--color-text-primary)] flex items-center gap-2">
-                <span>Từ vựng đến hạn ôn tập hôm nay</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${dueWords.length > 0 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'}`}>
-                  {dueWords.length} từ
-                </span>
-              </h2>
-            </div>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              Bám sát giáo trình New HSK {userLevel} ({coursebookDue.scopeLabel}) • Chu kỳ lặp lại ngắt quãng SM-2
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {dueWords.length > 0 ? (
-              <button
-                type="button"
-                onClick={onStartReview}
-                className="px-3.5 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] transition-all flex items-center gap-1.5 shadow-sm cursor-pointer hover:shadow-md"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Ôn tập ngay ({dueWords.length})</span>
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => onNavigate('flashcards')}
-              className="px-3 py-2 rounded-xl bg-[var(--color-background)] hover:bg-[var(--color-primary-light)] text-[var(--color-text-primary)] hover:text-[var(--color-primary)] border border-[var(--color-border)] text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <span>Mở bàn học SM-2</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
-
-        {dueWords.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {dueWords.slice(0, 10).map((word: any) => {
-              const isPlaying = playingHanzi === word.hanzi;
-              const card = srsCards[word.id] || srsCards[word.hanzi];
-              const isNewWord = !card || card.state === 'new';
-
-              return (
-                <div
-                  key={word.id}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden ${
-                    isPlaying
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]/40 shadow-sm scale-[1.02]'
-                      : 'border-[var(--color-border)] bg-[var(--color-background)] hover:border-[var(--color-primary)] hover:shadow-sm'
-                  }`}
-                  onClick={(e) => handlePlayWordAudio(e, word.hanzi)}
-                  title="Click để nghe phát âm ngay lập tức (0s độ trễ)"
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <span className="text-2xl font-bold font-chinese text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)] transition-colors leading-none">
-                      {word.hanzi}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => handlePlayWordAudio(e, word.hanzi)}
-                      className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                        isPlaying
-                          ? 'bg-[var(--color-primary)] text-white animate-pulse'
-                          : 'bg-transparent text-[var(--color-text-secondary)] group-hover:text-[var(--color-primary)] group-hover:bg-[var(--color-primary-light)]'
-                      }`}
-                    >
-                      <Volume2 className={`w-4 h-4 ${isPlaying ? 'animate-bounce' : ''}`} />
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-[var(--color-primary)] font-medium mt-2 font-mono">
-                    {word.pinyin}
-                  </p>
-                  <p className="text-xs text-[var(--color-text-secondary)] truncate mt-0.5">
-                    {word.vietnamese || word.english}
-                  </p>
-
-                  <div className="mt-2.5 pt-2 border-t border-[var(--color-border)]/60 flex items-center justify-between text-[10px] text-[var(--color-text-secondary)]">
-                    <span className="font-mono opacity-80">
-                      {word.lessonNumber ? `Bài ${word.lessonNumber}` : `HSK ${word.hskLevel}`}
-                    </span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded font-medium ${
-                        isNewWord
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                          : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                      }`}
-                    >
-                      {isNewWord ? 'Từ mới' : 'Đến hạn'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 px-4 bg-[var(--color-background)] rounded-2xl border border-dashed border-[var(--color-border)] space-y-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-sm">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div className="space-y-1 max-w-md mx-auto">
-              <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                Tuyệt vời! Không còn từ vựng tồn đọng hôm nay
-              </h3>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Tất cả từ vựng theo tiến độ <strong>{coursebookDue.scopeLabel}</strong> đã được ôn tập đúng chu kỳ. Thuật toán SM-2 sẽ tự động phân phối các từ cần ôn vào những ngày tiếp theo (có hôm ít, có hôm nhiều theo độ ghi nhớ).
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  logStudyActivity('review', 'Luyện củng cố từ đã học');
-                  onStartReview();
-                }}
-                className="px-3.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-text-primary)] text-xs font-semibold transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <RotateCw className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                <span>Luyện củng cố ({coursebookDue.totalWordsCount} từ đã học)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigate('coursebook')}
-                className="px-3.5 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>Học bài mới trong Giáo trình</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };

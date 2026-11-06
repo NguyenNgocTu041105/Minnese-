@@ -449,3 +449,88 @@ def test_import_vocab_cli_execution_and_auto_syllabus_check(tmp_path, capsys):
     assert "KIỂM TRA TỪ ĐIỂN SYLLABUS HSK 3.0" in out
     assert target_vocab.exists()
 
+
+def test_import_vocab_split_variants(tmp_path):
+    csv_file = tmp_path / "variants.csv"
+    rej_file = tmp_path / "rejected_variants.csv"
+    target_vocab = tmp_path / "vocab_variants.jsonl"
+    content = "Word,Pinyin,Level\n爸爸|爸,bàba|bà,1\n第（第二）,dì (dì-èr),1\n有（一）点儿,yǒu(yī)diǎnr,2\n称1,chēng,2\n"
+    csv_file.write_text(content, encoding="utf-8")
+
+    # Without split_variants: all 4 are rejected due to non-Hanzi chars
+    imp_no_split = QbVocabImporter(
+        file_path=str(csv_file),
+        source="Test Variants",
+        license_status="permitted",
+        split_variants=False,
+        target_vocab_path=str(target_vocab),
+        rejected_csv_path=str(rej_file)
+    )
+    summary_no = imp_no_split.process(execute=False)
+    assert len(summary_no.valid_items) == 0
+    assert len(summary_no.rejected_rows) == 4
+    assert rej_file.exists()
+
+    # With split_variants: correctly expanded into clean words
+    imp_split = QbVocabImporter(
+        file_path=str(csv_file),
+        source="Test Variants",
+        license_status="permitted",
+        split_variants=True,
+        target_vocab_path=str(target_vocab),
+        rejected_csv_path=str(rej_file)
+    )
+    summary_split = imp_split.process(execute=False)
+    words = [item.word for item in summary_split.valid_items]
+    assert "爸爸" in words
+    assert "爸" in words
+    assert "第" in words
+    assert "第二" in words
+    assert "有一点儿" in words
+    assert "有点儿" in words
+    assert "称" in words
+    assert summary_split.split_variants_count > 0
+
+
+def test_import_vocab_ideographic_zero(tmp_path):
+    csv_file = tmp_path / "zero.csv"
+    rej_file = tmp_path / "rejected_zero.csv"
+    target_vocab = tmp_path / "vocab_zero.jsonl"
+    csv_file.write_text("Word,Pinyin,Level\n〇,líng,1\n", encoding="utf-8")
+
+    importer = QbVocabImporter(
+        file_path=str(csv_file),
+        source="Test Zero",
+        license_status="permitted",
+        target_vocab_path=str(target_vocab),
+        rejected_csv_path=str(rej_file)
+    )
+    summary = importer.process(execute=False)
+    assert len(summary.valid_items) == 1
+    assert summary.valid_items[0].word == "〇"
+    assert summary.valid_items[0].level == 1
+
+
+def test_import_vocab_merged_duplicates_count(tmp_path):
+    csv_file = tmp_path / "dups.csv"
+    rej_file = tmp_path / "rejected_dups.csv"
+    target_vocab = tmp_path / "vocab_dups.jsonl"
+    # Word 白 at level 1 (Adj) and level 3 (Adv)
+    content = "Word,Pinyin,Level\n白,bái,1\n白,bái,3\n"
+    csv_file.write_text(content, encoding="utf-8")
+
+    importer = QbVocabImporter(
+        file_path=str(csv_file),
+        source="Test Dups",
+        license_status="permitted",
+        target_vocab_path=str(target_vocab),
+        rejected_csv_path=str(rej_file)
+    )
+    summary = importer.process(execute=False)
+    assert len(summary.valid_items) == 1
+    assert summary.valid_items[0].word == "白"
+    assert summary.valid_items[0].level == 1
+    assert summary.merged_duplicates_count == 1
+
+
+

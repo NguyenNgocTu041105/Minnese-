@@ -206,6 +206,8 @@ export interface QuizQuestion {
   questionChinese?: string;
   audioText?: string;
   options?: string[];
+  options_images?: string[];
+  illustration_theme?: string;
   correctAnswer: string | string[];
   explanation: string;
   usageNotes?: string;

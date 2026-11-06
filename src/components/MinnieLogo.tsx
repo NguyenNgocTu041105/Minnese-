@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Upload, Trash2, Maximize2 } from 'lucide-react';
+import { X, Upload, Trash2 } from 'lucide-react';
 
-interface MinnieLogoProps {
+export interface MinnieLogoProps {
   className?: string;
   size?: number;
   showText?: boolean;
@@ -10,10 +10,11 @@ interface MinnieLogoProps {
 }
 
 const LOCAL_STORAGE_LOGO_KEY = 'minnie_custom_logo_img';
+const DEFAULT_MASCOT_SRC = '/minnie-mascot.png?v=3';
 
 export const MinnieLogo: React.FC<MinnieLogoProps> = ({
   className = '',
-  size = 40,
+  size = 36,
   showText = true,
   variant = 'horizontal',
   allowZoom = false,
@@ -26,7 +27,10 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_LOGO_KEY);
-      if (saved) {
+      if (saved && (saved.includes('iVBORw0KGgoAAAANSUhEUgAA') || saved.length > 50000)) {
+        localStorage.removeItem(LOCAL_STORAGE_LOGO_KEY);
+        setCustomLogoUrl(null);
+      } else if (saved) {
         setCustomLogoUrl(saved);
       }
     } catch {}
@@ -34,7 +38,12 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
     const handleStorageUpdate = () => {
       try {
         const saved = localStorage.getItem(LOCAL_STORAGE_LOGO_KEY);
-        setCustomLogoUrl(saved || null);
+        if (saved && (saved.includes('iVBORw0KGgoAAAANSUhEUgAA') || saved.length > 50000)) {
+          localStorage.removeItem(LOCAL_STORAGE_LOGO_KEY);
+          setCustomLogoUrl(null);
+        } else {
+          setCustomLogoUrl(saved || null);
+        }
       } catch {}
     };
 
@@ -70,6 +79,31 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
     window.dispatchEvent(new Event('minnie-logo-updated'));
   };
 
+  const mascotSrc = customLogoUrl || DEFAULT_MASCOT_SRC;
+
+  // Mascot circular badge image element with soft lavender border (#D8B4FE)
+  const renderMascotImg = (imgSize: number, extraClasses = '') => (
+    <div
+      className={`relative rounded-full ring-2 ring-[#D8B4FE] ring-offset-1 ring-offset-transparent shadow-xs overflow-hidden shrink-0 transition-transform duration-200 group-hover:scale-105 bg-purple-50/50 dark:bg-purple-950/30 ${extraClasses}`}
+      style={{ width: imgSize, height: imgSize }}
+      onClick={(e) => {
+        if (allowZoom) {
+          e.stopPropagation();
+          setIsZoomOpen(true);
+        }
+      }}
+    >
+      <img
+        src={mascotSrc}
+        alt="Minnie & Corgi Mascot"
+        className="w-full h-full object-cover rounded-full select-none"
+        loading="eager"
+        decoding="async"
+        referrerPolicy="no-referrer"
+      />
+    </div>
+  );
+
   return (
     <>
       <input
@@ -80,27 +114,48 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
         className="hidden"
       />
 
-      {/* If custom image uploaded by user, render image cleanly */}
-      {customLogoUrl ? (
-        <div className={`flex items-center gap-2 select-none ${className}`}>
-          <img
-            src={customLogoUrl}
-            alt="Minnie Chinese Logo"
-            className="h-9 sm:h-10 object-contain rounded-lg"
-            referrerPolicy="no-referrer"
-          />
-          {showText && (
-            <span className="font-black text-lg sm:text-xl tracking-wider text-[var(--color-primary)] dark:text-purple-300 font-sans leading-none">
-              MINNIE CHINESE
+      {variant === 'avatar' || !showText ? (
+        /* Pure Avatar Mode */
+        <div className={`inline-flex items-center select-none ${className}`}>
+          {renderMascotImg(size)}
+        </div>
+      ) : variant === 'badge' ? (
+        /* Vertical Badge Mode (prominent mascot badge + stacked typography) */
+        <div className={`flex flex-col items-center text-center select-none ${className}`}>
+          <div className="relative group">
+            {renderMascotImg(size, 'ring-3 ring-[#D8B4FE] shadow-md shadow-purple-500/15')}
+          </div>
+          <div className="mt-2.5 flex flex-col items-center leading-none">
+            <div className="flex items-center gap-1 sm:gap-1.5 font-sans">
+              <span className="font-black text-base sm:text-lg tracking-wide text-[#7C3AED] dark:text-[#D8B4FE]">
+                MINNIE
+              </span>
+              <span className="font-black text-base sm:text-lg tracking-wide text-stone-900 dark:text-[#FFFFFF]">
+                CHINESE
+              </span>
+            </div>
+            <span className="mt-1 text-[9px] sm:text-[10px] font-bold tracking-wider text-teal-600 dark:text-teal-300 uppercase">
+              Khảo Thí Tiếng Trung 3.0
             </span>
-          )}
+          </div>
         </div>
       ) : (
-        /* Pure Clean Text Logo: MINNIE CHINESE */
-        <div className={`flex items-center select-none ${className}`}>
-          <span className="font-black text-lg sm:text-xl md:text-2xl tracking-wider text-[var(--color-primary)] dark:text-purple-300 font-sans leading-none hover:opacity-95 transition-opacity">
-            MINNIE CHINESE
-          </span>
+        /* Horizontal Navbar Logo (Mascot circular avatar + MINNIE CHINESE + Subtitle) */
+        <div className={`flex items-center gap-2 sm:gap-2.5 select-none shrink min-w-0 ${className}`}>
+          {renderMascotImg(size)}
+          <div className="flex flex-col justify-center min-w-0 leading-none">
+            <div className="flex items-center gap-1 sm:gap-1.5 font-sans whitespace-nowrap">
+              <span className="font-black text-sm sm:text-base md:text-lg tracking-normal sm:tracking-wide text-[#7C3AED] dark:text-[#D8B4FE] transition-colors">
+                MINNIE
+              </span>
+              <span className="font-black text-sm sm:text-base md:text-lg tracking-normal sm:tracking-wide text-stone-900 dark:text-[#FFFFFF] transition-colors">
+                CHINESE
+              </span>
+            </div>
+            <span className="text-[8px] sm:text-[9.5px] font-bold tracking-tight sm:tracking-wider text-teal-600 dark:text-teal-300 mt-0.5 sm:mt-1 whitespace-nowrap transition-colors">
+              Khảo Thí Tiếng Trung 3.0
+            </span>
+          </div>
         </div>
       )}
 
@@ -125,9 +180,24 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
               </button>
             </div>
 
-            <div className="py-6 flex items-center justify-center">
-              <span className="font-black text-3xl tracking-widest text-[var(--color-primary)] dark:text-purple-300">
-                MINNIE CHINESE
+            <div className="py-6 flex flex-col items-center justify-center space-y-3">
+              <div className="w-32 h-32 rounded-full ring-4 ring-[#D8B4FE] ring-offset-2 ring-offset-transparent overflow-hidden shadow-xl">
+                <img
+                  src={mascotSrc}
+                  alt="Minnie & Corgi Mascot"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex items-center gap-2 font-sans">
+                <span className="font-black text-2xl text-[#7C3AED] dark:text-[#D8B4FE]">
+                  MINNIE
+                </span>
+                <span className="font-black text-2xl text-stone-900 dark:text-[#FFFFFF]">
+                  CHINESE
+                </span>
+              </div>
+              <span className="text-xs font-bold tracking-wider text-teal-600 dark:text-teal-300">
+                Khảo Thí Tiếng Trung 3.0
               </span>
             </div>
 

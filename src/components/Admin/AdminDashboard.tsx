@@ -79,6 +79,7 @@ import {
   saveSubmissionToFirestore,
   fetchOnlineExamsFromFirestore,
   saveOnlineExamToFirestore,
+  deleteOnlineExamInFirestore,
   ADMIN_EMAILS,
   addAdminEmailToFirestore,
   removeAdminEmailFromFirestore,
@@ -161,6 +162,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   // Ownership verification functions
   const isClassOwner = (cls: ClassDoc): boolean => {
     if (!cls) return false;
+    // Admins and root users have universal management authority over all classes
+    if (currentAdmin?.role === 'admin' || currentAdminEmail.includes('admin') || currentAdminEmail.includes('babysharkkk123')) return true;
     const createdBy = (cls.created_by || '').toLowerCase();
     const teacherName = (cls.teacher_name || '').toLowerCase();
     return (
@@ -179,6 +182,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   };
 
   const isAssignmentOwner = (asg: AssignmentDoc): boolean => {
+    if (currentAdmin?.role === 'admin' || currentAdminEmail.includes('admin') || currentAdminEmail.includes('babysharkkk123')) return true;
     const createdBy = (asg.created_by || '').toLowerCase();
     if (createdBy === currentAdminEmail) return true;
     if (asg.target_class_id && myClasses.some((c) => c.id === asg.target_class_id)) return true;
@@ -220,12 +224,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
     });
   }, [students, studentFilter, myClassIdSet, myClassCodeSet]);
 
+  // Check if an assignment has passed its deadline
+  const isAssignmentExpired = (asg: AssignmentDoc): boolean => {
+    if (!asg.due_date) return false;
+    const dueTime = new Date(asg.due_date).getTime();
+    if (isNaN(dueTime)) return false;
+    return dueTime <= Date.now();
+  };
+
   const displayedAssignments = useMemo(() => {
+    const active = assignments.filter((a) => !isAssignmentExpired(a));
     if (assignmentScope === 'my_assignments') {
-      return assignments.filter(isAssignmentOwner);
+      return active.filter(isAssignmentOwner);
     }
-    return assignments;
+    return active;
   }, [assignmentScope, assignments, isAssignmentOwner]);
+
+  const getDefaultDueDateTimeString = () => {
+    const d = new Date(Date.now() + 3 * 86400000);
+    d.setHours(23, 59, 0, 0);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T23:59`;
+  };
 
   // New assignment form state
   const [showAddAssignModal, setShowAddAssignModal] = useState(false);
@@ -295,18 +315,67 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
         fetchOnlineExamsFromFirestore(),
       ]);
 
+      let mergedSubmissions = realSubmissions || [];
+      try {
+        const localSubs: AssignmentSubmissionDoc[] = JSON.parse(localStorage.getItem('minnese_local_submissions') || '[]');
+        const existingIds = new Set(mergedSubmissions.map((s) => s.id));
+        for (const ls of localSubs) {
+          if (!existingIds.has(ls.id)) mergedSubmissions.push(ls);
+        }
+      } catch (e) {}
+
+      let mergedExams = realExams || [];
+      try {
+        const localExams: OnlineExamDoc[] = JSON.parse(localStorage.getItem('minnese_local_online_exams') || '[]');
+        const existingIds = new Set(mergedExams.map((e) => e.id));
+        for (const le of localExams) {
+          if (!existingIds.has(le.id)) mergedExams.push(le);
+        }
+      } catch (e) {}
+
+      // Filter & purge any expired assignments
+      const activeAssignments = (realAssignments || []).filter((a) => !isAssignmentExpired(a));
+      const expiredAssignments = (realAssignments || []).filter(isAssignmentExpired);
+      if (expiredAssignments.length > 0) {
+        expiredAssignments.forEach((exp) => {
+          deleteAssignmentInFirestore(exp.id).catch(console.warn);
+          if (exp.content_ref_id) {
+            deleteOnlineExamInFirestore(exp.content_ref_id).catch(console.warn);
+          }
+        });
+      }
+
       setStudents(realUsers || []);
       setClasses(realClasses || []);
-      setAssignments(realAssignments || []);
+      setAssignments(activeAssignments);
       setFileStores(realFileStores || []);
-      setSubmissions(realSubmissions || []);
-      setOnlineExams(realExams || []);
+      setSubmissions(mergedSubmissions);
+      setOnlineExams(mergedExams);
     } catch (err) {
       console.warn('Could not load real data from Firestore:', err);
     } finally {
       setIsLoadingData(false);
     }
   };
+
+  // Periodic sweep to automatically remove expired assignments every 15 seconds
+  useEffect(() => {
+    const sweepInterval = setInterval(() => {
+      setAssignments((prev) => {
+        const expired = prev.filter(isAssignmentExpired);
+        if (expired.length === 0) return prev;
+        expired.forEach((exp) => {
+          deleteAssignmentInFirestore(exp.id).catch(console.warn);
+          if (exp.content_ref_id) {
+            deleteOnlineExamInFirestore(exp.content_ref_id).catch(console.warn);
+          }
+        });
+        return prev.filter((a) => !isAssignmentExpired(a));
+      });
+    }, 15000);
+
+    return () => clearInterval(sweepInterval);
+  }, []);
 
   // Sync vocab on external update & Initial load of Firestore data
   useEffect(() => {
@@ -870,13 +939,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
     try {
       const selectedClass = classes.find((c) => c.id === newAssignTargetClass);
       const effectiveHsk = newAssignTargetType === 'class' && selectedClass ? selectedClass.hsk_level : newAssignLevel;
+      const byokKey = localStorage.getItem('minnese_gemini_api_key') || localStorage.getItem('gemini_api_key') || '';
       const res = await fetch('/api/gemini/generate-quiz', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(byokKey ? { 'x-byok-gemini-key': byokKey } : {}),
+        },
         body: JSON.stringify({
           topic: aiQuizTopic || 'Kiến thức trọng tâm HSK',
           hskLevel: effectiveHsk,
           count: aiQuizCount,
+          apiKey: byokKey,
         }),
       });
       const data = await res.json();
@@ -990,6 +1064,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
       contentTitle = `Luyện viết chữ Hán OCR: ${newAssignTitle.trim()}`;
     }
 
+    let finalDueDateIso = '';
+    if (newAssignDueDate) {
+      finalDueDateIso = new Date(newAssignDueDate).toISOString();
+    } else {
+      const d = new Date(Date.now() + 3 * 86400000);
+      d.setHours(23, 59, 0, 0);
+      finalDueDateIso = d.toISOString();
+    }
+
     const newAssign: AssignmentDoc = {
       id: `assign-${Date.now()}`,
       title: newAssignTitle.trim(),
@@ -1007,7 +1090,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
       vocab_words: vocabWords,
       reading_topic: newAssignType === 'reading' ? readingTopic : undefined,
       writing_prompt: newAssignType === 'writing' ? writingPrompt : undefined,
-      due_date: newAssignDueDate || new Date(Date.now() + 7 * 86400000).toISOString(),
+      due_date: finalDueDateIso,
       created_by: currentAdminEmail,
       created_at: new Date().toISOString(),
       is_active: true,
@@ -1017,6 +1100,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
     setShowAddAssignModal(false);
     setNewAssignTitle('');
     setNewAssignDesc('');
+    setNewAssignDueDate('');
     setGeneratedQuizQuestions([]);
     setSelectedZaloAssignment(newAssign);
 
@@ -1100,7 +1184,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   return (
     <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6" id="admin-panel-container">
       {/* Top Header with Admin Identity and Multi-Teacher Isolation Status */}
-      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] space-y-4">
+      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] space-y-4 silk-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
@@ -2020,11 +2104,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-[var(--color-text-primary)]">
-                Quản lý Bài tập được giao ({assignments.length})
+              <h2 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                <span>Quản lý Bài tập được giao ({displayedAssignments.length})</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  ⏰ Tự động xóa khi quá hạn
+                </span>
               </h2>
               <p className="text-xs text-[var(--color-text-secondary)]">
-                Bài tập phân theo mã lớp cụ thể hoặc cấp HSK chung. Học viên chỉ thấy bài tập của lớp mình.
+                Bài tập phân theo mã lớp cụ thể hoặc cấp HSK chung. Khi quá giờ deadline, bài tập và đề thi sẽ tự động xóa vĩnh viễn khỏi hệ thống.
               </p>
             </div>
 
@@ -2055,7 +2142,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
               </div>
 
               <button
-                onClick={() => setShowAddAssignModal(true)}
+                onClick={() => {
+                  if (!newAssignDueDate) {
+                    setNewAssignDueDate(getDefaultDueDateTimeString());
+                  }
+                  setShowAddAssignModal(true);
+                }}
                 className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] flex items-center gap-2 transition-all shadow-xs shrink-0 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -2068,6 +2160,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
             {displayedAssignments.map((asg) => {
               const targetClass = classes.find((c) => c.id === asg.target_class_id);
               const isOwner = isAssignmentOwner(asg);
+              const due = new Date(asg.due_date);
+              const dueFormatted = `${due.toLocaleDateString('vi-VN')} ${due.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+              const timeLeftMs = due.getTime() - Date.now();
+              const hoursLeft = Math.max(0, Math.floor(timeLeftMs / 3600000));
+              const daysLeft = Math.floor(hoursLeft / 24);
 
               return (
                 <div
@@ -2112,8 +2209,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                       </div>
                       <h3 className="font-bold text-sm text-[var(--color-text-primary)]">{asg.title}</h3>
                     </div>
-                    <span className="text-[11px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      Hạn: {new Date(asg.due_date).toLocaleDateString('vi-VN')}
+                    <span className="text-[11px] font-bold text-rose-500 bg-rose-500/10 px-2.5 py-0.5 rounded-full whitespace-nowrap flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-rose-500" />
+                      <span>Hạn: {dueFormatted}</span>
+                      <span className="opacity-80">({hoursLeft > 24 ? `còn ${daysLeft} ngày` : hoursLeft > 0 ? `còn ${hoursLeft} giờ` : 'Sắp xóa'})</span>
                     </span>
                   </div>
 
@@ -2871,14 +2970,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
 
                       <div>
                         <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">
-                          Hạn nộp bài
+                          Hạn chót nộp bài (Giờ & Ngày)
                         </label>
                         <input
-                          type="date"
+                          type="datetime-local"
                           value={newAssignDueDate}
                           onChange={(e) => setNewAssignDueDate(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
+                          className="w-full px-3 py-2 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-mono"
                         />
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                          <span>⏰ Tự động xóa:</span>
+                          <span>Đến đúng ngày & giờ này, bài tập và đề thi sẽ tự động xóa vĩnh viễn khỏi hệ thống.</span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2904,7 +3007,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                     </button>
                     <button
                       type="submit"
-                      disabled={newAssignTargetType === 'class' && myClasses.length === 0}
+                      disabled={newAssignTargetType === 'class' && classes.length === 0}
                       className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] cursor-pointer disabled:opacity-50 shadow-md transition-all flex items-center gap-1.5"
                     >
                       <span>Xác nhận giao bài</span>

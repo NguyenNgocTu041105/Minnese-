@@ -66,11 +66,24 @@ import {
   HSK6_WORKBOOK_LESSONS,
   HSK6_OFFICIAL_MOCK_EXAM,
 } from '../../data/hsk6WorkbookData';
-import { playChineseAudio } from '../../utils/chineseAudio';
+import {
+  getEnrichedWorkbookLessons,
+  getEnrichedWorkbookLesson,
+  EnrichedWorkbookLesson,
+} from '../../data/workbookEnricher';
+import { DetailedTextbookLesson } from '../../data/newHsk1BookData';
+import { playChineseAudio, resolveChineseTtsPayload } from '../../utils/chineseAudio';
+
+export {
+  getEnrichedWorkbookLessons,
+  getEnrichedWorkbookLesson,
+};
+export type { EnrichedWorkbookLesson };
 
 interface WorkbookViewProps {
   hskLevel?: number;
   currentLessonNumber?: number;
+  currentLesson?: DetailedTextbookLesson;
   onUpdateUserXp?: (xp: number) => void;
   onOpenStrokeStudio?: (hanzi: string) => void;
 }
@@ -78,18 +91,19 @@ interface WorkbookViewProps {
 export const WorkbookView: React.FC<WorkbookViewProps> = ({
   hskLevel = 1,
   currentLessonNumber = 1,
+  currentLesson,
   onUpdateUserXp,
   onOpenStrokeStudio,
 }) => {
   // HSK Level state (defaults to prop, user can also toggle inside workbook)
   const [selectedHskLevel, setSelectedHskLevel] = useState<number>(hskLevel || 1);
 
-  // Modes: 'lesson_workbook' | 'official_mock_exam' | 'ai_generated_exam'
-  const [viewMode, setViewMode] = useState<'lesson_workbook' | 'official_mock_exam' | 'ai_generated_exam'>('lesson_workbook');
+  // Modes: 'lesson_workbook' | 'ai_generated_exam' (Official mock removed from mode switcher)
+  const [viewMode, setViewMode] = useState<'lesson_workbook' | 'ai_generated_exam'>('lesson_workbook');
   const [selectedLessonNum, setSelectedLessonNum] = useState<number>(currentLessonNumber || 1);
 
-  // Sub-tabs: 'xiaoyu' | 'word_expansion' | 'listen_read' | 'mock_drill' | 'writing'
-  const [subTab, setSubTab] = useState<'xiaoyu' | 'word_expansion' | 'listen_read' | 'mock_drill' | 'writing'>('xiaoyu');
+  // Sub-tabs: 'mock_drill' | 'listen_read' | 'word_expansion' | 'writing' | 'xiaoyu' (Default: 'mock_drill')
+  const [subTab, setSubTab] = useState<'mock_drill' | 'listen_read' | 'word_expansion' | 'writing' | 'xiaoyu'>('mock_drill');
 
   // Interactive Exercise States
   const [userAnswers, setUserAnswers] = useState<{ [key: string]: string }>({});
@@ -137,15 +151,41 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
     }
   }, [currentLessonNumber]);
 
-  // Dynamically resolve lessons and mock exam according to chosen HSK Level
+  // Reset question answers & interactive exercise state when lesson or level changes
+  useEffect(() => {
+    setUserAnswers({});
+    setIsAnswerSubmitted({});
+    setPlayingAudioId(null);
+    setSubTab('mock_drill');
+  }, [selectedHskLevel, selectedLessonNum]);
+
+  // Reset generated AI exam if HSK level changes
+  useEffect(() => {
+    if (generatedAiExam && generatedAiExam.hskLevel !== selectedHskLevel) {
+      setGeneratedAiExam(null);
+      setAiExamAnswers({});
+      setIsAiTimerRunning(false);
+    }
+  }, [selectedHskLevel, generatedAiExam]);
+
+  // If viewMode accidentally is 'official_mock_exam', auto-redirect to 'lesson_workbook'
+  useEffect(() => {
+    if (viewMode === ('official_mock_exam' as any)) {
+      setViewMode('lesson_workbook');
+    }
+  }, [viewMode]);
+
+  // Dynamically resolve enriched lessons according to chosen HSK Level
   const activeLessons = useMemo(() => {
-    if (selectedHskLevel === 2) return HSK2_WORKBOOK_LESSONS;
-    if (selectedHskLevel === 3) return HSK3_WORKBOOK_LESSONS;
-    if (selectedHskLevel === 4) return HSK4_WORKBOOK_LESSONS;
-    if (selectedHskLevel === 5) return HSK5_WORKBOOK_LESSONS;
-    if (selectedHskLevel === 6) return HSK6_WORKBOOK_LESSONS;
-    return HSK1_WORKBOOK_LESSONS;
+    return getEnrichedWorkbookLessons(selectedHskLevel);
   }, [selectedHskLevel]);
+
+  // Ensure selectedLessonNum is always valid within activeLessons upon level switches
+  useEffect(() => {
+    if (activeLessons.length > 0 && !activeLessons.some((l) => l.lessonNumber === selectedLessonNum)) {
+      setSelectedLessonNum(activeLessons[0].lessonNumber);
+    }
+  }, [activeLessons, selectedLessonNum]);
 
   const activeMockExam: MockExamQuestion[] = useMemo(() => {
     if (selectedHskLevel === 2) return HSK2_OFFICIAL_MOCK_EXAM;
@@ -157,9 +197,13 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
   }, [selectedHskLevel]);
 
   const currentWorkbookLesson: any = useMemo(() => {
+    if (currentLesson && currentLesson.lessonNumber === selectedLessonNum) {
+      return getEnrichedWorkbookLesson(selectedHskLevel, selectedLessonNum, currentLesson);
+    }
     const found = activeLessons.find((l) => l.lessonNumber === selectedLessonNum);
-    return found || activeLessons[0] || HSK1_WORKBOOK_LESSONS[0];
-  }, [activeLessons, selectedLessonNum]);
+    if (found) return found;
+    return activeLessons[0] || getEnrichedWorkbookLesson(selectedHskLevel, 1);
+  }, [activeLessons, selectedLessonNum, selectedHskLevel, currentLesson]);
 
   // Normalized exercise pools so no subtab is empty
   const activeListeningExercises = useMemo(() => {
@@ -170,30 +214,34 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
     return currentWorkbookLesson?.readingExercises || currentWorkbookLesson?.hskMockReading || [];
   }, [currentWorkbookLesson]);
 
-  // Available subtabs calculation for current lesson
+  // Available subtabs calculation for current lesson (Interactive Mock Drills at position 1)
   const availableSubTabs = useMemo(() => {
-    const rawTabs: { id: 'xiaoyu' | 'word_expansion' | 'listen_read' | 'mock_drill' | 'writing'; rawLabel: string; icon: any; badge: string }[] = [];
+    const rawTabs: { id: 'mock_drill' | 'listen_read' | 'word_expansion' | 'writing' | 'xiaoyu'; rawLabel: string; icon: any; badge: string }[] = [];
     
-    // Always include Xiaoyu lecture if it has phonetics or hanziSection
-    if (currentWorkbookLesson?.phonetics?.length > 0 || currentWorkbookLesson?.hanziSection) {
-      rawTabs.push({ id: 'xiaoyu', rawLabel: 'Lớp Học Tiểu Ngữ (小语讲堂)', icon: GraduationCap, badge: 'Ngữ âm & Bộ thủ' });
-    }
-    if (currentWorkbookLesson?.wordExpansion) {
-      rawTabs.push({ id: 'word_expansion', rawLabel: 'Mở Rộng Từ Ngữ (字词拓展)', icon: Sparkles, badge: 'Cấu tạo từ mới' });
-    }
-    if (currentWorkbookLesson?.listenAndReadDrills && currentWorkbookLesson.listenAndReadDrills.length > 0) {
-      rawTabs.push({ id: 'listen_read', rawLabel: 'Nghe Đọc Luyện (听读练)', icon: Headphones, badge: 'Luyện âm & Phản xạ' });
-    }
+    // 1. Mock drills first (Interactive practice)
     if (activeListeningExercises.length > 0 || activeReadingExercises.length > 0) {
       rawTabs.push({ id: 'mock_drill', rawLabel: 'Mô Phỏng Đề HSK (模拟训练)', icon: Trophy, badge: `${activeListeningExercises.length + activeReadingExercises.length} bài tập` });
     }
+    // 2. Listen & read drills
+    if (currentWorkbookLesson?.listenAndReadDrills && currentWorkbookLesson.listenAndReadDrills.length > 0) {
+      rawTabs.push({ id: 'listen_read', rawLabel: 'Nghe Đọc Luyện (听读练)', icon: Headphones, badge: `${currentWorkbookLesson.listenAndReadDrills.length} nhóm luyện` });
+    }
+    // 3. Word expansion
+    if (currentWorkbookLesson?.wordExpansion) {
+      rawTabs.push({ id: 'word_expansion', rawLabel: 'Mở Rộng Từ Ngữ (字词拓展)', icon: Sparkles, badge: 'Cấu tạo từ mới' });
+    }
+    // 4. Writing exercises
     if (currentWorkbookLesson?.writingExercises && currentWorkbookLesson.writingExercises.length > 0) {
       rawTabs.push({ id: 'writing', rawLabel: 'Phần Viết (书写)', icon: PenTool, badge: `${currentWorkbookLesson.writingExercises.length} câu viết` });
+    }
+    // 5. Xiaoyu lecture
+    if (currentWorkbookLesson?.phonetics?.length > 0 || currentWorkbookLesson?.hanziSection) {
+      rawTabs.push({ id: 'xiaoyu', rawLabel: 'Lớp Học Tiểu Ngữ (小语讲堂)', icon: GraduationCap, badge: 'Ngữ âm & Bộ thủ' });
     }
 
     // Default fallback tab if none matched
     if (rawTabs.length === 0) {
-      rawTabs.push({ id: 'xiaoyu', rawLabel: 'Sách Bài Tập', icon: BookOpen, badge: 'Tổng hợp' });
+      rawTabs.push({ id: 'mock_drill', rawLabel: 'Sách Bài Tập', icon: BookOpen, badge: 'Bài tập' });
     }
 
     // Map to continuous sequential numbering (1., 2., 3., etc.)
@@ -237,8 +285,12 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
   }, [isAiTimerRunning, aiExamTimeLeft, isAiExamFinished]);
 
   const handlePlayAudio = (text: string, id?: string) => {
+    if (!text || !text.trim()) return;
+    const resolved = resolveChineseTtsPayload(text);
+    const speakableText = resolved || (/[\u4e00-\u9fa50-9]/.test(text) ? text : '');
+    if (!speakableText) return;
     if (id) setPlayingAudioId(id);
-    playChineseAudio(text);
+    playChineseAudio(speakableText);
     if (id) {
       setTimeout(() => setPlayingAudioId(null), 2500);
     }
@@ -417,142 +469,58 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in" id="workbook-root-container">
-      {/* Level Selection & Workbook Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-800 via-emerald-900 to-slate-950 border border-teal-500/30 p-6 sm:p-8 text-white shadow-xl">
-        <div className="relative z-10 space-y-6">
-          {/* Top Bar: HSK Level Badges & Digital Textbook Notice */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 pb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-teal-200">Cấp độ Sách Bài Tập:</span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {[
-                  { level: 1, label: 'New HSK 1' },
-                  { level: 2, label: 'New HSK 2' },
-                  { level: 3, label: 'New HSK 3' },
-                  { level: 4, label: 'New HSK 4' },
-                  { level: 5, label: 'New HSK 5' },
-                  { level: 6, label: 'New HSK 6' },
-                ].map((item) => (
-                  <button
-                    key={item.level}
-                    type="button"
-                    onClick={() => {
-                      setSelectedHskLevel(item.level);
-                      setSelectedLessonNum(1);
-                      if (generatedAiExam) {
-                        setGeneratedAiExam(null);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      selectedHskLevel === item.level
-                        ? 'bg-amber-400 text-slate-950 font-black shadow-md scale-105'
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* Compact Navigation Bar: Mode Switcher & Lesson Exercise Subtabs */}
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-3 sm:p-4 shadow-xs space-y-3 silk-card">
+        {/* Top: Mode Switcher & Lesson Indicator */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {/* Mode Switcher - Exactly 2 modes */}
+            <div className="flex items-center gap-1.5 p-1 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setViewMode('lesson_workbook')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === 'lesson_workbook'
+                    ? 'bg-teal-600 text-white shadow-xs font-black'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Sách Bài Tập</span>
+              </button>
 
-            <div className="text-[11px] text-teal-200/90 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Chuẩn CTI Books & NXB Dân Trí 《新HSK教程 学练手册》</span>
+              <button
+                type="button"
+                onClick={() => setViewMode('ai_generated_exam')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === 'ai_generated_exam'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs font-black'
+                    : 'text-purple-600 dark:text-purple-400 hover:text-purple-700 font-semibold'
+                }`}
+              >
+                <Wand2 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                <span>✨ AI Chế Đề Thi Tùy Chọn & Tài Liệu Ngoài</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2.5">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/20 backdrop-blur-md text-teal-200 border border-teal-400/30 text-xs font-bold tracking-wider uppercase">
-                <BookOpen className="w-4 h-4 text-teal-300" />
-                SBT New HSK {selectedHskLevel} • Sổ Tay Học & Luyện Tập
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black font-chinese tracking-tight text-teal-50">
-                {viewMode === 'lesson_workbook'
-                  ? `Bài ${currentWorkbookLesson.lessonNumber}: ${currentWorkbookLesson.titleChinese} (${currentWorkbookLesson.titleVietnamese})`
-                  : viewMode === 'official_mock_exam'
-                  ? `HSK (${selectedHskLevel === 1 ? '一级' : selectedHskLevel === 2 ? '二级' : selectedHskLevel === 3 ? '三级' : '四级'}) 模拟试卷 • Bộ Đề Thi Thử Chuẩn`
-                  : `AI Chế Đề Thi Thử New HSK ${selectedHskLevel} Thông Minh (Tùy Chọn Bài & Tài Liệu Ngoài)`}
-              </h1>
-              <p className="text-xs sm:text-sm text-teal-100/90 max-w-2xl leading-relaxed">
-                Tích hợp trọn bộ <strong>Lớp học Tiểu Ngữ (小语讲堂)</strong>,{' '}
-                <strong>Mở rộng từ ngữ (字词拓展)</strong>, <strong>Luyện tập mô phỏng (模拟训练)</strong>,{' '}
-                <strong>Luyện viết chữ Hán (书写)</strong> và <strong>AI Chế Đề Thi Đa Dạng Ngữ Cảnh</strong>.
-              </p>
-
-              {/* Mode Switcher */}
-              <div className="flex items-center gap-2 pt-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('lesson_workbook')}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    viewMode === 'lesson_workbook'
-                      ? 'bg-teal-400 text-slate-950 shadow-md font-black'
-                      : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>Sách Bài Tập Bài {currentWorkbookLesson.lessonNumber}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewMode('official_mock_exam');
-                    if (!isTimerRunning && !isMockExamFinished) {
-                      handleStartMockExam();
-                    }
-                  }}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    viewMode === 'official_mock_exam'
-                      ? 'bg-amber-400 text-slate-950 shadow-md font-black'
-                      : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30'
-                  }`}
-                >
-                  <Trophy className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Đề Thi Thử Chuẩn ({activeMockExam.length} câu)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('ai_generated_exam')}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    viewMode === 'ai_generated_exam'
-                      ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg font-black scale-105 ring-2 ring-purple-300'
-                      : 'bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 border border-purple-400/40'
-                  }`}
-                >
-                  <Wand2 className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                  <span>✨ AI Chế Đề Thi Tùy Chọn & Tài Liệu Ngoài</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Current Lesson Badge for Workbook */}
-            {viewMode === 'lesson_workbook' && (
-              <div className="bg-black/30 backdrop-blur-md px-5 py-4 rounded-2xl border border-teal-500/30 space-y-1 shrink-0 text-right">
-                <div className="text-[11px] font-bold text-teal-200 uppercase tracking-wider">
-                  Sách Bài Tập Theo Bài Học
-                </div>
-                <div className="text-xl font-black font-chinese text-amber-300">
-                  Bài {currentWorkbookLesson.lessonNumber}
-                </div>
-                <div className="text-xs text-teal-100 font-mono">
-                  Trang {currentWorkbookLesson.pageNumber || '001'}
-                </div>
-              </div>
+          {/* Quick Lesson Indicator */}
+          <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
+            <span className="font-bold text-[var(--color-primary)]">New HSK {selectedHskLevel}</span>
+            <span>•</span>
+            <span className="font-semibold text-[var(--color-text-primary)]">Bài {currentWorkbookLesson.lessonNumber}</span>
+            {currentWorkbookLesson.pageNumber && (
+              <>
+                <span>•</span>
+                <span className="font-mono">Trang {currentWorkbookLesson.pageNumber}</span>
+              </>
             )}
           </div>
         </div>
-      </div>
 
-      {/* ========================================================= */}
-      {/* MODE 1: LESSON WORKBOOK (THEO TỪNG BÀI) */}
-      {/* ========================================================= */}
-      {viewMode === 'lesson_workbook' && (
-        <div className="space-y-6">
-          {/* Subtabs Bar */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--color-border)]">
+        {/* Lesson Exercise Subtabs (Active in lesson_workbook mode) */}
+        {viewMode === 'lesson_workbook' && (
+          <div className="flex items-center gap-2 overflow-x-auto pt-2.5 border-t border-[var(--color-border)] custom-scrollbar">
             {availableSubTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = subTab === tab.id;
@@ -561,13 +529,13 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setSubTab(tab.id)}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 ${
                     isActive
-                      ? 'bg-teal-600 text-white shadow-md'
-                      : 'bg-[var(--color-surface)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-[var(--color-border)]'
+                      ? 'bg-teal-600 text-white shadow-sm'
+                      : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-border)]/50 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-teal-600'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-teal-600'}`} />
                   <span>{tab.label}</span>
                   {tab.badge && (
                     <span
@@ -582,6 +550,14 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* ========================================================= */}
+      {/* MODE 1: LESSON WORKBOOK (THEO TỪNG BÀI) */}
+      {/* ========================================================= */}
+      {viewMode === 'lesson_workbook' && (
+        <div className="space-y-6">
 
           {/* SUBTAB 1: LỚP HỌC TIỂU NGỮ (小语讲堂) */}
           {subTab === 'xiaoyu' && (
@@ -631,7 +607,7 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                                   <button
                                     key={aIdx}
                                     type="button"
-                                    onClick={() => handlePlayAudio(item.hanzi || item.audioText || item.pinyin, `p-${idx}-${aIdx}`)}
+                                    onClick={() => handlePlayAudio(item.hanzi || item.audioText || item.audioScript || item.pinyin, `p-${idx}-${aIdx}`)}
                                     className={`p-2 rounded-xl text-left border transition-all flex items-center justify-between gap-1.5 cursor-pointer ${
                                       isPlaying
                                         ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
@@ -734,8 +710,18 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                             <div className="text-xs font-bold text-[var(--color-text-primary)] font-chinese">
                               {rule.ruleChinese} ({rule.ruleVietnamese})
                             </div>
-                            <div className="text-xs text-teal-600 flex items-center gap-2">
+                            <div className="text-xs text-teal-600 flex items-center justify-between gap-2">
                               <span>Chữ ví dụ: <strong className="text-base font-chinese">{rule.exampleChar}</strong> ({rule.pinyin})</span>
+                              {rule.exampleChar && (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePlayAudio(rule.exampleChar, `rule_ex_${sIdx}`)}
+                                  className="p-1 rounded-md bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-300 transition-colors shrink-0 cursor-pointer"
+                                  title="Nghe phát âm chữ mẫu"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                             {rule.meaning && (
                               <div className="text-[11px] text-[var(--color-text-secondary)]">{rule.meaning}</div>
@@ -747,30 +733,199 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                   )}
                 </div>
               )}
+
+              {/* CTA to Interactive Exercises */}
+              <div className="pt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSubTab('mock_drill')}
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-sm shadow-md flex items-center gap-2 cursor-pointer transition-all transform hover:scale-[1.02]"
+                >
+                  <span>Làm bài tập thực hành của Bài {currentWorkbookLesson.lessonNumber} ngay →</span>
+                </button>
+              </div>
             </div>
           )}
 
           {/* SUBTAB 2: MỞ RỘNG TỪ NGỮ (字词拓展) */}
           {subTab === 'word_expansion' && currentWorkbookLesson.wordExpansion && (
-            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-4">
+            <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-6">
               <h3 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-500" />
                 <span>Mở Rộng Từ Ngữ & Cấu Tạo Từ (字词拓展)</span>
               </h3>
 
-              {currentWorkbookLesson.wordExpansion.structures && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {currentWorkbookLesson.wordExpansion.structures.map((st: any, sIdx: number) => (
-                    <div
-                      key={sIdx}
-                      className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] space-y-2"
-                    >
-                      <div className="text-sm font-bold font-chinese text-[var(--color-text-primary)]">
-                        {st.baseChar} → {st.combinedWords?.join(', ')}
+              {/* Word Combinations / Compounds */}
+              {((currentWorkbookLesson.wordExpansion.compounds && currentWorkbookLesson.wordExpansion.compounds.length > 0) ||
+                (currentWorkbookLesson.wordExpansion.combinations && currentWorkbookLesson.wordExpansion.combinations.length > 0) ||
+                (currentWorkbookLesson.wordExpansion.structures && currentWorkbookLesson.wordExpansion.structures.length > 0)) && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600">
+                    Cấu tạo từ ghép & Mở rộng (词汇组合):
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(currentWorkbookLesson.wordExpansion.combinations || currentWorkbookLesson.wordExpansion.compounds || currentWorkbookLesson.wordExpansion.structures).map((st: any, sIdx: number) => {
+                      const audioTarget = st.combinedWords
+                        ? `${st.combinedHanzi || st.baseChar || st.word}，${st.combinedWords.join('，')}`
+                        : st.combinedHanzi || st.baseChar || st.word;
+                      return (
+                        <div
+                          key={sIdx}
+                          className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] space-y-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-sm font-bold font-chinese text-[var(--color-text-primary)]">
+                              {st.combinedHanzi || st.baseChar || st.word} {st.pinyin ? `(${st.pinyin})` : ''}
+                              {st.combinedWords ? ` → ${st.combinedWords.join(', ')}` : st.part1 && st.part2 ? ` = ${st.part1} + ${st.part2}` : ''}
+                            </div>
+                            {audioTarget && (
+                              <button
+                                type="button"
+                                onClick={() => handlePlayAudio(audioTarget, `exp_st_${sIdx}`)}
+                                className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-300 transition-colors shrink-0 cursor-pointer"
+                                title="Nghe phát âm từ ngữ"
+                              >
+                                <Volume2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-xs text-[var(--color-text-secondary)]">{st.meaning || st.explanation}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Discussion if any */}
+              {currentWorkbookLesson.wordExpansion.discussion && (
+                <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/20 space-y-1">
+                  <div className="text-xs font-bold text-teal-700 dark:text-teal-300">
+                    {currentWorkbookLesson.wordExpansion.discussion.question}
+                  </div>
+                  <div className="text-xs text-[var(--color-text-secondary)]">
+                    {currentWorkbookLesson.wordExpansion.discussion.answer}
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive Fill In Blanks / Exercises */}
+              {((currentWorkbookLesson.wordExpansion.fillInBlanks && currentWorkbookLesson.wordExpansion.fillInBlanks.length > 0) ||
+                (currentWorkbookLesson.wordExpansion.exercises && currentWorkbookLesson.wordExpansion.exercises.length > 0)) && (
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-teal-600">
+                      Bài tập điền từ trọng điểm ({((currentWorkbookLesson.wordExpansion.fillInBlanks || currentWorkbookLesson.wordExpansion.exercises) as any[]).length} câu):
+                    </h4>
+                    {currentWorkbookLesson.wordExpansion.wordBank && currentWorkbookLesson.wordExpansion.wordBank.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-[var(--color-text-secondary)]">Ngân hàng từ:</span>
+                        {currentWorkbookLesson.wordExpansion.wordBank.map((wb: string, wbIdx: number) => (
+                          <span key={wbIdx} className="px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-700 dark:text-teal-300 text-xs font-chinese font-bold">
+                            {wb}
+                          </span>
+                        ))}
                       </div>
-                      <div className="text-xs text-[var(--color-text-secondary)]">{st.explanation}</div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {(currentWorkbookLesson.wordExpansion.fillInBlanks || currentWorkbookLesson.wordExpansion.exercises).map((fib: any, fIdx: number) => {
+                      const isSubmitted = isAnswerSubmitted[fib.id];
+                      const selectedAns = userAnswers[fib.id];
+                      const isCorrect = selectedAns === fib.correctAnswer;
+
+                      return (
+                        <div
+                          key={fib.id || fIdx}
+                          className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] space-y-2.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-xs font-bold text-teal-600">Câu {fIdx + 1}:</span>
+                              <div className="text-sm font-bold font-chinese text-[var(--color-text-primary)] mt-0.5">
+                                {fib.sentenceWithBlank}
+                              </div>
+                              {fib.pinyinSentence && (
+                                <div className="text-xs font-mono text-teal-600">{fib.pinyinSentence}</div>
+                              )}
+                              {fib.vietnameseTranslation && (
+                                <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                                  {fib.vietnameseTranslation}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const fullSentence = fib.sentenceWithBlank
+                                  ? fib.sentenceWithBlank.replace(/[（(][^()（）]*[)）]/g, fib.correctAnswer || '')
+                                  : fib.correctAnswer || '';
+                                handlePlayAudio(fullSentence, `fib_${fib.id || fIdx}`);
+                              }}
+                              className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-300 transition-colors shrink-0 cursor-pointer"
+                              title="Nghe câu hoàn chỉnh"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Options */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {fib.options?.map((opt: string) => {
+                              const isSelected = selectedAns === opt;
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  disabled={isSubmitted}
+                                  onClick={() => handleSelectAnswer(fib.id, opt)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold font-chinese border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                                      : 'bg-[var(--color-surface)] hover:bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)]'
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Submit & Explanation */}
+                          {!isSubmitted ? (
+                            <button
+                              type="button"
+                              disabled={!selectedAns}
+                              onClick={() => handleSubmitQuestion(fib.id, fib.correctAnswer)}
+                              className="px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition-all"
+                            >
+                              Kiểm tra
+                            </button>
+                          ) : (
+                            <div className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-1">
+                              <div className="text-xs font-bold">
+                                {isCorrect ? (
+                                  <span className="text-emerald-600 flex items-center gap-1">
+                                    <CheckCircle2 className="w-4 h-4" /> Chính xác! (+15 XP)
+                                  </span>
+                                ) : (
+                                  <span className="text-rose-600 flex items-center gap-1">
+                                    <XCircle className="w-4 h-4" /> Chưa đúng. Đáp án: {fib.correctAnswer}
+                                  </span>
+                                )}
+                              </div>
+                              {fib.explanation && (
+                                <p className="text-xs text-[var(--color-text-secondary)]">
+                                  <strong>Giải thích:</strong> {fib.explanation}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -814,16 +969,20 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                                 )}
                               </div>
 
-                              {item.audioText && (
-                                <button
-                                  type="button"
-                                  onClick={() => handlePlayAudio(item.audioText, item.id)}
-                                  className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                >
-                                  <Volume2 className="w-3.5 h-3.5" />
-                                  <span>Phát âm</span>
-                                </button>
-                              )}
+                              {(() => {
+                                const audioTarget = item.audioText || item.correctAnswer || item.pinyinPrompt || (item as any).hanzi;
+                                if (!audioTarget) return null;
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePlayAudio(audioTarget, item.id)}
+                                    className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                  >
+                                    <Volume2 className="w-3.5 h-3.5" />
+                                    <span>Phát âm</span>
+                                  </button>
+                                );
+                              })()}
                             </div>
 
                             {/* Options */}
@@ -917,16 +1076,20 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                               </div>
                             </div>
 
-                            {q.audioScript && (
-                              <button
-                                type="button"
-                                onClick={() => handlePlayAudio(q.audioScript, q.id)}
-                                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
-                              >
-                                <Volume2 className="w-3.5 h-3.5" />
-                                <span>Nghe Audio</span>
-                              </button>
-                            )}
+                            {(() => {
+                              const audioTarget = q.audioScript || (q as any).audioText || (q as any).promptChinese;
+                              if (!audioTarget) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePlayAudio(audioTarget, q.id)}
+                                  className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                  <span>Nghe Audio</span>
+                                </button>
+                              );
+                            })()}
                           </div>
 
                           {/* Options */}
@@ -1119,31 +1282,102 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {currentWorkbookLesson.writingExercises.map((w: any, wIdx: number) => (
-                  <div
-                    key={wIdx}
-                    className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="text-xl font-black font-chinese text-[var(--color-text-primary)]">
-                        {w.hanzi || w.word}
-                      </div>
-                      <div className="text-xs font-mono text-teal-600">{w.pinyin}</div>
-                      <div className="text-xs text-[var(--color-text-secondary)]">{w.vietnamese || w.meaning}</div>
-                    </div>
+                {currentWorkbookLesson.writingExercises.map((w: any, wIdx: number) => {
+                  const isSentenceExercise = Boolean(w.sentenceContext);
+                  const isSubmitted = isAnswerSubmitted[w.id || `wr_${wIdx}`];
 
-                    {onOpenStrokeStudio && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenStrokeStudio(w.hanzi || w.word)}
-                        className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  if (isSentenceExercise) {
+                    return (
+                      <div
+                        key={w.id || wIdx}
+                        className="p-5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] space-y-3 col-span-1 md:col-span-2"
                       >
-                        <PenTool className="w-3.5 h-3.5" />
-                        <span>Luyện viết nét</span>
-                      </button>
-                    )}
-                  </div>
-                ))}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-teal-600">
+                            Bài {wIdx + 1}: {w.promptText || 'Sắp xếp các từ thành câu hoàn chỉnh (排列顺序):'}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-lg bg-[var(--color-surface)] border border-teal-500/20 text-sm font-bold font-chinese text-teal-700 dark:text-teal-300">
+                          {w.sentenceContext}
+                        </div>
+
+                        {!isSubmitted ? (
+                          <button
+                            type="button"
+                            onClick={() => setIsAnswerSubmitted((prev) => ({ ...prev, [w.id || `wr_${wIdx}`]: true }))}
+                            className="px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
+                          >
+                            Xem câu hoàn chỉnh & Giải thích
+                          </button>
+                        ) : (
+                          <div className="p-3.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-1.5">
+                            <div className="text-xs font-bold text-emerald-600 flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <span>Đáp án đúng:</span>
+                                <strong className="text-sm font-chinese text-[var(--color-text-primary)]">{w.correctAnswer}</strong>
+                              </div>
+                              {w.correctAnswer && (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePlayAudio(w.correctAnswer, `wr_ans_${wIdx}`)}
+                                  className="p-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-300 transition-colors shrink-0 cursor-pointer"
+                                  title="Nghe phát âm câu đúng"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            {w.explanation && (
+                              <p className="text-xs text-[var(--color-text-secondary)]">
+                                <strong>Giải thích ngữ pháp:</strong> {w.explanation}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={w.id || wIdx}
+                      className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] flex items-center justify-between gap-3"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-xl font-black font-chinese text-[var(--color-text-primary)]">
+                            {w.hanzi || w.word}
+                          </div>
+                          {(w.hanzi || w.word) && (
+                            <button
+                              type="button"
+                              onClick={() => handlePlayAudio(w.hanzi || w.word, `wr_char_${wIdx}`)}
+                              className="p-1 rounded-md bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-300 transition-colors shrink-0 cursor-pointer"
+                              title="Nghe phát âm chữ Hán"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-xs font-mono text-teal-600">{w.pinyin}</div>
+                        <div className="text-xs text-[var(--color-text-secondary)]">{w.vietnamese || w.meaning}</div>
+                      </div>
+
+                      {onOpenStrokeStudio && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenStrokeStudio(w.hanzi || w.word)}
+                          className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <PenTool className="w-3.5 h-3.5" />
+                          <span>Luyện viết nét</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1441,16 +1675,20 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                           )}
                         </div>
 
-                        {q.audioScript && (
-                          <button
-                            type="button"
-                            onClick={() => handlePlayAudio(q.audioScript!, q.id)}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
-                          >
-                            <Volume2 className="w-3.5 h-3.5" />
-                            <span>Nghe Audio</span>
-                          </button>
-                        )}
+                        {(() => {
+                          const audioTarget = q.audioScript || (q as any).audioText || ((q as any).type === 'listening' ? q.promptChinese : undefined);
+                          if (!audioTarget) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handlePlayAudio(audioTarget, q.id)}
+                              className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                              <span>Nghe Audio</span>
+                            </button>
+                          );
+                        })()}
                       </div>
 
                       {/* Options */}
@@ -1535,7 +1773,7 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
       {/* ========================================================= */}
       {/* MODE 3: OFFICIAL MOCK EXAM (ĐỀ THI THỬ CHUẨN SÁCH) */}
       {/* ========================================================= */}
-      {viewMode === 'official_mock_exam' && (
+      {(viewMode as string) === 'official_mock_exam' && (
         <div className="space-y-6">
           {/* Mock Exam Timer & Header Bar */}
           <div className="p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1641,16 +1879,20 @@ export const WorkbookView: React.FC<WorkbookViewProps> = ({
                       )}
                     </div>
 
-                    {q.audioScript && (
-                      <button
-                        type="button"
-                        onClick={() => handlePlayAudio(q.audioScript!, q.id)}
-                        className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" />
-                        <span>Nghe Audio</span>
-                      </button>
-                    )}
+                    {(() => {
+                      const audioTarget = q.audioScript || (q as any).audioText || (q.part === 1 ? q.promptChinese : undefined);
+                      if (!audioTarget) return null;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handlePlayAudio(audioTarget, q.id)}
+                          className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>Nghe Audio</span>
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   {/* Options */}

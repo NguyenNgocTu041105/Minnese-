@@ -41,11 +41,11 @@
             {{ q.stem }}
         </div>
 
-        <!-- 4 Options -->
+        <!-- Options -->
         <div class="grid-2" style="margin: 1rem 0; gap: 0.5rem;">
             {% for opt in q.options %}
             <div style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; {% if loop.index0 == q.answer_index %}background: #f0fdf4; border-color: #86efac; font-weight: 600;{% endif %}">
-                <span>{{ ['A', 'B', 'C', 'D'][loop.index0] }}. {{ opt }}</span>
+                <span>{{ "ABCDEFGH"[loop.index0] }}. {{ opt }}</span>
                 {% if loop.index0 == q.answer_index %}
                 <span style="color: var(--success); font-size: 0.8rem;">✓ Đáp án đúng</span>
                 {% endif %}

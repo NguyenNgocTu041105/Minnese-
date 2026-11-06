@@ -1,0 +1,27 @@
+export const validGroqStructuredResponse = {
+  questions: [{
+    stem: '小明今天去____。',
+    completed_stem: '小明今天去学校。',
+    options: ['学校', '医院', '机场', '商店'],
+    options_images: [],
+    answer_idx: 0,
+    explanation_summary_vi: 'Câu nói rõ Tiểu Minh hôm nay đến trường.',
+    answer_rationale_vi: '学校 là nơi Tiểu Minh đến trong câu này.',
+    level: 1,
+    skill: 'reading',
+    part_type: 'read_fill_blank_4opt',
+    pinyin: 'xiǎo míng jīn tiān qù xué xiào。',
+    illustration_theme: null,
+    topic: null,
+    difficulty_tier: 'tier1_difficult',
+    trap_type: 'context_scope',
+    target_grammar: 'Câu kể đơn giản',
+    target_vocabulary: '学校',
+    distractor_rationales: [
+      { option_idx: 1, option_text: '医院', rationale_vi: '医院 là nơi khám chữa bệnh, không phải nơi đến trong câu.' },
+      { option_idx: 2, option_text: '机场', rationale_vi: '机场 là sân bay, không phải nơi đến trong câu.' },
+      { option_idx: 3, option_text: '商店', rationale_vi: '商店 là cửa hàng, không phải nơi đến trong câu.' },
+    ],
+    naturalness_review: { status: 'natural', rationale_vi: 'Câu đơn giản và tự nhiên.' },
+  }],
+};

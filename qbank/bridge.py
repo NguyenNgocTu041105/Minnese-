@@ -86,7 +86,8 @@ class QbLegacyDBAdapter:
 
         if self.sqlite_path:
             # Direct SQLite connection (used in tests or custom path)
-            with sqlite3.connect(self.sqlite_path) as conn:
+            with sqlite3.connect(self.sqlite_path, timeout=30.0) as conn:
+                conn.execute("PRAGMA busy_timeout = 30000;")
                 cur = conn.cursor()
                 cur.execute("SELECT content_hash, hanzi_content FROM questions;")
                 for r in cur.fetchall():
@@ -124,9 +125,11 @@ class QbLegacyDBAdapter:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = f"{db_target}.backup_{timestamp}"
 
-        src_conn = sqlite3.connect(db_target)
-        dst_conn = sqlite3.connect(backup_path)
+        src_conn = sqlite3.connect(db_target, timeout=30.0)
+        dst_conn = sqlite3.connect(backup_path, timeout=30.0)
         try:
+            src_conn.execute("PRAGMA busy_timeout = 30000;")
+            dst_conn.execute("PRAGMA busy_timeout = 30000;")
             src_conn.backup(dst_conn)
             logger.info(f"Successfully created SQLite backup at {backup_path}")
             return backup_path
@@ -143,7 +146,8 @@ class QbLegacyDBAdapter:
             return 0
 
         if self.sqlite_path:
-            with sqlite3.connect(self.sqlite_path) as conn:
+            with sqlite3.connect(self.sqlite_path, timeout=30.0) as conn:
+                conn.execute("PRAGMA busy_timeout = 30000;")
                 cur = conn.cursor()
                 sql = """
                     INSERT INTO questions (
@@ -193,7 +197,8 @@ class QbLegacyDBAdapter:
             return 0
 
         if self.sqlite_path:
-            with sqlite3.connect(self.sqlite_path) as conn:
+            with sqlite3.connect(self.sqlite_path, timeout=30.0) as conn:
+                conn.execute("PRAGMA busy_timeout = 30000;")
                 cur = conn.cursor()
                 placeholders = ",".join(["?"] * len(legacy_ids))
                 cur.execute(f"UPDATE questions SET status = 'rejected' WHERE id IN ({placeholders});", legacy_ids)
@@ -216,6 +221,8 @@ class QbSyncResult(BaseModel):
     synced_count: int = 0
     skipped_duplicate_hash: int = 0
     skipped_near_duplicate: int = 0
+    skipped_blocked_flags: int = 0
+    blocked_questions: List[Dict[str, str]] = Field(default_factory=list)
     is_dry_run: bool = True
     backup_file: Optional[str] = None
     records: List[Dict[str, Any]] = Field(default_factory=list)
@@ -320,7 +327,29 @@ class QbBridge:
         payloads_to_insert: List[Dict[str, Any]] = []
         questions_to_sync: List[Tuple[QbQuestion, str, str]] = []
 
+        from qbank.validators import validate_clean_characters
+
         for q in eligible_questions:
+            # Safeguard 1: Block questions with character noise (Latin / Vietnamese / bracket noise)
+            is_clean, clean_notes = validate_clean_characters(q.stem, q.options)
+            if not is_clean:
+                result.skipped_blocked_flags += 1
+                reason = f"Chứa chữ nhiễu (Latin/Vi/ngoặc): {'; '.join(clean_notes)}"
+                result.blocked_questions.append({"question_id": q.question_id, "reason": reason})
+                logger.warning(f"Từ chối đồng bộ câu {q.question_id}: {reason}")
+                continue
+
+            # Safeguard 2: Block questions with solver ambiguity unless approved with override reason
+            notes_str = " ".join(q.qa.notes)
+            has_solver_ambiguity = ("Solver flagged ambiguity" in notes_str or "2 options acceptable" in notes_str or "Solver mismatch" in notes_str)
+            has_human_override = ("Duyệt ngoại lệ" in notes_str or "Người duyệt thủ công xác nhận" in notes_str or "duyệt thủ công" in notes_str.lower())
+            if has_solver_ambiguity and not has_human_override:
+                result.skipped_blocked_flags += 1
+                reason = "Solver cảnh báo đa nghĩa (chưa có ghi chú duyệt ngoại lệ của người duyệt)"
+                result.blocked_questions.append({"question_id": q.question_id, "reason": reason})
+                logger.warning(f"Từ chối đồng bộ câu {q.question_id}: {reason}")
+                continue
+
             # Format options with legacy keys
             legacy_opts, opts_json_str = format_legacy_options(q.options)
             correct_ans_char = chr(65 + q.answer_index)

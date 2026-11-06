@@ -5,7 +5,12 @@ import psycopg2.extras
 from contextlib import contextmanager
 from config.settings import settings
 
-SQLITE_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "hsk_exam.db")
+SQLITE_DB_PATH = os.path.abspath(
+    os.getenv(
+        "HSK_EXAM_DB_PATH",
+        os.path.join(os.path.dirname(__file__), "..", "data", "hsk_exam.db"),
+    )
+)
 
 def init_sqlite_schema(conn: sqlite3.Connection):
     """Khởi tạo cấu trúc bảng SQLite tương thích hoàn toàn cho môi trường Local."""
@@ -143,6 +148,8 @@ class SQLiteDictCursor:
         self._cur.close()
 
 def is_postgres_available() -> bool:
+    if os.getenv("MINNESE_STAGING", "").lower() == "true":
+        return False
     try:
         conn = psycopg2.connect(settings.DATABASE_URL, connect_timeout=2)
         conn.close()

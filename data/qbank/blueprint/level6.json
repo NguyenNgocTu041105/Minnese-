@@ -1,0 +1,138 @@
+{
+  "hsk_version": "3.0",
+  "level": 6,
+  "name": "HSK 6 (六级) 考试大纲与试卷结构",
+  "verification": {
+    "verified_fields": [
+      "total_questions",
+      "time_limit_minutes"
+    ],
+    "unverified_fields": [
+      "section_breakdown",
+      "part_detail",
+      "skill_duration",
+      "scoring"
+    ],
+    "verification_sources": [
+      {
+        "field": "total_questions",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      },
+      {
+        "field": "time_limit_minutes",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      }
+    ],
+    "last_verified_at": "2026-10-26T00:00:00Z"
+  },
+  "total_questions": 82,
+  "total_time_min": 125,
+  "max_score": 300,
+  "passing_score": 180,
+  "has_pinyin": false,
+  "audio_playback": 1,
+  "sections": {
+    "listening": {
+      "name": "听力 (Listening)",
+      "skill": "listening",
+      "total_questions": 40,
+      "time_min": 35,
+      "score_weight": 100,
+      "parts": {
+        "listening_1": {
+          "name": "第一部分：听短对话/单句选答案",
+          "type": "listen_dialogue_qa_4opt",
+          "skill": "listening",
+          "n_questions": 20,
+          "n_options": 4,
+          "time_min": 15,
+          "status": "unverified",
+          "verified": false,
+          "description": "听短篇学术、文化、新闻对话或单句加问句选答案，4个选项（第1-20题）。"
+        },
+        "listening_2": {
+          "name": "第二部分：听长篇采访/演讲选答案",
+          "type": "listen_talks_qa_4opt",
+          "skill": "listening",
+          "n_questions": 20,
+          "n_options": 4,
+          "time_min": 20,
+          "status": "unverified",
+          "verified": false,
+          "description": "听深度访谈、专题讲座或科普独白加问句选答案（每篇3-5题），4个选项（第21-40题）。"
+        }
+      }
+    },
+    "reading": {
+      "name": "阅读 (Reading)",
+      "skill": "reading",
+      "total_questions": 40,
+      "time_min": 45,
+      "score_weight": 100,
+      "parts": {
+        "reading_1": {
+          "name": "第一部分：病句辨析",
+          "type": "read_find_faulty_sentence_4opt",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 4,
+          "time_min": 10,
+          "description": "病句辨析，每题给出4个句子，选出有语病（成分残缺、搭配不当、语序混乱等）的一项（第41-50题）。"
+        },
+        "reading_2": {
+          "name": "第二部分：选词填空",
+          "type": "read_cloze_passages_4opt",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 4,
+          "time_min": 12,
+          "description": "高阶选词填空，语篇中含3-4个空格，从4组词语搭配中选出最恰当的一组（第51-60题）。"
+        },
+        "reading_3": {
+          "name": "第三部分：篇章阅读理解",
+          "type": "read_comprehension_long_articles_4opt",
+          "skill": "reading",
+          "n_questions": 20,
+          "n_options": 4,
+          "time_min": 23,
+          "status": "unverified",
+          "verified": false,
+          "description": "深度篇章阅读理解，4-5篇高阶论述文或文学作品，涵盖深层主旨、言外之意与逻辑推断（第61-80题）。"
+        }
+      }
+    },
+    "writing": {
+      "name": "写作 (Writing)",
+      "skill": "writing",
+      "total_questions": 2,
+      "time_min": 40,
+      "score_weight": 100,
+      "parts": {
+        "writing_1": {
+          "name": "第一部分：缩写文章 (400字)",
+          "type": "write_summary_shortening_400chars",
+          "skill": "writing",
+          "n_questions": 1,
+          "n_options": 0,
+          "time_min": 25,
+          "description": "阅读一篇1000字左右的叙事或说明性文章（阅读10分钟），将其缩写为一篇约400字的短文，要求保留原意、结构完整（第81题，60分）。"
+        },
+        "writing_2": {
+          "name": "第二部分：高阶论述文写作 (300字)",
+          "type": "write_topic_essay_300chars",
+          "skill": "writing",
+          "n_questions": 1,
+          "n_options": 0,
+          "time_min": 15,
+          "status": "unverified",
+          "verified": false,
+          "description": "根据给定社会热点议题或哲学引语，撰写不少于300字的立论清晰、论证严密的议论文（第82题，40分）。"
+        }
+      }
+    }
+  }
+}

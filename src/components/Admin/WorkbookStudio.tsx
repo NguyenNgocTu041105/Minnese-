@@ -89,6 +89,7 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
   const [remixHsk, setRemixHsk] = useState<HSKLevel>(1);
   const [remixQuestionCount, setRemixQuestionCount] = useState<number>(10);
   const [remixDuration, setRemixDuration] = useState<number>(15);
+  const [remixDeadlineDays, setRemixDeadlineDays] = useState<number>(3);
   const [remixTargetType, setRemixTargetType] = useState<'all' | 'class' | 'level'>('all');
   const [remixTargetClassId, setRemixTargetClassId] = useState<string>('');
   const [isRemixing, setIsRemixing] = useState(false);
@@ -264,16 +265,24 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
   // Trigger OCR & Parsing
   const handleProcessWorkbook = async () => {
     if (!uploadTitle.trim()) {
-      alert('Vui lòng nhập tên Bộ Sách Bài Tập (ví dụ: Sách Bài Tập HSK 1 - Bài 1 đến 5)');
+      showNotification(false, 'Vui lòng nhập tên Bộ Sách Bài Tập (ví dụ: Sách Bài Tập HSK 1 - Bài 1 đến 5).');
       return;
     }
     if (uploadSourceType === 'text' && !pastedText.trim()) {
-      alert('Vui lòng dán nội dung bài tập văn bản hoặc tải file hình ảnh bài tập.');
+      showNotification(false, 'Vui lòng dán nội dung bài tập vào ô văn bản trước khi xử lý.');
       return;
     }
     if (uploadSourceType === 'images' && uploadedImages.length === 0) {
-      alert('Vui lòng chọn ít nhất 1 hình ảnh hoặc trang sách bài tập scan.');
+      showNotification(false, 'Vui lòng chọn ít nhất 1 hình ảnh trang sách bài tập scan trước khi bóc tách.');
       return;
+    }
+    // Validate image size (mỗi ảnh base64 không nên vượt 4MB ~ 5.5MB base64)
+    if (uploadSourceType === 'images') {
+      const oversized = uploadedImages.filter((img) => img.length > 5_500_000);
+      if (oversized.length > 0) {
+        showNotification(false, `⚠️ ${oversized.length} ảnh quá lớn (>4MB). Vui lòng nén ảnh hoặc chụp lại với độ phân giải thấp hơn.`);
+        return;
+      }
     }
 
     setIsOcrProcessing(true);
@@ -410,7 +419,7 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
   // AI Exam Remix Trigger
   const handleGenerateRemixExam = async () => {
     if (!remixExamTitle.trim()) {
-      alert('Vui lòng nhập Tiêu đề Đề Thi Online.');
+      showNotification(false, 'Vui lòng nhập Tiêu đề Đề Thi Online trước khi tạo.');
       return;
     }
 
@@ -429,6 +438,13 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
           sourceQuestions = targetWb.parsed_questions;
           rawTextContext = targetWb.raw_text || '';
         }
+      }
+
+      // Guard: Kiểm tra ngân hàng câu hỏi không rỗng
+      if (sourceQuestions.length === 0 && !rawTextContext.trim()) {
+        showNotification(false, '⚠️ Ngân hàng câu hỏi đang trống. Vui lòng tải lên sách bài tập trước khi trộn đề.');
+        setIsRemixing(false);
+        return;
       }
 
       const res = await fetch('/api/workbooks/parse-and-remix', {
@@ -507,6 +523,9 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
     await saveOnlineExamToFirestore(newExam);
     setOnlineExams([newExam, ...onlineExams]);
 
+    const deadlineDate = new Date(Date.now() + (remixDeadlineDays || 3) * 86400000);
+    deadlineDate.setHours(23, 59, 0, 0);
+
     // Also automatically publish an Assignment so students in that class see it in their Dashboard
     const autoAssignment: AssignmentDoc = {
       id: `assign-exam-${Date.now()}`,
@@ -519,7 +538,7 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
       hsk_level: remixTargetType === 'class' && selectedClass ? selectedClass.hsk_level : remixHsk,
       content_type: 'quiz',
       content_ref_id: newExam.id,
-      due_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+      due_date: deadlineDate.toISOString(),
       created_by: currentAdminEmail,
       created_at: new Date().toISOString(),
       is_active: true,
@@ -865,13 +884,15 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  alert('Tính năng Quét ảnh OCR sách bài tập tạm thời được khóa trong giai đoạn MVP để tối ưu chi phí vận hành token cho trung tâm. Vui lòng sử dụng chế độ "Dán văn bản bài tập" hoàn toàn miễn phí!');
-                }}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-not-allowed bg-[var(--color-background)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60"
-                title="Tính năng bóc tách ảnh OCR tạm khóa trong bản MVP"
+                onClick={() => setUploadSourceType('images')}
+                disabled
+                className="relative px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-not-allowed bg-[var(--color-background)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-50"
+                title="Tính năng bóc tách ảnh OCR đang được phát triển — sẽ ra mắt trong phiên bản v2.0"
               >
-                📸 Tải ảnh scan (Tạm khóa v2.0)
+                📸 Tải ảnh scan
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase tracking-wide">
+                  Sắp ra mắt
+                </span>
               </button>
             </div>
 
@@ -1295,6 +1316,24 @@ export const WorkbookStudio: React.FC<WorkbookStudioProps> = ({
                     🏫 Lớp: {c.class_name} ({c.class_code})
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-[var(--color-text-primary)] flex items-center justify-between">
+                <span>8. Hạn nộp & Tự động xóa</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">⏰ Auto-delete</span>
+              </label>
+              <select
+                value={remixDeadlineDays}
+                onChange={(e) => setRemixDeadlineDays(Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] font-medium"
+              >
+                <option value={1}>1 ngày (Hết hạn sau 24h)</option>
+                <option value={3}>3 ngày (Mặc định - Khuyến nghị)</option>
+                <option value={5}>5 ngày</option>
+                <option value={7}>7 ngày (1 tuần)</option>
+                <option value={14}>14 ngày (2 tuần)</option>
               </select>
             </div>
           </div>

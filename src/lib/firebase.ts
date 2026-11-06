@@ -949,10 +949,19 @@ export async function fetchAssignmentsFromFirestore(): Promise<AssignmentDoc[]> 
     const q = collection(db, 'assignments');
     const snap = await getDocs(q);
     const list: AssignmentDoc[] = [];
+
     snap.forEach((d) => {
       const data = d.data() as AssignmentDoc;
-      list.push({ ...data, id: d.id });
+      const assign = { ...data, id: d.id };
+      list.push(assign);
     });
+
+    list.sort(
+      (a, b) =>
+        new Date(a.due_date || 0).getTime() -
+        new Date(b.due_date || 0).getTime()
+    );
+
     return list;
   } catch (err) {
     console.warn('Could not fetch assignments from firestore:', err);
@@ -969,10 +978,13 @@ export function subscribeAssignmentsFromFirestore(
       q,
       (snap) => {
         const list: AssignmentDoc[] = [];
+
         snap.forEach((d) => {
           const data = d.data() as AssignmentDoc;
-          list.push({ ...data, id: d.id });
+          const assign = { ...data, id: d.id };
+          list.push(assign);
         });
+
         list.sort(
           (a, b) =>
             new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
@@ -1155,22 +1167,60 @@ export async function deleteWorkbookInFirestore(workbookId: string): Promise<boo
 // ONLINE EXAMS CRUD IN FIRESTORE
 // ---------------------------------------------------------------------------
 export async function fetchOnlineExamsFromFirestore(): Promise<OnlineExamDoc[]> {
+  const merged: OnlineExamDoc[] = [];
+  const seenIds = new Set<string>();
+  const seenCodes = new Set<string>();
+
+  const addExam = (exam: OnlineExamDoc) => {
+    if (!exam) return;
+    const idKey = (exam.id || '').trim();
+    const codeKey = (exam.exam_code || '').trim().toUpperCase();
+    if (idKey && seenIds.has(idKey)) return;
+    if (codeKey && seenCodes.has(codeKey)) return;
+    if (idKey) seenIds.add(idKey);
+    if (codeKey) seenCodes.add(codeKey);
+    merged.push(exam);
+  };
+
   try {
     const q = collection(db, 'online_exams');
     const snap = await getDocs(q);
-    const list: OnlineExamDoc[] = [];
     snap.forEach((d) => {
       const data = d.data() as OnlineExamDoc;
-      list.push({ ...data, id: d.id });
+      addExam({ ...data, id: d.id });
     });
-    return list;
   } catch (err) {
     console.warn('Could not fetch online exams from Firestore:', err);
-    return [];
   }
+
+  // Local storage fallback and merge
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const localExams: OnlineExamDoc[] = JSON.parse(localStorage.getItem('minnese_local_online_exams') || '[]');
+      if (Array.isArray(localExams)) {
+        localExams.forEach((e) => {
+          if (e && (e.id || e.exam_code)) {
+            addExam(e);
+          }
+        });
+      }
+    }
+  } catch (localErr) {
+    console.warn('Could not load local online exams from localStorage:', localErr);
+  }
+
+  return merged;
 }
 
 export async function saveOnlineExamToFirestore(exam: OnlineExamDoc): Promise<boolean> {
+  // Always update local cache so students can immediately access the exam
+  try {
+    const localExams: OnlineExamDoc[] = JSON.parse(localStorage.getItem('minnese_local_online_exams') || '[]');
+    const filtered = localExams.filter((e) => e.id !== exam.id && e.exam_code !== exam.exam_code);
+    filtered.unshift(exam);
+    localStorage.setItem('minnese_local_online_exams', JSON.stringify(filtered.slice(0, 50)));
+  } catch (localErr) {}
+
   try {
     const ref = doc(db, 'online_exams', exam.id);
     await setDoc(ref, sanitizeForFirestore(exam), { merge: true });
@@ -1195,8 +1245,8 @@ export async function deleteOnlineExamInFirestore(examId: string): Promise<boole
 }
 
 export async function getOnlineExamByCode(examCode: string): Promise<OnlineExamDoc | null> {
+  const cleanCode = examCode.trim().toUpperCase();
   try {
-    const cleanCode = examCode.trim().toUpperCase();
     const q = query(collection(db, 'online_exams'), where('exam_code', '==', cleanCode));
     const snap = await getDocs(q);
     if (!snap.empty) {
@@ -1204,8 +1254,16 @@ export async function getOnlineExamByCode(examCode: string): Promise<OnlineExamD
       return { ...(d.data() as OnlineExamDoc), id: d.id };
     }
   } catch (err) {
-    console.warn('Could not fetch exam by code:', err);
+    console.warn('Could not fetch exam by code from Firestore:', err);
   }
+
+  // Local fallback cache
+  try {
+    const localExams: OnlineExamDoc[] = JSON.parse(localStorage.getItem('minnese_local_online_exams') || '[]');
+    const found = localExams.find((e) => (e.exam_code || '').trim().toUpperCase() === cleanCode);
+    if (found) return found;
+  } catch (localErr) {}
+
   return null;
 }
 

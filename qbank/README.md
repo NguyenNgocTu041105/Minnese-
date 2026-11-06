@@ -114,6 +114,12 @@ python -m qbank.cli import-vocab data/raw_vocab.xlsx --source "Danh mục Giáo 
    python -m qbank.cli import-vocab data/qbank/syllabus/vocab_rejected.csv --source "Sửa lỗi thủ công" --license-status self-authored --mode merge --execute
    ```
 
+### Đề cương HSK 2025 & Nguồn Pinyin
+- **Nguồn dữ liệu**: Dữ liệu HSK 2025 được trích xuất từ đề cương chính thức 《新版HSK考试大纲》（2025-11）thông qua gói `hsk30==0.2.1` trên PyPI (đã đối chiếu các mốc số thứ tự 序号 300, 500, 1.000, 2.000 với bản PDF chính thức).
+- **Nguồn gốc Pinyin**: File gốc trong gói `hsk30` chỉ cung cấp cột `word` và `level`, không bao gồm phiên âm pinyin. Cột pinyin trong `hsk2025_words.csv` được tự sinh tự động thông qua thư viện `pypinyin` (`Style.TONE`). Do tính chất chữ đa âm (多音字), một số từ có thể mang phiên âm ngữ cảnh khác, tuy nhiên phiên âm này hoàn toàn mang tính chất hiển thị/tra cứu phụ trợ và **không ảnh hưởng** đến quá trình thẩm định cấp độ câu hỏi.
+- **Thẩm định cấp độ theo Chữ Hán (Character-level grading)**: Hệ thống sử dụng danh mục 3.088 chữ Hán phân cấp (`chars.jsonl`) theo Đề cương 2025. Ngưỡng ký tự vượt cấp cho phép là 5% (`QBANK_CHAR_BUDGET=0.05`), miễn trừ tên riêng trong `names.txt`, bỏ qua dấu câu, chữ số và chỗ trống.
+
+
 ### Giao diện Web Quản trị Cục bộ (qbank/admin/)
 Giao diện Web trực quan chạy nội bộ phục vụ quản trị đề thi và từ vựng HSK 3.0:
 

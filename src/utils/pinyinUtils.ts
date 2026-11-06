@@ -7,6 +7,9 @@
  * Tone 5 (Neutral): Neutral Slate / Gray (#64748b)
  */
 import { pinyin as getPinyinPro } from 'pinyin-pro';
+import { generateAccuratePinyin, isPinyinAligned, normalizePinyinForAlignment } from './pinyinEngine';
+
+export { generateAccuratePinyin, isPinyinAligned, normalizePinyinForAlignment };
 
 export const TONE_COLORS = {
   1: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900',
@@ -119,14 +122,51 @@ export function splitPinyinSyllables(pinyin: string): string[] {
 }
 
 /**
- * Converts a Chinese sentence or phrase into standard Pinyin with tone marks
+ * Converts a Chinese sentence or phrase into standard Pinyin with tone marks,
+ * applying standard tone sandhi and polyphone disambiguation.
  */
 export function getSentencePinyin(text: string): string {
   if (!text) return '';
-  try {
-    return getPinyinPro(text, { toneType: 'symbol' }) || '';
-  } catch (err) {
-    console.warn('getSentencePinyin error:', err);
-    return '';
-  }
+  return generateAccuratePinyin(text);
 }
+
+/**
+ * Splits Chinese Hanzi from parenthesized Pinyin.
+ * Handles cases like:
+ * - '苹果 (píngguǒ)' -> { hanzi: '苹果', pinyin: 'píngguǒ' }
+ * - '桌子上有一本书。(Zhuōzi shang yǒu yì běn shū.)' -> { hanzi: '桌子上有一本书。', pinyin: 'Zhuōzi shang...' }
+ * - 'A. 妹妹 (mèimei)' -> { hanzi: 'A. 妹妹', pinyin: 'mèimei' }
+ * - '纯汉字' -> { hanzi: '纯汉字', pinyin: '' }
+ */
+export function splitHanziAndPinyin(rawText: string): { hanzi: string; pinyin?: string } {
+  if (!rawText) return { hanzi: '', pinyin: undefined };
+  const trimmed = rawText.trim();
+
+  // If text has parenthesized pinyin segments anywhere
+  const pinyinRegex = /[（\(]([a-zA-ZāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüÜ0-9\s,\.!?:'\-–—]+)[）\)]/g;
+  const matches = [...trimmed.matchAll(pinyinRegex)];
+  if (matches.length > 0) {
+    const extractedPinyins = matches.map((m) => m[1].trim()).filter(Boolean);
+    const cleanHanzi = sanitizeHanziOnly(trimmed);
+    return {
+      hanzi: cleanHanzi,
+      pinyin: extractedPinyins.join(' '),
+    };
+  }
+  return { hanzi: trimmed, pinyin: undefined };
+}
+
+/**
+ * Strips parenthesized inline pinyin from text when Pinyin is toggled OFF.
+ * Preserves blanks like (mèimei) if isTianzige is true.
+ */
+export function sanitizeHanziOnly(text: string, isTianzige: boolean = false): string {
+  if (!text) return '';
+  if (isTianzige) return text;
+  return text
+    .replace(/\s*[（\(][a-zA-ZāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüÜ0-9\s,\.!?:'\-–—]+[）\)]\s*/g, '')
+    .replace(/\s+([，。！？,.!?；;:])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+

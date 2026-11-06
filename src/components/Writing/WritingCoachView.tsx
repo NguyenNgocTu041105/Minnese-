@@ -34,6 +34,7 @@ import {
 import { HSKLevel, UserProfile, UserStats } from '../../types';
 import { playChineseAudio } from '../../utils/chineseAudio';
 import { CartoonLoader } from '../CartoonLoader';
+import { logStudyActivity } from '../../utils/activityLogger';
 
 export interface WritingPromptPreset {
   id: string;
@@ -836,6 +837,9 @@ export const WritingCoachView: React.FC<WritingCoachViewProps> = ({
         xp: stats.xp + xpEarned,
         studyTimeMinutes: stats.studyTimeMinutes + 10,
       });
+
+      const currentPrompt = activePrompt;
+      logStudyActivity('review', 'Luyện viết chữ Hán AI: ' + (currentPrompt?.title || 'Bài viết'));
 
       // Save to local writing history
       const newEntry: SavedWritingEntry = {

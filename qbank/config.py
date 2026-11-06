@@ -1,6 +1,11 @@
 import os
 from typing import Optional
-from dotenv import load_dotenv
+from urllib.parse import urlsplit
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    def load_dotenv(*args, **kwargs):
+        return False
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -9,6 +14,33 @@ load_dotenv()
 
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+
+def assert_free_only_provider(base_url: str) -> None:
+    """Fail closed for the Python generator under the free-only policy."""
+    free_only = os.getenv("QBANK_LLM_FREE_ONLY", "true").strip().lower()
+    allow_paid = os.getenv("QBANK_LLM_ALLOW_PAID", "false").strip().lower()
+    if free_only == "false" and allow_paid == "true":
+        return
+    if free_only != "true" or allow_paid != "false":
+        raise RuntimeError(
+            "QBank generation blocked: QBANK_LLM_FREE_ONLY=true and "
+            "QBANK_LLM_ALLOW_PAID=false are required."
+        )
+
+    try:
+        parsed = urlsplit(base_url)
+        scheme = parsed.scheme.lower()
+        hostname = (parsed.hostname or "").lower()
+    except ValueError:
+        scheme = ""
+        hostname = ""
+
+    if scheme != "https" or hostname != "api.groq.com":
+        raise RuntimeError(
+            "QBank generation blocked: only the verified free Groq HTTPS endpoint is allowed "
+            "while free-only policy is active."
+        )
 
 
 def resolve_project_path(path: str) -> str:
@@ -39,16 +71,34 @@ class QbConfig(BaseModel):
     llm_model: str = Field(
         default_factory=lambda: os.getenv("QBANK_LLM_MODEL", "gemini-2.5-flash")
     )
+    llm_fallback_models: str = Field(
+        default_factory=lambda: os.getenv("QBANK_LLM_FALLBACK_MODELS", "")
+    )
+    llm_reasoning_effort: str = Field(
+        default_factory=lambda: os.getenv("QBANK_LLM_REASONING_EFFORT", "low")
+    )
     llm_temperature: float = Field(
         default_factory=lambda: float(os.getenv("QBANK_LLM_TEMPERATURE", "0.7"))
     )
+    llm_max_tokens: int = Field(
+        default_factory=lambda: int(os.getenv("QBANK_LLM_MAX_TOKENS", "8192"))
+    )
+
+    @property
+    def fallback_models(self) -> list:
+        if not self.llm_fallback_models:
+            return []
+        return [m.strip() for m in self.llm_fallback_models.split(",") if m.strip()]
 
     # Runtime Limits
     max_calls_per_run: int = Field(
         default_factory=lambda: int(os.getenv("QBANK_MAX_CALLS_PER_RUN", "10"))
     )
+    max_failures_per_run: int = Field(
+        default_factory=lambda: int(os.getenv("QBANK_MAX_FAILURES_PER_RUN", "6"))
+    )
     batch_size: int = Field(
-        default_factory=lambda: int(os.getenv("QBANK_BATCH_SIZE", "10"))
+        default_factory=lambda: int(os.getenv("QBANK_BATCH_SIZE", "5"))
     )
 
     # Local Storage Settings
@@ -73,6 +123,9 @@ class QbConfig(BaseModel):
     )
     out_of_level_threshold: float = Field(
         default_factory=lambda: float(os.getenv("QBANK_OUT_OF_LEVEL_THRESHOLD", "0.15"))
+    )
+    char_budget: float = Field(
+        default_factory=lambda: float(os.getenv("QBANK_CHAR_BUDGET", "0.05"))
     )
     near_dup_threshold: float = Field(
         default_factory=lambda: float(os.getenv("QBANK_NEAR_DUP_THRESHOLD", "0.80"))
@@ -99,6 +152,9 @@ class QbConfig(BaseModel):
     )
     option_max_len_diff: int = Field(
         default_factory=lambda: int(os.getenv("QBANK_OPTION_MAX_LEN_DIFF", "3"))
+    )
+    sampling_seed: Optional[int] = Field(
+        default_factory=lambda: int(os.getenv("QBANK_SAMPLING_SEED")) if os.getenv("QBANK_SAMPLING_SEED") else None
     )
 
 

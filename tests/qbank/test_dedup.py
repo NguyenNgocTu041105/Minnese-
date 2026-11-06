@@ -67,6 +67,42 @@ def test_get_comparable_stem_fill_blank():
     assert get_comparable_stem("今天天气很好。") == "今天天气很好。"
 
 
+def test_get_comparable_stem_blank_variations_match_standard_blank():
+    """Verify that ___, （ ）, (), and variations produce identical comparable stem to ____."""
+    from qbank.dedup import get_comparable_stem
+    options = ["学校", "医院", "银行", "商店"]
+    ans_idx = 0
+
+    stem_std = "王老师在____上课。"
+    stem_3under = "王老师在___上课。"
+    stem_cn_space = "王老师在（ ）上课。"
+    stem_cn_multispace = "王老师在（   ）上课。"
+    stem_en_empty = "王老师在()上课。"
+    stem_en_space = "王老师在( )上课。"
+
+    expected = "王老师在学校上课。"
+
+    comp_std = get_comparable_stem(stem_std, options, ans_idx)
+    comp_3under = get_comparable_stem(stem_3under, options, ans_idx)
+    comp_cn_space = get_comparable_stem(stem_cn_space, options, ans_idx)
+    comp_cn_multispace = get_comparable_stem(stem_cn_multispace, options, ans_idx)
+    comp_en_empty = get_comparable_stem(stem_en_empty, options, ans_idx)
+    comp_en_space = get_comparable_stem(stem_en_space, options, ans_idx)
+
+    assert comp_std == expected
+    assert comp_3under == expected
+    assert comp_cn_space == expected
+    assert comp_cn_multispace == expected
+    assert comp_en_empty == expected
+    assert comp_en_space == expected
+
+    # Verify near-duplicate detection between ____ and ()
+    is_dup, sim, matched = check_near_duplicate(comp_en_empty, [comp_std], threshold=0.8)
+    assert is_dup is True
+    assert sim == 1.0
+    assert matched == comp_std
+
+
 def test_extract_ngrams_adaptive_short_sentences():
     # Very short sentence (HSK 1: 4 chars) -> adapts to 2-grams
     short_text = "他是老师。"

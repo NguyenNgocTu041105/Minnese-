@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set, Optional, Any
 from qbank.models import QbVocabItem
 
 logger = logging.getLogger("qbank.syllabus")
@@ -11,8 +11,13 @@ class QbSyllabus:
     """
     Loads, validates, and filters vocabulary syllabus for HSK 3.0.
     Strictly filters out any record with license_status in ('unknown', 'restricted').
+    Also loads and indexes character syllabus (chars.jsonl) for character-level grading.
     """
-    def __init__(self, vocab_file_path: Optional[str] = None):
+    def __init__(
+        self,
+        vocab_file_path: Optional[str] = None,
+        chars_file_path: Optional[str] = None
+    ):
         if vocab_file_path is None:
             default_path = os.path.join(
                 os.path.dirname(__file__), "..", "data", "qbank", "syllabus", "vocab.jsonl"
@@ -26,19 +31,54 @@ class QbSyllabus:
                 vocab_file_path = default_path
         self.vocab_file_path = os.path.abspath(vocab_file_path)
 
+        if chars_file_path is None:
+            default_chars = os.path.join(
+                os.path.dirname(__file__), "..", "data", "qbank", "syllabus", "chars.jsonl"
+            )
+            sample_chars = os.path.join(
+                os.path.dirname(__file__), "..", "data", "qbank", "syllabus", "chars.sample.jsonl"
+            )
+            if not os.path.exists(default_chars) and os.path.exists(sample_chars):
+                chars_file_path = sample_chars
+            else:
+                chars_file_path = default_chars
+        self.chars_file_path = os.path.abspath(chars_file_path) if chars_file_path else None
+
         self.items: List[QbVocabItem] = []
         self.rejected_records: List[Dict] = []
         self._level_map: Dict[int, List[QbVocabItem]] = {}
         self._word_level_map: Dict[str, int] = {}
+        self._char_level_map: Dict[str, int] = {}
         self.load()
 
     def load(self) -> None:
-        """Loads and filters vocabulary items from JSONL file."""
+        """Loads and filters vocabulary items and character recognition items from JSONL files."""
         self.items.clear()
         self.rejected_records.clear()
         self._level_map.clear()
         self._word_level_map.clear()
+        self._char_level_map.clear()
 
+        # 1. Load characters from chars_file_path if available
+        if self.chars_file_path and os.path.exists(self.chars_file_path):
+            try:
+                with open(self.chars_file_path, "r", encoding="utf-8") as fc:
+                    for line in fc:
+                        raw = line.strip()
+                        if not raw or raw.startswith("#"):
+                            continue
+                        try:
+                            c_data = json.loads(raw)
+                            ch = c_data.get("char")
+                            lvl = c_data.get("level")
+                            if ch and lvl is not None:
+                                self._char_level_map[ch] = int(lvl)
+                        except Exception:
+                            pass
+            except Exception as e:
+                logger.warning(f"Error loading character syllabus from {self.chars_file_path}: {e}")
+
+        # 2. Load vocabulary items from vocab_file_path
         if not os.path.exists(self.vocab_file_path):
             logger.warning(f"Syllabus file not found at {self.vocab_file_path}")
             return
@@ -140,15 +180,40 @@ class QbSyllabus:
         """Looks up the HSK level of a word, or None if not found in syllabus."""
         return self._word_level_map.get(word)
 
+    def get_char_level(self, char: str) -> Optional[int]:
+        """Looks up the HSK level of a single Chinese character, or None if ungraded."""
+        return self._char_level_map.get(char)
+
+    def get_char_count(self) -> int:
+        """Returns total number of recognition characters loaded."""
+        return len(self._char_level_map)
+
+    def get_chars_up_to_level(self, up_to_level: int) -> Set[str]:
+        """Returns set of all recognition characters up to and including the specified level."""
+        return {ch for ch, lvl in self._char_level_map.items() if lvl <= up_to_level}
+
+    def get_words_by_level(self, level: int) -> List[str]:
+        """Returns list of unique words for a specific level."""
+        seen = set()
+        res = []
+        for item in self.get_vocab_for_level(level):
+            if item.word not in seen:
+                seen.add(item.word)
+                res.append(item.word)
+        return res
+
 
 _syllabus_instance: Optional[QbSyllabus] = None
 
 
-def get_syllabus(vocab_file_path: Optional[str] = None) -> QbSyllabus:
+def get_syllabus(
+    vocab_file_path: Optional[str] = None,
+    chars_file_path: Optional[str] = None
+) -> QbSyllabus:
     """Lazy loader for QbSyllabus singleton."""
     global _syllabus_instance
-    if vocab_file_path is not None:
-        return QbSyllabus(vocab_file_path=vocab_file_path)
+    if vocab_file_path is not None or chars_file_path is not None:
+        return QbSyllabus(vocab_file_path=vocab_file_path, chars_file_path=chars_file_path)
     if _syllabus_instance is None:
         _syllabus_instance = QbSyllabus()
     return _syllabus_instance

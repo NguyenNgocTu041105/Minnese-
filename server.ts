@@ -5,6 +5,7 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import { assertStagingDatabaseIsolation } from './src/server/dbPaths.js';
 import { pinyin as getPinyinPro } from 'pinyin-pro';
 import { INITIAL_RAG_DOCUMENTS, queryKnowledgeBase } from './src/data/ragKnowledgeBase';
 import { INITIAL_VOCABULARY } from './src/data/hskVocabulary';
@@ -12,6 +13,28 @@ import { NEW_HSK1_FULL_LESSONS } from './src/data/newHsk1BookData';
 import { NEW_HSK2_FULL_LESSONS } from './src/data/newHsk2BookData';
 import { NEW_HSK3_FULL_LESSONS } from './src/data/newHsk3BookData';
 import { NEW_HSK4_FULL_LESSONS } from './src/data/newHsk4BookData';
+import {
+  qbankRouter,
+  sanitizeError,
+  isQBankAdminEnabled,
+  logEphemeralTokenIfNeeded,
+  warnIfInsecureAdminToken,
+  getQBankAdminToken,
+  qbankSecurityMiddleware,
+  requireAdminAuth,
+} from './src/server/qbankRoutes';
+import { examRouter } from './src/server/examRoutes';
+import { initAutoQuestionScheduler } from './src/server/cron/autoQuestionScheduler';
+import { handleBYOKTest, handleVoiceChatCall } from './src/server/voiceChatHandler';
+
+export {
+  isQBankAdminEnabled,
+  logEphemeralTokenIfNeeded,
+  warnIfInsecureAdminToken,
+  getQBankAdminToken,
+  qbankSecurityMiddleware,
+  requireAdminAuth,
+};
 
 dotenv.config();
 
@@ -20,10 +43,10 @@ let ragDocuments = [...INITIAL_RAG_DOCUMENTS];
 let vocabularyList = [...INITIAL_VOCABULARY];
 
 // Lazy-safe Google GenAI initialization
-function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getGeminiClient(customApiKey?: string): GoogleGenAI | null {
+  const apiKey = customApiKey?.trim() || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.warn('GEMINI_API_KEY is not set. Intelligent RAG fallback responses will be used.');
+    if (!customApiKey) console.warn('GEMINI_API_KEY is not set. Intelligent RAG fallback responses will be used.');
     return null;
   }
   return new GoogleGenAI({
@@ -419,16 +442,17 @@ function buildRAGFallbackResponse(
 ): string {
   if (retrievedSources.length === 0) {
     return (
-      `你好！Dưới đây là hướng dẫn súc tích dành cho chủ đề "${query}" (HSK ${hskLevel}):\n\n` +
+      `你好！Mình chưa có tài liệu HSK chính thức về chủ đề "${query}" trong giáo trình nội bộ, nhưng theo kiến thức ngôn ngữ học Trung Quốc chung (chuẩn HSK 3.0 - Cấp độ ${hskLevel}):\n\n` +
       `- **Cấu trúc câu cơ bản**: *Chủ ngữ + [Thời gian/Địa điểm] + [Phó từ] + Động từ + Tân ngữ*\n` +
       `  *Ví dụ*: **我每天在图书馆学习中文** (Wǒ měitiān zài túshūguǎn xuéxí Zhōngwén - Tôi học tiếng Trung ở thư viện mỗi ngày).\n\n` +
-      `- **Quy tắc biến điệu**: 2 thanh 3 đi liền -> thanh 3 thứ nhất đọc thành thanh 2 (**你好** nǐ + hǎo -> ní hǎo).\n\n` +
-      `- **Phân biệt trợ từ**: **的** (sở hữu: 我的书), **得** (trình độ: 跑得快), **地** (phó từ: 慢慢地走).`
+      `- **Quy tắc biến điệu**: Hai thanh 3 đi liền nhau -> thanh 3 thứ nhất đọc thành thanh 2 (**你好** nǐ + hǎo -> ní hǎo).\n\n` +
+      `- **Phân biệt trợ từ**: **的** (sở hữu: 我的书), **得** (trình độ: 跑得快), **地** (phó từ: 慢慢地走).\n\n` +
+      `*(Lưu ý: Để gia sư giải đáp chi tiết hơn theo thời gian thực, bạn có thể thiết lập khóa Gemini API Key (BYOK) tại thanh công cụ.)*`
     );
   }
 
   const primary = retrievedSources[0];
-  let response = `### ${primary.title} (HSK ${hskLevel})\n\n`;
+  let response = `### 📖 ${primary.title} (HSK ${hskLevel})\n\n`;
   response += `**Quy tắc cốt lõi:**\n${primary.rulesSummary}\n\n`;
   response += `**Giải thích & Áp dụng:**\n${primary.content}\n\n`;
 
@@ -439,23 +463,82 @@ function buildRAGFallbackResponse(
     });
   }
 
+  // Incorporate secondary retrieved documents if multiple sources found (R8)
+  if (retrievedSources.length > 1) {
+    response += `\n---\n### 📚 Tài liệu liên quan bổ trợ trong giáo trình:\n\n`;
+    for (let i = 1; i < retrievedSources.length; i++) {
+      const doc = retrievedSources[i];
+      response += `#### ${i + 1}. ${doc.title} (${(doc.category || 'ngữ pháp').toUpperCase()})\n`;
+      if (doc.rulesSummary) {
+        response += `**Tóm tắt quy tắc:** ${doc.rulesSummary}\n\n`;
+      }
+      if (doc.content) {
+        const snippet = doc.content.length > 250 ? doc.content.slice(0, 250).trim() + '...' : doc.content;
+        response += `**Trích lược nội dung:**\n${snippet}\n\n`;
+      }
+      if (doc.examples && doc.examples.length > 0) {
+        const firstEx = doc.examples[0];
+        response += `*Ví dụ*: **${firstEx.chinese}** (${firstEx.pinyin}) - "${firstEx.english}"\n\n`;
+      }
+    }
+  }
+
   return response;
 }
 
 async function startServer() {
+  assertStagingDatabaseIsolation();
   const app = express();
-  const PORT = 3000;
+  const PORT = Number.parseInt(process.env.PORT || '3000', 10);
+  const HOST = process.env.HOST || '0.0.0.0';
 
-  // Gzip / Brotli compression for high-concurrency bandwidth optimization
-  app.use(compression());
+  // Gzip / Brotli compression for high-concurrency bandwidth optimization.
+  // In development mode, NEVER compress Vite dev server requests, ES modules, or SSE streams
+  // to prevent chunked transfer dropouts and "Failed to fetch dynamically imported module" errors.
+  app.use(
+    compression({
+      filter: (req: Request, res: Response) => {
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        if (process.env.NODE_ENV !== 'production') {
+          const url = req.originalUrl || req.url || '';
+          const pathname = req.path || url.split('?')[0];
+          // In development mode, only compress /api/* endpoints;
+          // NEVER compress Vite dev server middleware requests (ES modules, HTML, assets, SSE)
+          // to prevent chunked transfer dropouts and "Failed to fetch dynamically imported module" errors.
+          if (!pathname.startsWith('/api/')) {
+            return false;
+          }
+        }
+        return compression.filter(req, res);
+      },
+    })
+  );
 
   // Support large base64 image payloads for OCR of scanned PDF textbooks
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+  // Ensure public/audio directory exists and mount static audio serving for Edge-TTS
+  const audioDir = path.join(process.cwd(), 'public', 'audio');
+  fs.mkdirSync(audioDir, { recursive: true });
+  app.use('/audio', express.static(audioDir));
+
   // Health check
   app.get('/api/health', (req: Request, res: Response) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      qbankAdminEnabled: isQBankAdminEnabled(),
+    });
+  });
+
+  // Dedicated lightweight status check endpoint for QBank Admin
+  app.get('/api/qbank-status', (req: Request, res: Response) => {
+    res.json({
+      enabled: isQBankAdminEnabled(),
+    });
   });
 
   // Admin Knowledge Base endpoints
@@ -565,16 +648,18 @@ async function startServer() {
 
     // Step 1: Query local Knowledge Base (RAG Retriever)
     const retrievedSources = queryKnowledgeBase(message, 3);
+    const hasRagContext = retrievedSources.length > 0;
     const ragContextText = retrievedSources
       .map(
         (doc, i) =>
-          `[Source ${i + 1}: ${doc.title} (${doc.category})]\nRules: ${doc.rulesSummary}\nDetails: ${doc.content}\nExamples: ${JSON.stringify(
+          `[Tài liệu ${i + 1}: ${doc.title} (Chuyên mục: ${doc.category})]\n- Tóm tắt quy tắc: ${doc.rulesSummary}\n- Chi tiết: ${doc.content}\n- Ví dụ: ${JSON.stringify(
             doc.examples
           )}`
       )
       .join('\n\n');
 
-    const gemini = getGeminiClient();
+    const byokKey = (req.headers['x-byok-gemini-key'] || req.headers['x-byok-api-key']) as string | undefined;
+    const gemini = getGeminiClient(byokKey);
 
     if (!gemini) {
       // Local Grounded RAG Synthesizer if API key not present
@@ -588,20 +673,34 @@ async function startServer() {
           snippet: d.rulesSummary || d.content.slice(0, 140) + '...',
         })),
         suggestedFollowUps: [
-          'How do I use 的, 得, and 地 correctly?',
-          'What are the 3rd tone sandhi rules?',
-          'Explain the difference between 会, 能, and 可以.',
+          'Cách phân biệt trợ từ 的, 得 và 地 trong câu?',
+          'Quy tắc biến điệu hai thanh 3 tiếng Trung là gì?',
+          'Phân biệt cách dùng 会, 能 và 可以.',
         ],
       });
     }
 
     try {
       // System instruction customized by mode with HSK 3.0 Standard focus
-      let systemPrompt = `You are "Minnese AI Tutor (敏思中文导师 / 敏思老师 - Minnese Lǎoshī)", an elite, warm, and highly pedagogical Mandarin Chinese language tutor specializing in the official HSK 3.0 curriculum (New HSK 1, 2, 3, 4, 5).
+      let systemPrompt = `You are "Minnese AI Tutor (敏思中文导师 / 敏思老师 - Minnese Lǎoshī)", an elite, warm, and highly pedagogical Mandarin Chinese language tutor specializing in the official HSK 3.0 curriculum (New HSK 1, 2, 3, 4, 5, 6).
 Target Learner Level: HSK ${hskLevel} (HSK 3.0 Standard).
 
-Always ground your answers in the provided [RAG KNOWLEDGE BASE RETRIEVAL]:
-${ragContextText || 'Standard HSK 3.0 (Levels 1-6) Grammar & Vocabulary Guidelines.'}
+${
+  hasRagContext
+    ? `[TÀI LIỆU GIÁO TRÌNH HSK CHÍNH THỨC NỘI BỘ (RAG CONTEXT)]:
+${ragContextText}
+
+QUY TẮC CỐT LÕI KHI CÓ RAG CONTEXT (BẮT BUỘC TUÂN THỦ):
+1. ƯU TIÊN TUYỆT ĐỐI & BÁM SÁT GIÁO TRÌNH: Bạn PHẢI trích dẫn, bám sát và ưu tiên sử dụng thông tin trong [TÀI LIỆU GIÁO TRÌNH HSK CHÍNH THỨC NỘI BỘ] ở trên. Tuyệt đối KHÔNG được mâu thuẫn, phủ nhận hoặc đưa ra giải thích trái ngược với nội dung giáo trình được cung cấp.
+2. Vận dụng trực tiếp các quy tắc, công thức ngữ pháp và ví dụ thực tiễn từ tài liệu giáo trình để giải thích cho người học một cách mạch lạc, dễ hiểu.`
+    : `[TRẠNG THÁI RAG CONTEXT]: Không tìm thấy tài liệu giáo trình HSK cụ thể trong cơ sở dữ liệu nội bộ khớp trực tiếp với câu hỏi này.
+
+QUY TẮC BẮT BUỘC KHI KHÔNG CÓ RAG CONTEXT (TUÂN THỦ NGHIÊM NGẶT 4 CHỈ THỊ):
+1. Thừa nhận minh bạch: Nếu câu hỏi về một chủ đề ngữ pháp/kiến thức chuyên sâu chưa có trong tài liệu nội bộ, bạn PHẢI nói rõ ràng: "Mình chưa có tài liệu HSK chính thức về chủ đề này trong giáo trình, nhưng theo kiến thức ngôn ngữ học Trung Quốc chung..." thay vì tự bịa đặt tài liệu giáo trình.
+2. Chuẩn HSK 3.0: Khi người học hỏi về từ vựng hoặc ngữ pháp HSK cụ thể không có trong RAG nội bộ, PHẢI giải thích dựa trên chuẩn HSK 3.0 chính thức và ghi rõ: "Theo chuẩn HSK 3.0...".
+3. Kiến thức mở rộng: Cho phép trả lời câu hỏi mở rộng (văn hóa Trung Hoa, phong tục tập quán, thành ngữ cao cấp ngoài HSK, giao tiếp bản xứ đời thường), nhưng PHẢI ghi rõ: "Đây là kiến thức mở rộng ngoài giáo trình HSK...".
+4. Đối với lời chào hỏi hoặc trò chuyện giao tiếp thông thường: Hãy phản hồi tự nhiên, ấm áp, khuyến khích học viên trò chuyện bằng tiếng Trung kèm Pinyin và dịch nghĩa tiếng Việt.`
+}
 
 Pedagogical & Content Guidelines for Vietnamese Learners:
 1. When introducing or referring to yourself, use "Gia sư Minnese", "Cô giáo Minnese / Thầy Minnese" hoặc "敏思老师 / Minnese Lǎoshī". STRICTLY NEVER use Japanese words like "Sensei" or any Japanese terminology.
@@ -609,7 +708,9 @@ Pedagogical & Content Guidelines for Vietnamese Learners:
 3. Strictly align vocabulary and grammar difficulty with the official HSK 3.0 standard (e.g. HSK 1: daily greeting & simple SVO; HSK 2: 是...的, 还是...吧, complement of result, 比较句; HSK 3: 把字句, 被字句, 越来越, 程度补语, 复合趋向补语).
 4. Highlight Tone Sandhi rules whenever relevant (e.g. 3rd tone + 3rd tone -> 2nd + 3rd; 不/一 tone changes).
 5. If the user asks for grammar explanations, break down the sentence syntax clearly with clear examples and practical context.
-6. Keep the tone encouraging, structured, and pedagogical.
+6. When explaining specific HSK vocabulary or grammar points not in RAG, answer based on the official HSK 3.0 standard, explicitly stating "Theo chuẩn HSK 3.0...".
+7. For expanded questions (Chinese culture, general topics outside HSK), allow answering but explicitly note "Đây là kiến thức mở rộng ngoài giáo trình HSK...".
+8. Keep the tone encouraging, structured, and pedagogical.
 
 Formatting & Visual Clarity Guidelines (CRITICAL):
 - BE CONCISE & DIRECT: Answer the user's question directly without dumping long unrequested textbook chapters or repetitive background text.
@@ -724,13 +825,16 @@ MỤC TIÊU:
     }
   });
 
-  // Live Real-Time Voice Partner Conversation Call Endpoint (Locked for MVP Cost Optimization)
-  app.post('/api/voice-chat/call', async (req: Request, res: Response) => {
-    return res.status(503).json({
-      error: 'Tính năng Live Voice Call tạm thời được khóa trong giai đoạn MVP để tối ưu chi phí token. Sẽ mở lại ở bản nâng cấp tiếp theo!',
-      locked: true,
-    });
-  });
+  // Ephemeral BYOK Connectivity & Key Test Endpoint
+  app.post('/api/byok/test', handleBYOKTest);
+
+  // Live Real-Time Voice Partner Conversation Call Endpoint (Unlocked with Ephemeral BYOK)
+  app.post('/api/voice-chat/call', handleVoiceChatCall);
+
+
+
+
+
 
   // AI Quiz Generator Endpoint
   app.post('/api/gemini/generate-quiz', async (req: Request, res: Response) => {
@@ -2993,109 +3097,13 @@ Return ONLY a valid JSON object matching this schema:
       });
     }
 
-    // Helper: Local fallback generator if AI quota or key is not available
-    const generateLocalFallbackQuestions = (count: number, hsk: number, mode: string) => {
-      const basePool = [
-        {
-          id: `q-wb-${Date.now()}-1`,
-          type: 'meaning',
-          prompt: `Chọn nghĩa tiếng Việt chính xác của câu "今天天气真好":`,
-          questionChinese: '今天天气真好',
-          options: ['Hôm nay thời tiết thật đẹp', 'Ngày mai trời sẽ mưa to', 'Hôm qua trời rất lạnh', 'Bây giờ trời đã tối rồi'],
-          correctAnswer: 'Hôm nay thời tiết thật đẹp',
-          explanation: '今天 (hôm nay) + 天气 (thời tiết) + 真好 (thật đẹp/thật tốt). Cấu trúc "真 + Tính từ" dùng biểu thị cảm thán.',
-          hskLevel: hsk || 1,
-        },
-        {
-          id: `q-wb-${Date.now()}-2`,
-          type: 'grammar',
-          prompt: `Chọn trợ từ thích hợp điền vào chỗ trống: "我学中文学___很开心":`,
-          questionChinese: '我学中文学___很开心',
-          options: ['得 (bổ ngữ trình độ)', '的 (định ngữ)', '地 (trạng ngữ)', '了 (hoàn thành)'],
-          correctAnswer: '得 (bổ ngữ trình độ)',
-          explanation: 'Khi động từ mang tân ngữ lặp lại động từ, ta dùng trợ từ "得": Động từ + Tân ngữ + Động từ + 得 + Bổ ngữ trình độ.',
-          hskLevel: hsk || 2,
-        },
-        {
-          id: `q-wb-${Date.now()}-3`,
-          type: 'pinyin',
-          prompt: `Chọn Pinyin và thanh điệu chuẩn của từ "认识" (quen biết):`,
-          questionChinese: '认识',
-          options: ['rènshi (thanh 4 + thanh nhẹ)', 'rènshí', 'rénshì', 'rěnshī'],
-          correctAnswer: 'rènshi (thanh 4 + thanh nhẹ)',
-          explanation: 'Từ 认识 trong khẩu ngữ âm "识" thường đọc thành thanh nhẹ (rènshi).',
-          hskLevel: hsk || 1,
-        },
-        {
-          id: `q-wb-${Date.now()}-4`,
-          type: 'word_order',
-          prompt: `Sắp xếp các từ sau thành câu chữ "把" hoàn chỉnh:`,
-          questionChinese: '把 / 苹果 / 洗干净 / 请 / 了',
-          options: [
-            '请把苹果洗干净。(Xin hãy rửa sạch táo)',
-            '请洗干净把苹果。',
-            '把苹果请洗干净。',
-            '苹果请把洗干净。',
-          ],
-          correctAnswer: '请把苹果洗干净。(Xin hãy rửa sạch táo)',
-          explanation: 'Cấu trúc câu chữ 把: Chủ ngữ/Từ thỉnh cầu + 把 + Tân ngữ + Động từ + Bổ ngữ kết quả.',
-          hskLevel: hsk || 3,
-        },
-        {
-          id: `q-wb-${Date.now()}-5`,
-          type: 'fill_blank',
-          prompt: `Điền từ thích hợp vào câu: "虽然工作很忙，___他每天都坚持锻炼身体":`,
-          questionChinese: '虽然工作很忙，___他每天都坚持锻炼身体',
-          options: ['但是 (nhưng mà)', '因为 (bởi vì)', '所以 (cho nên)', '如果 (nếu như)'],
-          correctAnswer: '但是 (nhưng mà)',
-          explanation: 'Cặp liên từ nhượng bộ: "虽然...但是..." (tuy... nhưng...).',
-          hskLevel: hsk || 2,
-        },
-        {
-          id: `q-wb-${Date.now()}-6`,
-          type: 'reading',
-          prompt: `Đọc đoạn văn ngắn sau: "大卫是留学生，他在北京学习汉语。他每天早上七点起床，八点去上课。" -> Hỏi: 大卫几点去上课?`,
-          questionChinese: '大卫几点去上课？',
-          options: ['八点 (8 giờ)', '七点 (7 giờ)', '九点 (9 giờ)', '六点 (6 giờ)'],
-          correctAnswer: '八点 (8 giờ)',
-          explanation: 'Căn cứ vào câu: "八点去上课" (8 giờ đi lên lớp).',
-          hskLevel: hsk || 1,
-        },
-      ];
-
-      // If source questions exist and mode is shuffle, permute them
-      if (sourceQuestions && sourceQuestions.length > 0) {
-        const shuffled = sourceQuestions.map((q: any, idx: number) => {
-          const optList = [...(q.options || [])].sort(() => Math.random() - 0.5);
-          return {
-            ...q,
-            id: `q-remix-${Date.now()}-${idx}`,
-            options: optList.length >= 2 ? optList : q.options,
-          };
-        }).sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, count);
-      }
-
-      const result = [];
-      for (let i = 0; i < count; i++) {
-        const template = basePool[i % basePool.length];
-        result.push({
-          ...template,
-          id: `q-gen-${Date.now()}-${i + 1}`,
-        });
-      }
-      return result;
-    };
-
     // Mode 1: PARSE RAW WORKBOOK (From OCR images or raw textbook pasted text)
     if (action === 'parse_raw') {
       if (!gemini) {
-        const questions = generateLocalFallbackQuestions(questionCount, targetHsk, 'parse');
-        return res.json({
-          success: true,
-          source: 'local_fallback',
-          parsedQuestions: questions,
-          rawText: rawText || 'Nội dung sách bài tập mẫu.',
+        return res.status(503).json({
+          success: false,
+          error: 'AI_SERVICE_UNAVAILABLE',
+          message: 'All AI models exhausted or unavailable',
         });
       }
 
@@ -3168,19 +3176,26 @@ Return ONLY a valid JSON object matching this schema:
           hskLevel: q.hskLevel || targetHsk,
         }));
 
+        if (questions.length === 0) {
+          return res.status(503).json({
+            success: false,
+            error: 'AI_SERVICE_UNAVAILABLE',
+            message: 'All AI models exhausted or unavailable',
+          });
+        }
+
         return res.json({
           success: true,
           source: 'gemini_ai',
           transcribedText: parsed.transcribedText || rawText || '',
-          parsedQuestions: questions.length > 0 ? questions : generateLocalFallbackQuestions(questionCount, targetHsk, 'parse'),
+          parsedQuestions: questions,
         });
       } catch (err: any) {
-        console.warn('[Workbook Parser] Error parsing with Gemini, falling back gracefully:', err?.message || err);
-        return res.json({
-          success: true,
-          source: 'local_fallback',
-          transcribedText: rawText || '',
-          parsedQuestions: generateLocalFallbackQuestions(questionCount, targetHsk, 'parse'),
+        console.error('[Workbook Parser] Error parsing with Gemini:', err?.message || err);
+        return res.status(503).json({
+          success: false,
+          error: 'AI_SERVICE_UNAVAILABLE',
+          message: 'All AI models exhausted or unavailable',
         });
       }
     }
@@ -3188,12 +3203,10 @@ Return ONLY a valid JSON object matching this schema:
     // Mode 2: AI REMIX EXAM (Generate mutated variations, shuffle, transform or create fresh exam from bank)
     if (action === 'remix_exam') {
       if (!gemini) {
-        const questions = generateLocalFallbackQuestions(questionCount, targetHsk, remixMode);
-        return res.json({
-          success: true,
-          source: 'local_fallback',
-          examTitle: examTitle,
-          questions: questions,
+        return res.status(503).json({
+          success: false,
+          error: 'AI_SERVICE_UNAVAILABLE',
+          message: 'All AI models exhausted or unavailable',
         });
       }
 
@@ -3281,19 +3294,26 @@ Return ONLY a JSON object matching this schema:
           hskLevel: q.hskLevel || targetHsk,
         }));
 
+        if (questions.length === 0) {
+          return res.status(503).json({
+            success: false,
+            error: 'AI_SERVICE_UNAVAILABLE',
+            message: 'All AI models exhausted or unavailable',
+          });
+        }
+
         return res.json({
           success: true,
           source: 'gemini_ai',
           examTitle: parsed.examTitle || examTitle,
-          questions: questions.length > 0 ? questions : generateLocalFallbackQuestions(questionCount, targetHsk, remixMode),
+          questions: questions,
         });
       } catch (err: any) {
-        console.warn('[Workbook Remix] Error remixing with Gemini, falling back gracefully:', err?.message || err);
-        return res.json({
-          success: true,
-          source: 'local_fallback',
-          examTitle: examTitle,
-          questions: generateLocalFallbackQuestions(questionCount, targetHsk, remixMode),
+        console.error('[Workbook Remix] Error remixing with Gemini:', err?.message || err);
+        return res.status(503).json({
+          success: false,
+          error: 'AI_SERVICE_UNAVAILABLE',
+          message: 'All AI models exhausted or unavailable',
         });
       }
     }
@@ -3301,12 +3321,43 @@ Return ONLY a JSON object matching this schema:
     return res.status(400).json({ error: 'Invalid action parameter' });
   });
 
+  // Mount HSK 3.0 QBank Admin API Router only if kill-switch is enabled
+  if (isQBankAdminEnabled()) {
+    warnIfInsecureAdminToken();
+    app.use('/api/qbank', qbankRouter);
+  }
+
+  // Mount Public HSK Mock Exam & Practice API Router (Student-Facing)
+  app.use('/api/exam', examRouter);
+
+  // CRUCIAL: Explicit API 404 Guard ensuring unhandled /api/* requests never fall through to SPA HTML fallback
+  app.all('/api/*', (req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      error: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+    });
+  });
+
+  // Global API JSON Error Handler ensuring API errors always return JSON, never HTML
+  app.use((err: any, req: Request, res: Response, next: any) => {
+    if (req.path.startsWith('/api/')) {
+      console.error('[API Server Error]', err);
+      if (res.headersSent) {
+        return next(err);
+      }
+      return res.status(err.status || err.statusCode || 500).json({
+        success: false,
+        error: sanitizeError(err.message || 'Lỗi máy chủ nội bộ'),
+      });
+    }
+    return next(err);
+  });
 
   // Production bundle or pre-compiled distribution serving (eliminates Cloud Run 429 rate limiting on unbundled files)
   const distPath = path.join(process.cwd(), 'dist');
   const hasBuiltDist = fs.existsSync(path.join(distPath, 'index.html'));
 
-  if (process.env.NODE_ENV === 'production' || hasBuiltDist) {
+  if (process.env.NODE_ENV === 'production') {
     app.use(express.static(distPath));
     app.get('*', (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -3319,8 +3370,14 @@ Return ONLY a JSON object matching this schema:
     app.use(vite.middlewares);
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Minnese server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Minnese server running on http://${HOST}:${PORT}`);
+    // Initialize background question scheduler (controlled by ENABLE_AUTO_QUESTION_GENERATION)
+    if (process.env.NODE_ENV !== 'test' && process.env.DISABLE_AUTO_SCHEDULER !== 'true') {
+      initAutoQuestionScheduler();
+    } else {
+      console.log('[Scheduler] Background auto question scheduler bypassed (test or disabled mode).');
+    }
   });
 }
 

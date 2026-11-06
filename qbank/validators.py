@@ -2,7 +2,7 @@ import os
 import re
 import unicodedata
 
-from typing import List, Tuple, Set, Optional
+from typing import List, Tuple, Set, Optional, Dict, Any
 import jieba
 from qbank.config import qbank_config
 from qbank.syllabus import QbSyllabus
@@ -26,7 +26,7 @@ BRACKET_NOTE_REGEX = re.compile(r"[\(（\[\{][^\)）\]\}]*[a-zA-Zàáảãạă�
 
 def is_chinese_char(ch: str) -> bool:
     """Checks if a character is a Chinese Hanzi character."""
-    return "\u4e00" <= ch <= "\u9fff"
+    return ("\u4e00" <= ch <= "\u9fff") or ("\u3400" <= ch <= "\u4dbf") or ch == "\u3007"
 
 
 def validate_clean_characters(stem: str, options: List[str]) -> Tuple[bool, List[str]]:
@@ -61,13 +61,16 @@ def validate_structure(
     stem: str,
     options: List[str],
     answer_index: int,
-    explanation_vi: str
+    explanation_vi: str,
+    expected_options: Optional[int] = 4,
+    min_options: int = 2,
+    max_options: int = 8
 ) -> Tuple[bool, List[str]]:
     """
     Validates general question structure:
     - Non-empty stem
-    - Exactly 4 non-empty, distinct options
-    - Valid answer index in [0..3]
+    - Configurable number of non-empty, distinct options (default expected_options=4, or within [min_options..max_options])
+    - Valid answer index in [0..len(options)-1]
     - Non-empty Vietnamese explanation
     """
     notes: List[str] = []
@@ -75,17 +78,25 @@ def validate_structure(
     if not stem or not stem.strip():
         notes.append("Stem (câu dẫn) không được để trống.")
 
-    if not options or len(options) != 4:
-        notes.append(f"Phải có đúng 4 phương án lựa chọn (nhận được {len(options) if options else 0}).")
+    if not options:
+        notes.append("Danh sách phương án lựa chọn không được để trống.")
     else:
+        if expected_options is not None:
+            if len(options) != expected_options:
+                notes.append(f"Phải có đúng {expected_options} phương án lựa chọn (nhận được {len(options)}).")
+        else:
+            if len(options) < min_options or len(options) > max_options:
+                notes.append(f"Số lượng phương án lựa chọn phải từ {min_options} đến {max_options} (nhận được {len(options)}).")
+
         norm_opts = [unicodedata.normalize("NFC", o.strip()) for o in options]
         if any(not o for o in norm_opts):
             notes.append("Không được có phương án lựa chọn rỗng.")
-        if len(set(norm_opts)) != 4:
+        if len(set(norm_opts)) != len(norm_opts):
             notes.append("Các phương án lựa chọn không được trùng lặp nội dung.")
 
-    if answer_index not in (0, 1, 2, 3):
-        notes.append(f"Chỉ số đáp án đúng (answer_index={answer_index}) không hợp lệ (phải từ 0 đến 3).")
+    if not isinstance(answer_index, int) or answer_index < 0 or (options and answer_index >= len(options)) or not options:
+        max_idx = (len(options) - 1) if options else 0
+        notes.append(f"Chỉ số đáp án đúng (answer_index={answer_index}) không hợp lệ (phải từ 0 đến {max_idx}).")
 
     if not explanation_vi or len(explanation_vi.strip()) < 5:
         notes.append("Giải thích bằng tiếng Việt (explanation_vi) quá ngắn hoặc để trống.")
@@ -262,8 +273,89 @@ def validate_level(
     level_ok = ratio <= threshold
     if not level_ok:
         notes.append(
-            f"Tỉ lệ từ vựng vượt cấp ({ratio:.1%}) vượt quá ngưỡng cho phép ({threshold:.1%}). "
+            f"Tỉ lệ từ vựng vượt cấp ({ratio:.1%}) vượt quá ngưỡng cho phép ({threshold:.1%}) (ghi chú mềm). "
             f"Các từ ngoài cấp: {', '.join(set(out_of_level_words))}"
         )
 
     return level_ok, list(set(out_of_level_words)), notes
+
+
+def validate_character_level(
+    text: str,
+    target_level: int,
+    syllabus: QbSyllabus,
+    char_budget: Optional[float] = None,
+    allowed_names: Optional[Set[str]] = None
+) -> Tuple[bool, Dict[str, Any], List[str]]:
+    """
+    Validates Chinese text against target HSK level based on RECOGNITION CHARACTERS (认读字):
+    - Exempts proper names from names.txt (e.g. 李华, 北京) so characters in names are not penalized.
+    - Strips punctuation, digits (0-9, ０-９), blanks ('____'), whitespace.
+    - For each remaining Chinese character:
+        * Looks up level in syllabus._char_level_map (1-6, or 7 for 7-9).
+        * If not in syllabus: counted separately as 'ungraded'.
+        * If level > target_level: counted as over-level.
+    - Ratio = len(over_level_chars) / max(total_evaluated_chars, 1).
+    - If ratio <= char_budget (default from QBANK_CHAR_BUDGET, 0.05 / 5%): passes.
+    """
+    if char_budget is None:
+        char_budget = getattr(qbank_config, "char_budget", 0.05)
+
+    if allowed_names is None:
+        allowed_names = get_allowed_names()
+
+    notes: List[str] = []
+    norm_text = unicodedata.normalize("NFC", text)
+
+    # 1. Exempt allowed proper names by replacing them with spaces
+    filtered_text = norm_text
+    sorted_names = sorted(allowed_names, key=len, reverse=True)
+    for name in sorted_names:
+        if name in filtered_text:
+            filtered_text = filtered_text.replace(name, " ")
+
+    # 2. Extract Chinese characters, skipping punctuation, digits, blanks
+    evaluated_chars: List[str] = []
+    over_level_chars: List[Tuple[str, int]] = []
+    ungraded_chars: List[str] = []
+
+    for ch in filtered_text:
+        if not is_chinese_char(ch):
+            continue
+
+        evaluated_chars.append(ch)
+        lvl = syllabus.get_char_level(ch)
+        if lvl is None:
+            ungraded_chars.append(ch)
+        elif lvl > target_level:
+            over_level_chars.append((ch, lvl))
+
+    total_chars = len(evaluated_chars)
+    over_count = len(over_level_chars)
+    ratio = (over_count / total_chars) if total_chars > 0 else 0.0
+
+    char_level_ok = ratio <= char_budget
+
+    if not char_level_ok:
+        over_summary = [f"{c}(L{l})" for c, l in over_level_chars]
+        notes.append(
+            f"Tỉ lệ chữ Hán vượt cấp ({ratio:.1%}) vượt quá ngân sách cho phép ({char_budget:.1%}). "
+            f"Chữ vượt cấp: {', '.join(over_summary)}"
+        )
+
+    if ungraded_chars:
+        notes.append(
+            f"Phát hiện {len(ungraded_chars)} chữ Hán ngoài bảng chuẩn 3.088 chữ (ungraded): {', '.join(set(ungraded_chars))}"
+        )
+
+    details = {
+        "total_chars": total_chars,
+        "over_level_count": over_count,
+        "over_level_chars": over_level_chars,
+        "ratio": ratio,
+        "char_budget": char_budget,
+        "ungraded_chars": ungraded_chars
+    }
+
+    return char_level_ok, details, notes
+

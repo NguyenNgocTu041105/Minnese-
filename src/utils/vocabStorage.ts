@@ -1,15 +1,19 @@
 import { WordItem } from '../types';
+import { FULL_HSK_SYLLABUS_VOCAB } from '../data/fullHskSyllabusVocab';
 import { INITIAL_VOCABULARY } from '../data/hskVocabulary';
 import { getAllNewHsk1Vocabulary } from '../data/newHsk1BookData';
 import { getAllNewHsk2Vocabulary } from '../data/newHsk2BookData';
 import { getAllNewHsk3Vocabulary } from '../data/newHsk3BookData';
 import { getAllNewHsk4Vocabulary } from '../data/newHsk4BookData';
+import { getAllNewHsk5Vocabulary } from '../data/newHsk5BookData';
+import { getAllNewHsk6Vocabulary } from '../data/newHsk6BookData';
 
 export const CUSTOM_VOCAB_STORAGE_KEY = 'minnese_custom_vocab_v1';
 export const DELETED_VOCAB_STORAGE_KEY = 'minnese_deleted_vocab_v1';
 
 export function getDeletedHanziSet(): Set<string> {
   try {
+    if (typeof localStorage === 'undefined') return new Set();
     const raw = localStorage.getItem(DELETED_VOCAB_STORAGE_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
@@ -22,6 +26,7 @@ export function getDeletedHanziSet(): Set<string> {
 
 export function getCustomVocabList(): WordItem[] {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem(CUSTOM_VOCAB_STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
@@ -32,6 +37,12 @@ export function getCustomVocabList(): WordItem[] {
   }
 }
 
+const PUNCT_REGEX = /[。？！，、；：？！\?\!]/;
+function isPunctSentence(hanzi?: string): boolean {
+  if (!hanzi) return false;
+  return PUNCT_REGEX.test(hanzi) || hanzi.length > 8;
+}
+
 export function getUnifiedVocabularyList(): WordItem[] {
   const deletedSet = getDeletedHanziSet();
   const map = new Map<string, WordItem>();
@@ -39,27 +50,59 @@ export function getUnifiedVocabularyList(): WordItem[] {
   const customList = getCustomVocabList().map((w) => ({ ...w, isCustom: true }));
   const customHanziSet = new Set(customList.map((w) => w.hanzi));
 
+  // 1. First, populate the complete official HSK 1–6 Standard Syllabus Vocabulary (5,334 headwords)
+  FULL_HSK_SYLLABUS_VOCAB.forEach((w) => {
+    if (!w || !w.hanzi) return;
+    if (deletedSet.has(w.hanzi) || (w.id && deletedSet.has(w.id))) return;
+    if (customHanziSet.has(w.hanzi)) return;
+    map.set(w.hanzi, { ...w });
+  });
+
   const mergeWord = (w: WordItem) => {
     if (!w || !w.hanzi) return;
+    if (isPunctSentence(w.hanzi)) return;
     if (deletedSet.has(w.hanzi) || (w.id && deletedSet.has(w.id))) return;
     // Don't overwrite custom words with textbook defaults
     if (customHanziSet.has(w.hanzi)) return;
     const existing = map.get(w.hanzi);
+    const examples =
+      w.examples && w.examples.length > 0
+        ? w.examples
+        : w.example
+        ? [
+            {
+              chinese: w.example,
+              hanzi: w.example,
+              pinyin: '',
+              vietnamese: w.exampleTranslation || '',
+              english: w.exampleTranslation || '',
+            },
+          ]
+        : existing?.examples;
+
     map.set(w.hanzi, {
       ...(existing || {}),
       ...w,
-      id: w.id || existing?.id || `vocab-${w.hanzi}`,
+      id: existing?.id || w.id || `vocab-${w.hanzi}`,
+      vietnamese: w.vietnamese || existing?.vietnamese,
+      hanViet: w.hanViet || existing?.hanViet,
+      partOfSpeech: w.partOfSpeech || existing?.partOfSpeech,
+      radical: w.radical || existing?.radical,
+      strokeCount: w.strokeCount || existing?.strokeCount,
+      mnemonic: w.mnemonic || existing?.mnemonic,
+      examples,
+      hskLevel: existing?.hskLevel || w.hskLevel,
     });
   };
 
-  // 1. Initial default vocabulary
+  // 2. Overlay Rich Textbook Lessons (Adds mnemonics, stroke counts, examples, audio)
   INITIAL_VOCABULARY.forEach(mergeWord);
-
-  // 2. Textbook vocabulary (HSK 1, HSK 2, HSK 3, HSK 4 3.0 Curriculum)
   getAllNewHsk1Vocabulary().forEach(mergeWord);
   getAllNewHsk2Vocabulary().forEach(mergeWord);
   getAllNewHsk3Vocabulary().forEach(mergeWord);
   getAllNewHsk4Vocabulary().forEach(mergeWord);
+  getAllNewHsk5Vocabulary().forEach(mergeWord);
+  getAllNewHsk6Vocabulary().forEach(mergeWord);
 
   // 3. Custom / Admin words go FIRST so newly added words are prioritized on top
   const mergedStandard = Array.from(map.values());

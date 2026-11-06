@@ -18,4 +18,9 @@ data/qbank/syllabus/vocab.jsonl
 data/qbank/syllabus/vocab_rejected.csv
 data/qbank/syllabus/*.backup_*
 data/inbox/
+data/qbank/syllabus/chars.jsonl
+.agents/
+ORIGINAL_REQUEST.md
+*.bak
+*.bak_*
 

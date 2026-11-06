@@ -14,11 +14,15 @@ import {
   ArrowLeft,
   Flame,
   Sparkles,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { OnlineExamDoc, QuizQuestion, UserProfile, AssignmentSubmissionDoc } from '../../types';
 import { playChineseAudio } from '../../utils/chineseAudio';
 import { saveSubmissionToFirestore } from '../../lib/firebase';
 import { WritingWorkspace } from './WritingWorkspace';
+import { HSKIllustrationCanvas, resolveSceneKey } from '../HSKIllustrationCanvas';
 
 interface OnlineExamRunnerProps {
   exam: OnlineExamDoc;
@@ -47,9 +51,12 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [showLiveExplanation, setShowLiveExplanation] = useState<boolean>(false);
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<Record<number, boolean>>({});
+  const examDurationMin = exam.duration_minutes ?? (exam as any).total_time_min ?? 0;
   const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(
-    exam.duration_minutes > 0 ? exam.duration_minutes * 60 : 0
+    examDurationMin > 0 ? examDurationMin * 60 : 0
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -65,7 +72,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
 
   // Countdown timer
   useEffect(() => {
-    if (exam.duration_minutes <= 0 || isSubmitted) return;
+    if (examDurationMin <= 0 || isSubmitted) return;
 
     const timer = setInterval(() => {
       setTimeLeftSeconds((prev) => {
@@ -79,7 +86,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [exam.duration_minutes, isSubmitted]);
+  }, [examDurationMin, isSubmitted]);
 
   const handleSelectAnswer = (option: string) => {
     if (isSubmitted) return;
@@ -115,7 +122,12 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
           correct += 0.5;
         }
       } else {
-        if (isAnswerMatch(ans, q.correctAnswer)) {
+        const correctAns =
+          q.correctAnswer ??
+          (typeof (q as any).answer_idx === 'number' && (q.options || (q as any).options)?.[(q as any).answer_idx]
+            ? (q.options || (q as any).options)[(q as any).answer_idx]
+            : '');
+        if (isAnswerMatch(ans, correctAns)) {
           correct++;
         }
       }
@@ -133,7 +145,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
     });
     setIsSubmitted(true);
 
-    // Save submission to Firestore
+    // Save submission to Firestore & local storage fallback
     try {
       const submissionDoc: AssignmentSubmissionDoc = {
         id: `sub-exam-${Date.now()}`,
@@ -148,6 +160,11 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
         submitted_at: new Date().toISOString(),
       };
       await saveSubmissionToFirestore(submissionDoc);
+      try {
+        const localSubs: AssignmentSubmissionDoc[] = JSON.parse(localStorage.getItem('minnese_local_submissions') || '[]');
+        localSubs.unshift(submissionDoc);
+        localStorage.setItem('minnese_local_submissions', JSON.stringify(localSubs.slice(0, 50)));
+      } catch (localErr) {}
     } catch (e) {
       console.warn('Could not save submission to Firestore:', e);
     }
@@ -258,76 +275,196 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                 {/* Prompt */}
                 <div className="space-y-3">
                   <h3 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] leading-relaxed">
-                    {currentQuestion.prompt}
+                    {currentQuestion.prompt || (currentQuestion as any).stem || `Câu hỏi ${currentIndex + 1}`}
                   </h3>
 
-                  {currentQuestion.questionChinese && (
-                    <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="text-lg sm:text-xl font-bold font-serif text-[var(--color-text-primary)]">
-                          {currentQuestion.questionChinese}
-                        </p>
-                        {currentQuestion.exampleSentence?.pinyin && (
-                          <p className="text-xs text-[var(--color-primary)] font-mono">
-                            {currentQuestion.exampleSentence.pinyin}
-                          </p>
+                  {(currentQuestion.questionChinese || (currentQuestion as any).stem) && (() => {
+                    const fullText = (currentQuestion.questionChinese || (currentQuestion as any).stem || '').trim();
+                    const qMatch = fullText.match(/(?:[\r\n\s]+|^)(问\s*[:：].*|★.*)$/s);
+                    const dialoguePart = qMatch && qMatch.index !== undefined && qMatch.index > 0 ? fullText.slice(0, qMatch.index).trim() : fullText;
+                    const questionPart = qMatch ? qMatch[1].trim() : null;
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between gap-3 silk-card">
+                          <div className="space-y-1 flex-1">
+                            <p className="text-lg sm:text-xl font-bold font-serif text-[var(--color-text-primary)] leading-relaxed">
+                              {dialoguePart}
+                            </p>
+                            {(currentQuestion.exampleSentence?.pinyin || (currentQuestion as any).pinyin) && (
+                              <p className="text-xs text-[var(--color-primary)] font-mono">
+                                {currentQuestion.exampleSentence?.pinyin || (currentQuestion as any).pinyin}
+                              </p>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const audioUrl = (currentQuestion as any).audio_url;
+                              if (audioUrl) {
+                                const audio = new Audio(audioUrl);
+                                audio.play().catch(() => playChineseAudio(dialoguePart));
+                              } else {
+                                playChineseAudio(dialoguePart);
+                              }
+                            }}
+                            className="p-2.5 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer shrink-0 silk-btn"
+                            title="Nghe phát âm chuẩn (Chỉ phát nội dung đối thoại)"
+                          >
+                            <Volume2 className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        {questionPart && (
+                          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-sm sm:text-base font-bold flex items-center gap-2 silk-card">
+                            <span>❓</span>
+                            <span>{questionPart}</span>
+                          </div>
                         )}
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => playChineseAudio(currentQuestion.questionChinese!)}
-                        className="p-2.5 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer shrink-0"
-                        title="Nghe phát âm chuẩn"
-                      >
-                        <Volume2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 {/* Options List / Writing Workspace */}
-                {currentQuestion.type === 'writing' ? (
-                  <WritingWorkspace
-                    promptText={currentQuestion.prompt}
-                    onAnswerSaved={(ansJson) => {
-                      setUserAnswers((prev) => ({
-                        ...prev,
-                        [currentIndex]: ansJson,
-                      }));
-                    }}
-                    savedAnswerJson={userAnswers[currentIndex]}
-                  />
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 pt-2">
-                    {currentQuestion.options?.map((opt, oIdx) => {
-                      const isSelected = userAnswers[currentIndex] === opt;
-                      const letter = String.fromCharCode(65 + oIdx);
+                {(() => {
+                  const rawPartType = String((currentQuestion as any).part_type || '').toLowerCase();
+                  const isPictureMatch = Boolean(
+                    (currentQuestion.options_images && currentQuestion.options_images.length > 0) ||
+                    rawPartType.includes('picture_match') ||
+                    currentQuestion.prompt?.includes('bức tranh') ||
+                    currentQuestion.prompt?.includes('hình ảnh')
+                  );
+                  const resolvedOptionImages = (currentQuestion.options_images && currentQuestion.options_images.length > 0)
+                    ? currentQuestion.options_images
+                    : isPictureMatch && Array.isArray(currentQuestion.options)
+                    ? currentQuestion.options.map((opt: string) => resolveSceneKey(opt) || opt)
+                    : [];
 
-                      return (
-                        <button
-                          key={oIdx}
-                          type="button"
-                          onClick={() => handleSelectAnswer(opt)}
-                          className={`p-4 rounded-2xl border text-left flex items-center gap-3.5 transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--color-text-primary)] ring-2 ring-[var(--color-primary)]/20 shadow-xs'
-                              : 'bg-[var(--color-background)] border-[var(--color-border)] hover:bg-[var(--color-surface)] text-[var(--color-text-primary)]'
-                          }`}
-                        >
-                          <span
-                            className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                  if (currentQuestion.type === 'writing') {
+                    return (
+                      <WritingWorkspace
+                        promptText={currentQuestion.prompt || (currentQuestion as any).stem || ''}
+                        onAnswerSaved={(ansJson) => {
+                          setUserAnswers((prev) => ({
+                            ...prev,
+                            [currentIndex]: ansJson,
+                          }));
+                        }}
+                        savedAnswerJson={userAnswers[currentIndex]}
+                      />
+                    );
+                  }
+
+                  if (isPictureMatch && resolvedOptionImages.length > 0) {
+                    return (
+                      <div
+                        className={`grid gap-3 pt-2 ${
+                          resolvedOptionImages.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'
+                        }`}
+                      >
+                        {resolvedOptionImages.map((scene: string, oIdx: number) => {
+                          const opt = currentQuestion.options?.[oIdx] || `Hình ${String.fromCharCode(65 + oIdx)}`;
+                          const isSelected = userAnswers[currentIndex] === opt;
+                          const letter = String.fromCharCode(65 + oIdx);
+
+                          return (
+                            <button
+                              key={oIdx}
+                              type="button"
+                              onClick={() => handleSelectAnswer(opt)}
+                              className={`p-3 rounded-2xl border text-left flex flex-col items-center gap-2 transition-all cursor-pointer silk-card-interactive ${
+                                isSelected
+                                  ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/20 shadow-xs'
+                                  : 'bg-[var(--color-background)] border-[var(--color-border)] hover:bg-[var(--color-surface)]'
+                              }`}
+                            >
+                              <div className="w-full flex items-center justify-between px-1">
+                                <span
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
+                                    isSelected
+                                      ? 'bg-[var(--color-primary)] text-white'
+                                      : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)]'
+                                  }`}
+                                >
+                                  {letter}
+                                </span>
+                                {isSelected && (
+                                  <span className="text-[11px] font-bold text-[var(--color-primary)] flex items-center gap-1">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Đã chọn</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="w-full rounded-xl overflow-hidden bg-white/5 border border-[var(--color-border)]/40 p-1">
+                                <HSKIllustrationCanvas scene={scene} aspectRatio="4/3" heightClass="h-28 sm:h-32" isOptionCard />
+                              </div>
+                              {currentQuestion.options?.[oIdx] && (
+                                <span className="text-xs sm:text-sm font-chinese font-semibold text-[var(--color-text-primary)]">
+                                  {currentQuestion.options[oIdx]}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 gap-3 pt-2">
+                      {currentQuestion.options?.map((opt, oIdx) => {
+                        const isSelected = userAnswers[currentIndex] === opt;
+                        const letter = String.fromCharCode(65 + oIdx);
+
+                        return (
+                          <button
+                            key={oIdx}
+                            type="button"
+                            onClick={() => handleSelectAnswer(opt)}
+                            className={`p-4 rounded-2xl border text-left flex items-center gap-3.5 transition-all cursor-pointer silk-card-interactive ${
                               isSelected
-                                ? 'bg-[var(--color-primary)] text-white'
-                                : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)]'
+                                ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--color-text-primary)] ring-2 ring-[var(--color-primary)]/20 shadow-xs'
+                                : 'bg-[var(--color-background)] border-[var(--color-border)] hover:bg-[var(--color-surface)] text-[var(--color-text-primary)]'
                             }`}
                           >
-                            {letter}
-                          </span>
-                          <span className="text-sm font-medium leading-relaxed">{opt}</span>
-                        </button>
-                      );
-                    })}
+                            <span
+                              className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                                isSelected
+                                  ? 'bg-[var(--color-primary)] text-white'
+                                  : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)]'
+                              }`}
+                            >
+                              {letter}
+                            </span>
+                            <span className="text-sm font-medium leading-relaxed">{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* Student Explanation Toggle */}
+                {Boolean((currentQuestion as any).explanation || (currentQuestion as any).explanation_vi) && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowLiveExplanation(!showLiveExplanation)}
+                      className="silk-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 cursor-pointer"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      <span>{showLiveExplanation ? 'Ẩn giải thích' : '💡 Xem giải thích đáp án'}</span>
+                    </button>
+                    {showLiveExplanation && (
+                      <div className="mt-2.5 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed space-y-1.5 animate-in fade-in silk-card">
+                        <p className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                          <span>💡 Giải thích chi tiết:</span>
+                        </p>
+                        <p className="whitespace-pre-wrap">{(currentQuestion as any).explanation || (currentQuestion as any).explanation_vi}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -495,7 +632,15 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
             <div className="space-y-4">
               {questions.map((q, idx) => {
                 const userAns = userAnswers[idx];
-                const isCorrect = isAnswerMatch(userAns, q.correctAnswer);
+                const correctAns =
+                  q.correctAnswer ??
+                  (typeof (q as any).answer_idx === 'number' && (q.options || (q as any).options)?.[(q as any).answer_idx]
+                    ? (q.options || (q as any).options)[(q as any).answer_idx]
+                    : '');
+                const isCorrect = isAnswerMatch(userAns, correctAns);
+                const qPrompt = q.prompt || (q as any).stem || `Câu ${idx + 1}`;
+                const qChinese = q.questionChinese || (q as any).stem;
+                const explanationText = q.explanation || (q as any).explanation_vi;
 
                 return (
                   <div
@@ -518,14 +663,14 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                           {idx + 1}
                         </span>
                         <span className="text-xs font-bold text-[var(--color-text-primary)]">
-                          {q.prompt}
+                          {qPrompt}
                         </span>
                       </div>
 
-                      {q.questionChinese && (
+                      {qChinese && (
                         <button
                           type="button"
-                          onClick={() => playChineseAudio(q.questionChinese!)}
+                          onClick={() => playChineseAudio(qChinese)}
                           className="p-1 text-[var(--color-primary)] hover:bg-[var(--color-background)] rounded-lg cursor-pointer"
                           title="Nghe phát âm"
                         >
@@ -534,48 +679,131 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                       )}
                     </div>
 
-                    {q.questionChinese && (
+                    {qChinese && (
                       <p className="text-base font-medium font-serif text-[var(--color-text-primary)] pl-8">
-                        {q.questionChinese}
+                        {qChinese}
                       </p>
                     )}
 
                     {/* Options Review */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-8">
-                      {q.options?.map((opt, oIdx) => {
-                        const isChosen = userAns === opt;
-                        const isRealCorrect = opt === q.correctAnswer;
+                    {(() => {
+                      const rawPartType = String((q as any).part_type || '').toLowerCase();
+                      const isPictureMatch = Boolean(
+                        ((q as any).options_images && (q as any).options_images.length > 0) ||
+                        rawPartType.includes('picture_match') ||
+                        q.prompt?.includes('bức tranh') ||
+                        q.prompt?.includes('hình ảnh')
+                      );
+                      const resolvedOptionImages = ((q as any).options_images && (q as any).options_images.length > 0)
+                        ? (q as any).options_images
+                        : isPictureMatch && Array.isArray(q.options)
+                        ? q.options.map((opt: string) => resolveSceneKey(opt) || opt)
+                        : [];
 
-                        let style = 'bg-[var(--color-background)] border-[var(--color-border)] text-[var(--color-text-secondary)]';
-                        if (isRealCorrect) {
-                          style = 'bg-emerald-500/10 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-bold';
-                        } else if (isChosen && !isRealCorrect) {
-                          style = 'bg-rose-500/10 border-rose-500/50 text-rose-600 font-bold line-through';
-                        }
-
+                      if (isPictureMatch && resolvedOptionImages.length > 0) {
                         return (
-                          <div
-                            key={oIdx}
-                            className={`p-3 rounded-xl text-xs border flex items-center gap-2 ${style}`}
-                          >
-                            <span className="font-bold">{String.fromCharCode(65 + oIdx)}.</span>
-                            <span>{opt}</span>
-                            {isRealCorrect && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 ml-auto shrink-0" />}
-                            {isChosen && !isRealCorrect && <AlertCircle className="w-3.5 h-3.5 text-rose-500 ml-auto shrink-0" />}
+                          <div className={`grid gap-2 pl-8 ${resolvedOptionImages.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                            {resolvedOptionImages.map((scene: string, oIdx: number) => {
+                              const opt = q.options?.[oIdx] || `Hình ${String.fromCharCode(65 + oIdx)}`;
+                              const isChosen = userAns === opt;
+                              const isRealCorrect = isAnswerMatch(opt, correctAns);
+
+                              let borderStyle = 'border-[var(--color-border)] bg-[var(--color-background)]';
+                              if (isRealCorrect) {
+                                borderStyle = 'border-2 border-emerald-500 bg-emerald-500/10';
+                              } else if (isChosen && !isRealCorrect) {
+                                borderStyle = 'border-2 border-rose-500 bg-rose-500/10';
+                              }
+
+                              return (
+                                <div key={oIdx} className={`p-2.5 rounded-2xl border flex flex-col items-center gap-1.5 ${borderStyle}`}>
+                                  <div className="w-full flex items-center justify-between text-xs font-bold">
+                                    <span>{String.fromCharCode(65 + oIdx)}</span>
+                                    {isRealCorrect && (
+                                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Đáp án đúng</span>
+                                      </span>
+                                    )}
+                                    {isChosen && !isRealCorrect && (
+                                      <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                                        <AlertCircle className="w-3.5 h-3.5" />
+                                        <span>Bạn đã chọn sai</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="w-full rounded-xl overflow-hidden bg-white/5 border border-[var(--color-border)]/40 p-1">
+                                    <HSKIllustrationCanvas scene={scene} aspectRatio="4/3" heightClass="h-24 sm:h-28" isOptionCard />
+                                  </div>
+                                  {q.options?.[oIdx] && (
+                                    <span className={`text-xs font-chinese font-semibold ${isRealCorrect ? 'text-emerald-700 dark:text-emerald-300 font-bold' : isChosen ? 'text-rose-600 line-through' : 'text-[var(--color-text-secondary)]'}`}>
+                                      {q.options[oIdx]}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         );
-                      })}
-                    </div>
+                      }
 
-                    {q.explanation && (
-                      <div className="p-3.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] ml-8 space-y-1">
-                        <span className="font-bold text-[var(--color-text-primary)] flex items-center gap-1">
-                          <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                          <span>Giải thích sư phạm:</span>
-                        </span>
-                        <p className="leading-relaxed">{q.explanation}</p>
-                      </div>
-                    )}
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-8">
+                          {q.options?.map((opt, oIdx) => {
+                            const isChosen = userAns === opt;
+                            const isRealCorrect = isAnswerMatch(opt, correctAns);
+
+                            let style = 'bg-[var(--color-background)] border-[var(--color-border)] text-[var(--color-text-secondary)]';
+                            if (isRealCorrect) {
+                              style = 'bg-emerald-500/10 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-bold';
+                            } else if (isChosen && !isRealCorrect) {
+                              style = 'bg-rose-500/10 border-rose-500/50 text-rose-600 font-bold line-through';
+                            }
+
+                            return (
+                              <div
+                                key={oIdx}
+                                className={`p-3 rounded-xl text-xs border flex items-center gap-2 ${style}`}
+                              >
+                                <span className="font-bold">{String.fromCharCode(65 + oIdx)}.</span>
+                                <span>{opt}</span>
+                                {isRealCorrect && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 ml-auto shrink-0" />}
+                                {isChosen && !isRealCorrect && <AlertCircle className="w-3.5 h-3.5 text-rose-500 ml-auto shrink-0" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {explanationText && (() => {
+                      const qKey = String(q.id || `q_${idx}`);
+                      const isExpanded = expandedExplanations[qKey];
+                      return (
+                        <div className="p-3.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] ml-8 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                              <span>Giải thích sư phạm & Trọng điểm lưu ý:</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedExplanations((prev) => ({ ...prev, [qKey]: !prev[qKey] }))}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-all cursor-pointer"
+                            >
+                              <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                              <span>{isExpanded ? 'Ẩn giải thích' : 'Xem giải thích'}</span>
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          {isExpanded && (
+                            <p className="leading-relaxed pl-5 border-l-2 border-purple-400 text-slate-700 dark:text-slate-300">
+                              {explanationText}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

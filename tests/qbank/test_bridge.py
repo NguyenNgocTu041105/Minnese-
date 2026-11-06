@@ -57,7 +57,7 @@ def test_hash_qbank_bridge_equals_crawler_deduplicator():
 def test_hash_reproduces_six_real_rows_from_copy(tmp_path):
     """
     Tests that compute_content_hash correctly reproduces the stored content_hash
-    of all 6 real rows from a copy of hsk_exam.db in tmp_path.
+    of all 60 real rows from a copy of hsk_exam.db in tmp_path.
     """
     real_db = os.path.abspath("data/hsk_exam.db")
     copy_db = str(tmp_path / "hsk_exam_copy.db")
@@ -69,7 +69,7 @@ def test_hash_reproduces_six_real_rows_from_copy(tmp_path):
     rows = cur.fetchall()
     conn.close()
 
-    assert len(rows) == 6
+    assert len(rows) == 60
     for qid, stem, opts_json, ans, stored_hash in rows:
         opts = json.loads(opts_json)
         computed = original_compute_content_hash(stem, opts, ans)
@@ -462,20 +462,20 @@ def test_retire_only_touches_sync_log_legacy_ids(tmp_path):
     legacy_copy = str(tmp_path / "hsk_exam_copy.db")
     shutil.copy2(real_db, legacy_copy)
 
-    # Record 6 original rows and their statuses
+    # Record 60 original rows and their statuses
     conn = sqlite3.connect(legacy_copy)
     cur = conn.cursor()
     cur.execute("SELECT id, status FROM questions;")
     original_rows_before = cur.fetchall()
     conn.close()
-    assert len(original_rows_before) == 6
+    assert len(original_rows_before) == 60
 
     qbank_db = str(tmp_path / "qbank.db")
     store = QbStore(db_path=qbank_db)
 
     # Sync a new question from QBank into legacy_copy
     stem = "这是一个全新的测试句子____。"
-    opts = ["A", "B", "C", "D"]
+    opts = ["苹果", "学校", "老师", "朋友"]
     h = QbQuestion.compute_hash(stem, opts, 0)
     q = QbQuestion(
         question_id="qb_retire_target",

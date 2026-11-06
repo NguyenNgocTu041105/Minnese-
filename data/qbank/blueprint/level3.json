@@ -1,17 +1,137 @@
 {
   "hsk_version": "3.0",
   "level": 3,
-  "verified": false,
-  "_notice": "CẢNH BÁO: ĐÂY CHỈ LÀ FILE BLUEPRINT PLACEHOLDER MẪU ĐỂ CHẠY TEST. KHÔNG PHẢI ĐỀ CHÍNH THỨC.",
+  "name": "HSK 3 (三级) 考试大纲与试卷结构",
+  "verification": {
+    "verified_fields": [
+      "total_questions",
+      "time_limit_minutes"
+    ],
+    "unverified_fields": [
+      "section_breakdown",
+      "part_detail",
+      "skill_duration",
+      "scoring"
+    ],
+    "verification_sources": [
+      {
+        "field": "total_questions",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      },
+      {
+        "field": "time_limit_minutes",
+        "source": "CTI/CLEC official sample paper 《新版HSK（1-6级）考试结构与样题示例》",
+        "url": "https://www.chinesetest.cn/",
+        "accessed": "2026-10-26"
+      }
+    ],
+    "last_verified_at": "2026-10-26T00:00:00Z"
+  },
+  "total_questions": 70,
+  "total_time_min": 83,
+  "max_score": 300,
+  "passing_score": 180,
+  "has_pinyin": false,
+  "audio_playback": 2,
   "sections": {
+    "listening": {
+      "name": "听力 (Listening)",
+      "skill": "listening",
+      "total_questions": 30,
+      "time_min": 28,
+      "score_weight": 100,
+      "parts": {
+        "listening_1": {
+          "name": "第一部分：听对话选图",
+          "type": "listen_dialogue_picture_match_split",
+          "skill": "listening",
+          "n_questions": 10,
+          "n_options": 6,
+          "time_min": 9,
+          "description": "听对话选图片，第1-5题6选5（含例子），第6-10题5选5（无例子）。"
+        },
+        "listening_2": {
+          "name": "第二部分：听短对话回答问题",
+          "type": "listen_dialogue_qa_3opt",
+          "skill": "listening",
+          "n_questions": 10,
+          "n_options": 3,
+          "time_min": 9,
+          "description": "听对话及问句选答案（11-15题为1轮对话，16-20题为2轮长对话），3个选项。"
+        },
+        "listening_3": {
+          "name": "第三部分：听单人独白/短文回答问题",
+          "type": "listen_monologue_qa_3opt",
+          "skill": "listening",
+          "n_questions": 10,
+          "n_options": 3,
+          "time_min": 10,
+          "description": "听短文叙述加问句（听两遍），从3个文本选项中选择正确答案（第21-30题）。"
+        }
+      }
+    },
     "reading": {
-      "name": "Reading (Đọc hiểu)",
+      "name": "阅读 (Reading)",
+      "skill": "reading",
+      "total_questions": 30,
+      "time_min": 30,
+      "score_weight": 100,
       "parts": {
         "reading_1": {
-          "type": "multiple_choice",
+          "name": "第一部分：句子匹配",
+          "type": "read_sentence_matching_split",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 6,
+          "time_min": 10,
+          "description": "句子关系配对，第31-35题6选5（含例子），第36-40题5选5（无例子）。"
+        },
+        "reading_2": {
+          "name": "第二部分：选词填空",
+          "type": "read_fill_blank_word_bank_split",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 6,
+          "time_min": 10,
+          "description": "选词填空，41-45题单句填空（6选5），46-50题对话填空（6选5）。"
+        },
+        "reading_3": {
+          "name": "第三部分：短文阅读理解",
+          "type": "read_comprehension_short_and_medium_3opt",
+          "skill": "reading",
+          "n_questions": 10,
+          "n_options": 3,
+          "time_min": 10,
+          "description": "阅读理解，51-56题短文单题（6篇，各1题），57-60题中长文双题（2篇，各2题），3个选项。"
+        }
+      }
+    },
+    "writing": {
+      "name": "书写 (Writing)",
+      "skill": "writing",
+      "total_questions": 10,
+      "time_min": 20,
+      "score_weight": 100,
+      "parts": {
+        "writing_1": {
+          "name": "第一部分：连词成句",
+          "type": "write_sentence_reorder_4opt",
+          "skill": "writing",
           "n_questions": 5,
           "n_options": 4,
-          "time_min": 5
+          "time_min": 10,
+          "description": "连词成句，将给出的打乱顺序的词语排列成一句语法正确、结构通顺的完整句子（第61-65题，5道题）。"
+        },
+        "writing_2": {
+          "name": "第二部分：看拼音写汉字",
+          "type": "write_tianzige_from_pinyin",
+          "skill": "writing",
+          "n_questions": 5,
+          "n_options": 0,
+          "time_min": 10,
+          "description": "看拼音写汉字，根据句意和括号中的拼音在田字格中正确书写汉字（第66-70题，5道题）。"
         }
       }
     }

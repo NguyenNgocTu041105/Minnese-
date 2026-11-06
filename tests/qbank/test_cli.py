@@ -259,3 +259,164 @@ def test_cli_retire_dry_run_and_confirm(test_store, sample_question):
                 exit_code = handle_retire(args_exec)
                 assert exit_code == 0
                 mock_retire.assert_called_once_with(batch_id="batch_cli_retire")
+
+
+def test_cli_list_models_command(capsys):
+    """Rule 4: list-models CLI command displays models safely."""
+    from qbank.cli import handle_list_models
+
+    parser = build_parser()
+    args = parser.parse_args(["list-models"])
+    assert args.command == "list-models"
+
+    with patch("qbank.llm.QbOpenAIClient.list_models", return_value=["gemini-2.5-flash", "gemini-2.0-flash"]):
+        exit_code = handle_list_models(args)
+        assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "DANH SÁCH MODEL KHẢ DỤNG CHO API KEY" in captured.out
+    assert "gemini-2.5-flash" in captured.out
+    assert "gemini-2.0-flash" in captured.out
+
+
+def test_cli_list_models_normalized_matching_no_false_warning(capsys, monkeypatch):
+    """Normalized matching: 'models/gemini-3.5-flash' matches 'gemini-3.5-flash' without false warning."""
+    import qbank.config
+    from qbank.cli import handle_list_models
+
+    monkeypatch.setattr(qbank.config.qbank_config, "llm_model", "gemini-3.5-flash")
+    monkeypatch.setattr(qbank.config.qbank_config, "llm_fallback_models", "gemini-3.5-flash-lite")
+
+    parser = build_parser()
+    args = parser.parse_args(["list-models"])
+
+    with patch("qbank.llm.QbOpenAIClient.list_models", return_value=["models/gemini-3.5-flash", "models/gemini-3.5-flash-lite"]):
+        exit_code = handle_list_models(args)
+        assert exit_code == 0
+
+    captured = capsys.readouterr()
+    assert "[MODEL CHÍNH]" in captured.out
+    assert "[DỰ PHÒNG]" in captured.out
+    assert "[CẢNH BÁO]" not in captured.out
+
+
+def test_cli_list_models_text_only_and_all_filtering(capsys):
+    """Flags --text-only (default) filters embeddings/images, --all shows everything."""
+    from qbank.cli import handle_list_models
+
+    models_sample = [
+        "models/gemini-3.5-flash",
+        "models/text-embedding-004",
+        "models/imagen-3.0-generate",
+        "models/gemini-2.0-flash-live"
+    ]
+
+    parser = build_parser()
+
+    # 1. Default (text-only)
+    args_default = parser.parse_args(["list-models"])
+    with patch("qbank.llm.QbOpenAIClient.list_models", return_value=models_sample):
+        exit_code = handle_list_models(args_default)
+        assert exit_code == 0
+
+    out_default = capsys.readouterr().out
+    assert "models/gemini-3.5-flash" in out_default
+    assert "text-embedding-004" not in out_default
+    assert "imagen-3.0-generate" not in out_default
+    assert "gemini-2.0-flash-live" not in out_default
+    assert "--text-only" in out_default
+
+    # 2. --all flag
+    args_all = parser.parse_args(["list-models", "--all"])
+    with patch("qbank.llm.QbOpenAIClient.list_models", return_value=models_sample):
+        exit_code = handle_list_models(args_all)
+        assert exit_code == 0
+
+    out_all = capsys.readouterr().out
+    assert "models/gemini-3.5-flash" in out_all
+    assert "text-embedding-004" in out_all
+    assert "imagen-3.0-generate" in out_all
+    assert "gemini-2.0-flash-live" in out_all
+
+
+def test_cli_probe_model_success(capsys, monkeypatch):
+    """probe-model command runs probe request and outputs metrics."""
+    import qbank.config
+    from qbank.cli import handle_probe_model
+
+    monkeypatch.setattr(qbank.config.qbank_config, "llm_api_key", "mock_key")
+    monkeypatch.setattr(qbank.config.qbank_config, "llm_reasoning_effort", "low")
+
+    parser = build_parser()
+    args = parser.parse_args(["probe-model", "gemini-3.5-flash"])
+
+    mock_res = {
+        "model": "gemini-3.5-flash",
+        "reasoning_effort": "low",
+        "status_code": 200,
+        "latency_ms": 145.2,
+        "ok": True,
+        "finish_reason": "stop",
+        "prompt_tokens": 12,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0,
+        "total_tokens": 17
+    }
+
+    with patch("qbank.llm.QbOpenAIClient.probe_model", return_value=mock_res) as mock_probe:
+        exit_code = handle_probe_model(args)
+        assert exit_code == 0
+        mock_probe.assert_called_once_with("gemini-3.5-flash", reasoning_effort="low")
+
+    out = capsys.readouterr().out
+    assert "KIỂM TRA MODEL LLM (PROBE-MODEL)" in out
+    assert "mỗi lần probe tốn 1 lượt hạn mức" in out.lower()
+    assert "HTTP 200" in out
+    assert "145 ms" in out
+    assert "THÀNH CÔNG" in out
+
+
+def test_cli_probe_model_retries_without_reasoning_effort_on_400(capsys, monkeypatch):
+    """If 400 occurs with reasoning_effort, probe-model retries once without it and reports both."""
+    import qbank.config
+    from qbank.cli import handle_probe_model
+
+    monkeypatch.setattr(qbank.config.qbank_config, "llm_api_key", "mock_key")
+    monkeypatch.setattr(qbank.config.qbank_config, "llm_reasoning_effort", "low")
+
+    parser = build_parser()
+    args = parser.parse_args(["probe-model", "gemini-3.5-flash"])
+
+    res1 = {
+        "model": "gemini-3.5-flash",
+        "reasoning_effort": "low",
+        "status_code": 400,
+        "latency_ms": 80.0,
+        "ok": False,
+        "error_type": "400 Lỗi tham số (Bad Request)",
+        "error_message": "Unsupported parameter: reasoning_effort"
+    }
+    res2 = {
+        "model": "gemini-3.5-flash",
+        "reasoning_effort": None,
+        "status_code": 200,
+        "latency_ms": 110.0,
+        "ok": True,
+        "finish_reason": "stop",
+        "prompt_tokens": 10,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0,
+        "total_tokens": 13
+    }
+
+    with patch("qbank.llm.QbOpenAIClient.probe_model", side_effect=[res1, res2]) as mock_probe:
+        exit_code = handle_probe_model(args)
+        assert exit_code == 0
+        assert mock_probe.call_count == 2
+
+    out = capsys.readouterr().out
+    assert "Thử nghiệm 1" in out
+    assert "400 Lỗi tham số" in out
+    assert "Thử nghiệm 2 (thử lại KHÔNG CÓ tham số reasoning_effort)" in out
+    assert "KẾT LUẬN: Model phản hồi tốt khi KHÔNG có reasoning_effort" in out
+

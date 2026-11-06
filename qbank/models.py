@@ -5,16 +5,18 @@ from pydantic import BaseModel, Field, field_validator, model_validator, ConfigD
 
 
 class QbProvenance(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    origin: Literal["original_generated"] = "original_generated"
-    batch_id: str
-    prompt_version: str
-    llm_model: str
-    created_at: str
+    model_config = ConfigDict(extra="ignore")
+    origin: str = "original_generated"
+    batch_id: str = "batch_default"
+    prompt_version: str = "v1.0"
+    llm_model: str = "deepseek-v3"
+    created_at: str = "2026-11-04T00:00:00Z"
+    source: Optional[str] = None
+    audio_generated: Optional[bool] = None
 
 
 class QbQA(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     structure_ok: bool = True
     level_ok: bool = True
     out_of_level_words: List[str] = Field(default_factory=list)
@@ -35,7 +37,7 @@ class QbQuestion(BaseModel):
     stem: str
     passage: Optional[str] = None
     options: List[str]
-    answer_index: int = Field(ge=0, le=3, description="0-based index of correct option")
+    answer_index: int = Field(ge=0, le=7, description="0-based index of correct option")
     explanation_vi: str
     pinyin_stem: Optional[str] = None
     vocab_tags: List[str] = Field(default_factory=list)
@@ -49,6 +51,11 @@ class QbQuestion(BaseModel):
     times_answered: int = 0
     times_wrong: int = 0
     content_hash: str
+    group_id: Optional[str] = None
+    group_passage: Optional[str] = None
+    group_options: Optional[List[str]] = None
+    options_images: Optional[List[str]] = None
+    audio_url: Optional[str] = None
 
     @field_validator("level")
     @classmethod
@@ -67,28 +74,66 @@ class QbQuestion(BaseModel):
     @field_validator("options")
     @classmethod
     def validate_options(cls, v: List[str]) -> List[str]:
-        if len(v) != 4:
-            raise ValueError(f"Phải có đúng 4 phương án lựa chọn, nhận được {len(v)}.")
+        if not (2 <= len(v) <= 8):
+            raise ValueError(f"Số lượng phương án lựa chọn phải từ 2 đến 8, nhận được {len(v)}.")
         normalized = [unicodedata.normalize("NFC", opt.strip()) for opt in v]
-        if len(set(normalized)) != 4:
+        if any(not opt for opt in normalized):
+            raise ValueError("Không được có phương án lựa chọn rỗng.")
+        if len(set(normalized)) != len(normalized):
             raise ValueError("Các phương án lựa chọn không được trùng lặp nội dung.")
         return normalized
 
+    @field_validator("group_options")
+    @classmethod
+    def validate_group_options(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        if v is None:
+            return v
+        if not (2 <= len(v) <= 10):
+            raise ValueError(f"Số lượng group_options phải từ 2 đến 10, nhận được {len(v)}.")
+        normalized = [unicodedata.normalize("NFC", opt.strip()) for opt in v]
+        if any(not opt for opt in normalized):
+            raise ValueError("Không được có phương án nhóm rỗng.")
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("Các group_options không được trùng lặp nội dung.")
+        return normalized
+
     @model_validator(mode="after")
-    def verify_content_hash(self) -> "QbQuestion":
-        computed = self.compute_hash(self.stem, self.options, self.answer_index)
-        if self.content_hash != computed:
+    def validate_answer_index_bounds(self) -> "QbQuestion":
+        if self.options and not (0 <= self.answer_index < len(self.options)):
             raise ValueError(
-                f"content_hash không khớp với compute_hash: kỳ vọng {computed}, nhận được {self.content_hash}"
+                f"Chỉ số đáp án đúng (answer_index={self.answer_index}) vượt quá số lượng phương án (0 đến {len(self.options) - 1})."
             )
         return self
 
+    @model_validator(mode="after")
+    def verify_content_hash(self) -> "QbQuestion":
+        computed = self.compute_hash(self.stem, self.options, self.answer_index, self.options_images)
+        if self.content_hash != computed:
+            computed_text_only = self.compute_hash(self.stem, self.options, self.answer_index, None)
+            if self.content_hash != computed_text_only:
+                raise ValueError(
+                    f"content_hash không khớp với compute_hash: kỳ vọng {computed}, nhận được {self.content_hash}"
+                )
+        return self
+
     @staticmethod
-    def compute_hash(stem: str, options: List[str], answer_index: int) -> str:
+    def compute_hash(
+        stem: str,
+        options: List[str],
+        answer_index: int,
+        options_images: Optional[List[str]] = None
+    ) -> str:
         """Computes deterministic SHA-256 content hash on normalized NFC text."""
         norm_stem = unicodedata.normalize("NFC", stem.strip())
         norm_opts = "|".join([unicodedata.normalize("NFC", opt.strip()) for opt in options])
+        norm_images = "|".join(
+            unicodedata.normalize("NFC", (img or "").strip().lower())
+            for img in (options_images or [])
+            if img
+        )
         raw = f"{norm_stem}##{norm_opts}##{answer_index}"
+        if norm_images:
+            raw += f"##{norm_images}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 

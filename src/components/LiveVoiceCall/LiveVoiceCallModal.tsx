@@ -24,6 +24,8 @@ import {
   Globe,
   Timer,
   Send,
+  Key,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   playMultilingualVoice,
@@ -31,6 +33,8 @@ import {
   getSavedVoiceSettings,
   saveVoiceSettings,
 } from '../../utils/chineseAudio';
+import { BYOKModal } from '../BYOKModal';
+import { getGeminiKey, hasValidGeminiKey, BYOK_UPDATED_EVENT } from '../../utils/byokStorage';
 
 export interface VoiceCallMessage {
   id: string;
@@ -128,6 +132,16 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const [speechSpeed, setSpeechSpeed] = useState(0.9);
   const [silenceDelay, setSilenceDelay] = useState<number>(1000); // 1.0 second fast interactive conversational turn
   const [pauseCountdownMs, setPauseCountdownMs] = useState<number>(0);
+  const [hasBYOKKey, setHasBYOKKey] = useState<boolean>(() => hasValidGeminiKey());
+  const [showBYOKModal, setShowBYOKModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setHasBYOKKey(hasValidGeminiKey());
+    };
+    window.addEventListener(BYOK_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(BYOK_UPDATED_EVENT, handleUpdate);
+  }, []);
 
   // Conversation State
   const [messages, setMessages] = useState<VoiceCallMessage[]>([]);
@@ -548,7 +562,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setSelectedTopic(effectiveTopic);
 
     try {
-      // Connect to server for initial greeting with fast 4s timeout
+      // Connect to server for initial greeting with generous 10s timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         try {
@@ -556,13 +570,20 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         } catch {
           // Ignore
         }
-      }, 4000);
+      }, 10000);
 
       let res: Response | null = null;
       try {
+        const geminiKey = getGeminiKey();
+        const callHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (geminiKey) {
+          callHeaders['X-BYOK-Gemini-Key'] = geminiKey;
+          callHeaders['X-BYOK-Api-Key'] = geminiKey;
+        }
+
         res = await fetch('/api/voice-chat/call', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: callHeaders,
           signal: controller.signal,
           body: JSON.stringify({
             userSpokenText: '',
@@ -570,6 +591,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             persona: selectedPersona.id,
             topic: effectiveTopic,
             hskLevel: targetHsk,
+            preferredLang: recognitionLang === 'vi-VN' ? 'vi' : recognitionLang === 'zh-CN' ? 'zh' : recognitionLang === 'en-US' ? 'en' : 'auto',
           }),
         });
       } catch (fetchErr: any) {
@@ -588,13 +610,24 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         data = await res.json().catch(() => null);
       }
 
-      const spokenText = data?.spokenReply || data?.replyChinese || '你好！很高兴和你语音通话。今天想和我聊点什么呢？';
-      const spokenLang: 'zh' | 'en' | 'vi' = data?.spokenLang || 'zh';
+      const isUserVietnamese = recognitionLang === 'vi-VN' || detectedActiveLang === 'vi';
+      const isUserEnglish = recognitionLang === 'en-US' || detectedActiveLang === 'en';
+
+      const defaultGreetingSpoken = isUserVietnamese
+        ? 'Chào bạn! Mình là Minnie. Hôm nay chúng mình cùng luyện nói tiếng Trung nhé!'
+        : isUserEnglish
+        ? 'Hello! I am Minnie. Let us practice speaking Chinese together today!'
+        : '你好！很高兴和你语音通话。今天想和我聊点什么呢？';
+
+      const defaultGreetingLang: 'zh' | 'en' | 'vi' = isUserVietnamese ? 'vi' : isUserEnglish ? 'en' : 'zh';
+
+      const spokenText = data?.spokenReply || data?.replyChinese || defaultGreetingSpoken;
+      const spokenLang: 'zh' | 'en' | 'vi' = data?.spokenLang || defaultGreetingLang;
 
       const initialGreeting = {
         spokenText,
         spokenLang,
-        chinese: data?.replyChinese || (spokenLang === 'zh' ? spokenText : ''),
+        chinese: data?.replyChinese || (spokenLang === 'zh' ? spokenText : '你好！很高兴和你语音通话。'),
         pinyin: data?.replyPinyin || 'Nǐ hǎo! Hěn gāoxìng hé nǐ yǔyīn tōnghuà. Jīntiān xiǎng hé wǒ liáo diǎn shénme ne?',
         vietnamese: data?.replyVietnamese || 'Chào bạn! Rất vui được gọi thoại cùng bạn. Hôm nay bạn muốn trò chuyện về chủ đề gì nè?',
       };
@@ -660,13 +693,20 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         } catch {
           // Ignore
         }
-      }, 4000);
+      }, 10000);
 
       let res: Response | null = null;
       try {
+        const geminiKey = getGeminiKey();
+        const callHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (geminiKey) {
+          callHeaders['X-BYOK-Gemini-Key'] = geminiKey;
+          callHeaders['X-BYOK-Api-Key'] = geminiKey;
+        }
+
         res = await fetch('/api/voice-chat/call', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: callHeaders,
           signal: controller.signal,
           body: JSON.stringify({
             userSpokenText: spokenText,
@@ -674,6 +714,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             persona: selectedPersona.id,
             topic: selectedTopic,
             hskLevel: targetHsk,
+            preferredLang: recognitionLang === 'vi-VN' ? 'vi' : recognitionLang === 'zh-CN' ? 'zh' : recognitionLang === 'en-US' ? 'en' : 'auto',
           }),
         });
       } catch (fetchErr: any) {
@@ -692,8 +733,19 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         data = await res.json().catch(() => null);
       }
 
-      const spoken = data?.spokenReply || data?.replyChinese || '我听到了，你说得很好！继续加油！';
-      const spokenLang: 'zh' | 'en' | 'vi' = data?.spokenLang || 'zh';
+      const isTurnVietnamese = recognitionLang === 'vi-VN' || detectedActiveLang === 'vi';
+      const isTurnEnglish = recognitionLang === 'en-US' || detectedActiveLang === 'en';
+
+      const defaultSpokenFallback = isTurnVietnamese
+        ? 'Mình đã nghe rõ câu của bạn rồi! Bạn phát âm rất tốt, chúng ta cùng tiếp tục nhé.'
+        : isTurnEnglish
+        ? 'I heard you clearly! Great pronunciation, let us keep going.'
+        : '我听到了，你说得很好！继续加油！';
+
+      const defaultSpokenLang: 'zh' | 'en' | 'vi' = isTurnVietnamese ? 'vi' : isTurnEnglish ? 'en' : 'zh';
+
+      const spoken = data?.spokenReply || data?.replyChinese || defaultSpokenFallback;
+      const spokenLang: 'zh' | 'en' | 'vi' = data?.spokenLang || defaultSpokenLang;
       const userLang: 'zh' | 'en' | 'vi' = data?.detectedUserLang || spokenLang;
 
       setDetectedActiveLang(userLang);
@@ -780,11 +832,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className="bg-[#0B0F19] text-white border border-[#1E293B] rounded-3xl w-full max-w-4xl 2xl:max-w-5xl shadow-2xl overflow-hidden flex flex-col h-[94vh] sm:h-[88vh] 2xl:h-[84vh] max-h-[920px] relative"
+        className="bg-[#0B0F19] text-white border border-[#1E293B] rounded-3xl w-full max-w-4xl 2xl:max-w-5xl shadow-2xl overflow-hidden flex flex-col h-[94vh] sm:h-[88vh] 2xl:h-[84vh] max-h-[920px] relative silk-card"
         id="live-voice-call-studio"
       >
         {/* Top Control Bar */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#1E293B] bg-[#0E1526]/80 backdrop-blur-md z-20 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#1E293B] bg-[#0E1526]/80 backdrop-blur-md z-20 shrink-0 silk-glass">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-lg shadow-lg border border-blue-400/30">
@@ -811,6 +863,20 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* BYOK Status Pill */}
+            <button
+              type="button"
+              onClick={() => setShowBYOKModal(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                hasBYOKKey
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+              }`}
+              title={hasBYOKKey ? 'Key cá nhân đang hoạt động. Bấm để quản lý.' : 'Chưa có Key cá nhân. Bấm để cấu hình.'}
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{hasBYOKKey ? '✓ Key cá nhân' : '⚡ Cài đặt Key'}</span>
+            </button>
             {/* Active Language Switcher & Indicator */}
             {status !== 'idle' && status !== 'ended' && (
               <div className="flex items-center gap-1 bg-[#131B2E] p-1 rounded-2xl border border-[#1E293B]">
@@ -1085,16 +1151,63 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 </div>
               </div>
 
+              {/* BYOK Status Card / Unlock Prompt */}
+              {!hasBYOKKey ? (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-600/10 to-orange-500/10 border border-amber-500/30 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                    <Key className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Mở Khóa Gọi Thoại Trực Tiếp (BYOK)</span>
+                  </div>
+                  <p className="text-[11px] text-gray-300 leading-relaxed">
+                    Live Voice Call kết nối trực tiếp với Google Gemini để đàm thoại 2 chiều tức thì. Vui lòng cung cấp <strong>Google AI Studio Key miễn phí 100%</strong> của bạn để trò chuyện không giới hạn và bảo mật tuyệt đối!
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowBYOKModal(true)}
+                    className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all cursor-pointer"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>Cấu hình API Key miễn phí ngay</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
+                  <div className="flex items-center gap-2 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Key cá nhân đã kích hoạt • Gọi thoại không giới hạn</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowBYOKModal(true)}
+                    className="text-[11px] text-cyan-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Đổi Key
+                  </button>
+                </div>
+              )}
+
               {/* Start Call Action Button */}
               <button
                 type="button"
-                onClick={handleStartCall}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 active:scale-98 transition-all cursor-pointer"
+                onClick={() => {
+                  if (!hasBYOKKey) {
+                    setShowBYOKModal(true);
+                  } else {
+                    handleStartCall();
+                  }
+                }}
+                className={`w-full py-3.5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-3 shadow-xl active:scale-98 transition-all cursor-pointer ${
+                  hasBYOKKey
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-blue-500/20'
+                    : 'bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-gray-200 border border-slate-600'
+                }`}
               >
                 <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
                   <Mic className="w-3.5 h-3.5 text-white" />
                 </div>
-                <span>Bắt Đầu Cuộc Gọi (Start Voice Call)</span>
+                <span>
+                  {hasBYOKKey ? 'Bắt Đầu Cuộc Gọi (Start Voice Call)' : 'Cấu hình Key để bắt đầu gọi'}
+                </span>
               </button>
             </div>
           )}
@@ -1510,6 +1623,12 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           )}
         </div>
       </div>
+      {/* BYOK Key Configuration Modal */}
+      <BYOKModal
+        isOpen={showBYOKModal}
+        onClose={() => setShowBYOKModal(false)}
+        onSuccess={() => setHasBYOKKey(hasValidGeminiKey())}
+      />
     </div>
   );
 };

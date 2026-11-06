@@ -2,7 +2,7 @@ import os
 import json
 import sqlite3
 from contextlib import contextmanager
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 from qbank.config import qbank_config
 from qbank.models import QbQuestion, QbProvenance, QbQA, QbSyncRecord
 
@@ -20,7 +20,8 @@ class QbStore:
     @contextmanager
     def session(self):
         """Context manager that automatically manages commits and always closes the connection."""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        conn.execute("PRAGMA busy_timeout = 30000;")
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -34,6 +35,8 @@ class QbStore:
     def init_schema(self) -> None:
         """Initializes tables for QBank."""
         with self.session() as conn:
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA busy_timeout = 30000;")
             cur = conn.cursor()
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS qb_questions (
@@ -58,11 +61,22 @@ class QbStore:
                     times_answered INTEGER DEFAULT 0,
                     times_wrong INTEGER DEFAULT 0,
                     content_hash TEXT UNIQUE NOT NULL,
+                    group_id TEXT,
+                    group_passage TEXT,
+                    group_options TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_qb_questions_hash ON qb_questions(content_hash);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_qb_questions_status ON qb_questions(status, level);")
+
+            # Idempotent migration for grouped question fields
+            cur.execute("PRAGMA table_info(qb_questions);")
+            existing_cols = {col[1] for col in cur.fetchall()}
+            for col_name in ("group_id", "group_passage", "group_options", "options_images", "audio_url"):
+                if col_name not in existing_cols:
+                    cur.execute(f"ALTER TABLE qb_questions ADD COLUMN {col_name} TEXT;")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_qb_questions_group ON qb_questions(group_id);")
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS qb_sync_log (
@@ -112,13 +126,35 @@ class QbStore:
                         question_id, level, skill, part_type, stem, passage, options,
                         answer_index, explanation_vi, pinyin_stem, vocab_tags, topic,
                         difficulty, display_label, provenance, qa, status,
-                        report_count, times_answered, times_wrong, content_hash
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        report_count, times_answered, times_wrong, content_hash,
+                        group_id, group_passage, group_options, options_images, audio_url
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(question_id) DO UPDATE SET
+                        level = excluded.level,
+                        skill = excluded.skill,
+                        part_type = excluded.part_type,
+                        stem = excluded.stem,
+                        passage = excluded.passage,
+                        options = excluded.options,
+                        answer_index = excluded.answer_index,
+                        explanation_vi = excluded.explanation_vi,
+                        pinyin_stem = excluded.pinyin_stem,
+                        vocab_tags = excluded.vocab_tags,
+                        topic = excluded.topic,
+                        difficulty = excluded.difficulty,
+                        display_label = excluded.display_label,
+                        provenance = excluded.provenance,
+                        qa = excluded.qa,
                         status = excluded.status,
                         report_count = excluded.report_count,
                         times_answered = excluded.times_answered,
-                        times_wrong = excluded.times_wrong;
+                        times_wrong = excluded.times_wrong,
+                        content_hash = excluded.content_hash,
+                        group_id = excluded.group_id,
+                        group_passage = excluded.group_passage,
+                        group_options = excluded.group_options,
+                        options_images = excluded.options_images,
+                        audio_url = excluded.audio_url;
                 """, (
                     q.question_id,
                     q.level,
@@ -140,7 +176,12 @@ class QbStore:
                     q.report_count,
                     q.times_answered,
                     q.times_wrong,
-                    q.content_hash
+                    q.content_hash,
+                    q.group_id,
+                    q.group_passage,
+                    json.dumps(q.group_options, ensure_ascii=False) if q.group_options is not None else None,
+                    json.dumps(q.options_images, ensure_ascii=False) if q.options_images is not None else None,
+                    q.audio_url,
                 ))
                 conn.commit()
                 return True
@@ -172,9 +213,11 @@ class QbStore:
         self,
         status: Optional[str] = None,
         level: Optional[int] = None,
-        limit: int = 100
+        batch_id: Optional[str] = None,
+        since: Optional[str] = None,
+        limit: Optional[int] = 100
     ) -> List[QbQuestion]:
-        """Lists questions filtered by status and level."""
+        """Lists questions filtered by status, level, batch_id, and since."""
         with self.session() as conn:
             cur = conn.cursor()
             query = "SELECT * FROM qb_questions WHERE 1=1"
@@ -185,8 +228,16 @@ class QbStore:
             if level:
                 query += " AND level = ?"
                 params.append(level)
-            query += " ORDER BY created_at DESC LIMIT ?"
-            params.append(limit)
+            if since:
+                query += " AND (created_at >= ? OR json_extract(provenance, '$.created_at') >= ?)"
+                params.extend([since, since])
+            if batch_id:
+                query += " AND json_extract(provenance, '$.batch_id') = ?"
+                params.append(batch_id)
+            query += " ORDER BY created_at DESC"
+            if limit:
+                query += " LIMIT ?"
+                params.append(int(limit))
 
             cur.execute(query, params)
             return [self._row_to_model(r) for r in cur.fetchall()]
@@ -194,6 +245,55 @@ class QbStore:
     def get_questions_by_level(self, level: int, limit: int = 100) -> List[QbQuestion]:
         """Convenience method to list questions by level."""
         return self.list_questions(level=level, limit=limit)
+
+    def get_used_vocab_words(self, level: int) -> Set[str]:
+        """Returns set of vocabulary words already tested in existing questions of this level."""
+        with self.session() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT vocab_tags, options, answer_index FROM qb_questions WHERE level = ?;", (level,))
+            used: Set[str] = set()
+            for r in cur.fetchall():
+                has_tag = False
+                if r["vocab_tags"]:
+                    try:
+                        tags = json.loads(r["vocab_tags"])
+                        for t in tags:
+                            if t and isinstance(t, str):
+                                used.add(t.strip())
+                                has_tag = True
+                    except Exception:
+                        pass
+                if not has_tag and r["options"] and r["answer_index"] is not None:
+                    try:
+                        opts = json.loads(r["options"])
+                        idx = int(r["answer_index"])
+                        if 0 <= idx < len(opts) and isinstance(opts[idx], str):
+                            used.add(opts[idx].strip())
+                    except Exception:
+                        pass
+            return used
+
+    def get_existing_option_sets(self, level: Optional[int] = None) -> Dict[frozenset, str]:
+        """Returns mapping of frozenset(options) -> question_id for duplicate option set detection."""
+        with self.session() as conn:
+            cur = conn.cursor()
+            query = "SELECT question_id, options FROM qb_questions"
+            params: List[Any] = []
+            if level is not None:
+                query += " WHERE level = ?"
+                params.append(level)
+            cur.execute(query, params)
+            mapping: Dict[frozenset, str] = {}
+            for r in cur.fetchall():
+                try:
+                    opts = json.loads(r["options"])
+                    if opts and isinstance(opts, list):
+                        s = frozenset(o.strip() for o in opts if isinstance(o, str))
+                        if s:
+                            mapping[s] = r["question_id"]
+                except Exception:
+                    pass
+            return mapping
 
 
     def update_status(self, question_id: str, new_status: str) -> bool:
@@ -209,6 +309,26 @@ class QbStore:
             )
             conn.commit()
             return cur.rowcount > 0
+
+    def delete_question(self, question_id: str) -> bool:
+        """Permanently deletes a question across qb_questions and associated pool/pending tables."""
+        with self.session() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM qb_questions WHERE question_id = ?;", (question_id,))
+            try:
+                cur.execute("DELETE FROM exam_eligible_pool WHERE question_id = ?;", (question_id,))
+            except Exception:
+                pass
+            try:
+                cur.execute("DELETE FROM questions WHERE id = ?;", (question_id,))
+            except Exception:
+                pass
+            try:
+                cur.execute("DELETE FROM pending_questions WHERE id = ?;", (question_id,))
+            except Exception:
+                pass
+            conn.commit()
+            return True
 
     def record_report(self, question_id: str, user_note: str = "") -> int:
         """
@@ -349,10 +469,42 @@ class QbStore:
             cur.execute("SELECT COUNT(*) as reported FROM qb_questions WHERE report_count > 0;")
             reported_count = cur.fetchone()["reported"]
 
+            # Detailed breakdowns: by_batch and flags_summary
+            cur.execute("SELECT * FROM qb_questions;")
+            all_rows = cur.fetchall()
+            by_batch: Dict[str, int] = {}
+            flags_summary: Dict[str, int] = {
+                "solver_ambiguity": 0,
+                "char_noise": 0,
+                "out_of_level_chars": 0,
+                "near_duplicate": 0,
+                "fallback_model": 0
+            }
+
+            from qbank.validators import validate_clean_characters
+            for r in all_rows:
+                q = self._row_to_model(r)
+                b_id = q.provenance.batch_id or "(none)"
+                by_batch[b_id] = by_batch.get(b_id, 0) + 1
+
+                notes_text = " ".join(q.qa.notes)
+                if "Solver flagged ambiguity" in notes_text or "2 options acceptable" in notes_text:
+                    flags_summary["solver_ambiguity"] += 1
+                if not validate_clean_characters(q.stem, q.options)[0]:
+                    flags_summary["char_noise"] += 1
+                if not q.qa.level_ok or any("vượt cấp" in n for n in q.qa.notes):
+                    flags_summary["out_of_level_chars"] += 1
+                if "gần trùng lặp" in notes_text:
+                    flags_summary["near_duplicate"] += 1
+                if "Sinh bởi model dự phòng" in notes_text:
+                    flags_summary["fallback_model"] += 1
+
             return {
                 "total_questions": total,
                 "by_status": by_status,
                 "by_level": by_level,
+                "by_batch": by_batch,
+                "flags_summary": flags_summary,
                 "reported_questions": reported_count
             }
 
@@ -361,9 +513,40 @@ class QbStore:
         data.pop("created_at", None)
         data.pop("rowid", None)
         data["options"] = json.loads(data["options"])
-        data["vocab_tags"] = json.loads(data["vocab_tags"]) if data["vocab_tags"] else []
-        data["provenance"] = QbProvenance.model_validate(json.loads(data["provenance"]))
-        data["qa"] = QbQA.model_validate(json.loads(data["qa"]))
+        data["vocab_tags"] = json.loads(data["vocab_tags"]) if data.get("vocab_tags") else []
+        try:
+            prov_dict = json.loads(data["provenance"]) if data.get("provenance") else {}
+            data["provenance"] = QbProvenance.model_validate(prov_dict)
+        except Exception:
+            data["provenance"] = QbProvenance(batch_id="batch_default", prompt_version="v1.0", llm_model="deepseek-v3", created_at="2026-11-04T00:00:00Z")
+        try:
+            qa_dict = json.loads(data["qa"]) if data.get("qa") else {}
+            data["qa"] = QbQA.model_validate(qa_dict)
+        except Exception:
+            data["qa"] = QbQA()
+        if data.get("topic") is None:
+            data["topic"] = ""
+        if data.get("difficulty") is None:
+            data["difficulty"] = "medium"
+        if data.get("display_label") is None:
+            data["display_label"] = "Đề luyện tập theo chuẩn HSK 3.0"
+        if data.get("group_options"):
+            if isinstance(data["group_options"], str):
+                try:
+                    data["group_options"] = json.loads(data["group_options"])
+                except (json.JSONDecodeError, ValueError):
+                    data["group_options"] = None
+        else:
+            data["group_options"] = None
+
+        if data.get("options_images"):
+            if isinstance(data["options_images"], str):
+                try:
+                    data["options_images"] = json.loads(data["options_images"])
+                except (json.JSONDecodeError, ValueError):
+                    data["options_images"] = None
+        else:
+            data["options_images"] = None
         return QbQuestion.model_validate(data)
 
 

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef, useCallback } from 'react';
 import { Navbar, NavTab } from './components/Navbar';
 import { DashboardView } from './components/Dashboard/DashboardView';
-import { SRSCardState, UserStats, UserProfile, AssignmentDoc, AssignmentSubmissionDoc } from './types';
+import { SRSCardState, UserStats, UserProfile, AssignmentDoc, AssignmentSubmissionDoc, OnlineExamDoc, HSKLevel } from './types';
 import { loadSRSCards, saveSRSCards } from './utils/srs';
 import { evaluateRealtimeStreak, registerStudyActivityToday, getCalendarDayDiff } from './utils/streak';
 import {
@@ -12,7 +12,9 @@ import {
   updateStudentInFirestore,
   subscribeAssignmentsFromFirestore,
   subscribeSubmissionsFromFirestore,
+  getOnlineExamByCodeFromFirestore,
 } from './lib/firebase';
+import { getCuratedQuestions } from './data/curatedQuizData';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import {
@@ -27,28 +29,80 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-// Resilient lazy loader with automatic retry to prevent transient network/rate-limit errors
-function lazyWithRetry<T extends React.ComponentType<any>>(
+/**
+ * Resilient promise executor with exponential backoff and finite retries.
+ * Mitigates transient Vite dependency re-optimizations, temporary network hiccups,
+ * and chunk stream delays without causing infinite loops.
+ */
+export function retryPromise<T>(
+  factory: () => Promise<T>,
+  retries = 3,
+  baseInterval = 800
+): Promise<T> {
+  const maxAttempts = Math.max(1, Math.floor(retries || 1));
+  const safeBaseInterval = Math.max(0, baseInterval);
+
+  return new Promise<T>((resolve, reject) => {
+    let attemptsMade = 0;
+
+    function handleError(err: any) {
+      if (attemptsMade >= maxAttempts) {
+        console.error(
+          `[lazyWithRetry] Dynamic import failed permanently after ${attemptsMade} attempts:`,
+          err
+        );
+        reject(err);
+      } else {
+        // Exponential backoff: safeBaseInterval * (1.5 ^ (attempt - 1)), with 4000ms max cap
+        const delay = Math.min(
+          Math.round(safeBaseInterval * Math.pow(1.5, attemptsMade - 1)),
+          4000
+        );
+        console.warn(
+          `[lazyWithRetry] Dynamic import attempt ${attemptsMade}/${maxAttempts} failed (${err?.message || err}). Retrying in ${delay}ms...`
+        );
+        setTimeout(attempt, delay);
+      }
+    }
+
+    function attempt() {
+      attemptsMade++;
+      try {
+        Promise.resolve(factory())
+          .then(resolve)
+          .catch(handleError);
+      } catch (err) {
+        handleError(err);
+      }
+    }
+
+    attempt();
+  });
+}
+
+// Resilient lazy loader with automatic retry, exponential backoff, and perpetual recovery reset for ErrorBoundary re-mounts
+export function lazyWithRetry<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retries = 3,
   interval = 800
 ): React.LazyExoticComponent<T> {
-  return lazy(() => {
-    return new Promise<{ default: T }>((resolve, reject) => {
-      function attempt(left: number) {
-        factory()
-          .then(resolve)
-          .catch((err) => {
-            if (left <= 1) {
-              reject(err);
-            } else {
-              setTimeout(() => attempt(left - 1), interval);
-            }
-          });
-      }
-      attempt(retries);
+  const load = () => retryPromise(factory, retries, interval);
+  const loadWrapper = () =>
+    load().catch((err) => {
+      // If all retries failed and the lazy component is rejected, schedule resetting payload
+      // so when ErrorBoundary or user clicks "Thử lại ngay", the lazy component
+      // will initiate a fresh load attempt instead of permanently throwing cached error.
+      // Crucial: reset _result to loadWrapper (not load) so repeated failures continue to self-reset.
+      setTimeout(() => {
+        if ((lazyComp as any)._payload) {
+          (lazyComp as any)._payload._status = -1;
+          (lazyComp as any)._payload._result = loadWrapper;
+        }
+      }, 0);
+      throw err;
     });
-  });
+  const lazyComp = lazy(loadWrapper);
+  return lazyComp;
 }
 
 // Code-split heavy views so the initial page load stays fast and doesn't fire 200+ concurrent module requests
@@ -70,6 +124,9 @@ const QuizzesView = lazyWithRetry(() =>
 const AdminDashboard = lazyWithRetry(() =>
   import('./components/Admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
 );
+const QBankAdmin = lazyWithRetry(() =>
+  import('./components/QBankAdmin').then((m) => ({ default: m.QBankAdmin }))
+);
 const JoinClassModal = lazyWithRetry(() =>
   import('./components/Dashboard/JoinClassModal').then((m) => ({ default: m.JoinClassModal }))
 );
@@ -83,16 +140,133 @@ const LiveVoiceCallModal = lazyWithRetry(() =>
 const STATS_STORAGE_KEY = 'minnese_user_stats_v2';
 const PROFILE_STORAGE_KEY = 'minnese_user_profile_v2';
 const THEME_STORAGE_KEY = 'minnese_theme_mode';
+const ASSIGNMENTS_STORAGE_KEY = 'minnese_assignments_v1';
+const SUBMISSIONS_STORAGE_KEY = 'minnese_local_submissions';
+
+function getInitialAssignments(): AssignmentDoc[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(ASSIGNMENTS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load assignments from localStorage:', err);
+    }
+  }
+
+  // Anchor initial sample deadline: exactly 3 days from initial launch at 23:59:59 (e.g. 5/11/2026 23:59:59)
+  const d = new Date();
+  d.setDate(d.getDate() + 3);
+  d.setHours(23, 59, 59, 999);
+
+  const initialList: AssignmentDoc[] = [
+    {
+      id: 'assign-001',
+      title: 'Bài tập tuần 1: Ôn tập 10 từ vựng cốt lõi HSK 1',
+      description: 'Hoàn thành bài kiểm tra trắc nghiệm 5 câu và ôn tập các từ chào hỏi, giáo viên, học sinh.',
+      target_type: 'level',
+      hsk_level: 1,
+      content_type: 'quiz',
+      content_ref_id: 'quiz-hsk1-sample',
+      question_count: 5,
+      duration_minutes: 10,
+      due_date: d.toISOString(),
+      created_by: 'admin@minnese.app',
+      created_at: new Date().toISOString(),
+      is_active: true,
+      questions: [
+        {
+          id: 'asg-q1',
+          type: 'meaning',
+          prompt: 'Từ "你好" (nǐ hǎo) có nghĩa là gì trong tiếng Việt?',
+          questionChinese: '你好',
+          options: ['Xin chào', 'Tạm biệt', 'Cảm ơn', 'Xin lỗi'],
+          correctAnswer: 'Xin chào',
+          explanation: '"你好" là lời chào hỏi cơ bản và phổ biến nhất trong tiếng Trung.',
+          hskLevel: 1,
+        },
+        {
+          id: 'asg-q2',
+          type: 'meaning',
+          prompt: 'Từ "老师" (lǎoshī) có nghĩa là gì?',
+          questionChinese: '老师',
+          options: ['Học sinh', 'Thầy giáo / Cô giáo', 'Bác sĩ', 'Bạn bè'],
+          correctAnswer: 'Thầy giáo / Cô giáo',
+          explanation: '"老师" có nghĩa là giáo viên, thầy cô giáo.',
+          hskLevel: 1,
+        },
+        {
+          id: 'asg-q3',
+          type: 'meaning',
+          prompt: 'Từ "学生" (xuésheng) có nghĩa là gì?',
+          questionChinese: '学生',
+          options: ['Học sinh / Sinh viên', 'Giáo viên', 'Hiệu trưởng', 'Bạn học'],
+          correctAnswer: 'Học sinh / Sinh viên',
+          explanation: '"学生" chỉ học sinh hoặc sinh viên.',
+          hskLevel: 1,
+        },
+        {
+          id: 'asg-q4',
+          type: 'meaning',
+          prompt: 'Từ "谢谢" (xièxie) dùng trong trường hợp nào?',
+          questionChinese: '谢谢',
+          options: ['Khi cảm ơn ai đó', 'Khi xin lỗi', 'Khi chào tạm biệt', 'Khi hỏi đường'],
+          correctAnswer: 'Khi cảm ơn ai đó',
+          explanation: '"谢谢" có nghĩa là cảm ơn.',
+          hskLevel: 1,
+        },
+        {
+          id: 'asg-q5',
+          type: 'pinyin',
+          prompt: 'Phiên âm Pinyin chính xác của từ "再见" là gì?',
+          questionChinese: '再见',
+          options: ['zài jiàn', 'zǎi jiān', 'zāi jiàn', 'zài jiān'],
+          correctAnswer: 'zài jiàn',
+          explanation: '"再见" đọc là zài jiàn (thanh 4 + thanh 4), nghĩa là tạm biệt.',
+          hskLevel: 1,
+        },
+      ],
+    },
+  ];
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(initialList));
+    } catch {}
+  }
+
+  return initialList;
+}
 
 // Feature Flags for MVP Cost Optimization (Chi phí 0đ)
 const ENABLE_LIVE_VOICE_CALL = false; // Tạm khóa Live Voice Call để tiết kiệm token
+
+/**
+ * ViewTransition wrapper — plays a quick fade+slide animation
+ * whenever the displayed tab changes. Uses a key so React remounts
+ * the wrapper and restarts the CSS animation.
+ */
+const ViewTransition: React.FC<{ tabKey: string; children: React.ReactNode }> = ({
+  tabKey,
+  children,
+}) => {
+  return (
+    <div key={tabKey} className="view-enter w-full">
+      {children}
+    </div>
+  );
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab') as NavTab | null;
-      if (tabParam && ['dashboard', 'coursebook', 'tutor', 'flashcards', 'dictionary', 'quizzes', 'admin'].includes(tabParam)) {
+      if (tabParam && ['dashboard', 'coursebook', 'tutor', 'flashcards', 'dictionary', 'quizzes', 'admin', 'qbank'].includes(tabParam)) {
         return tabParam;
       }
       if (params.get('exam') || params.get('code') || params.get('exam_code')) {
@@ -115,6 +289,39 @@ export default function App() {
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedFlashcardDeckId, setSelectedFlashcardDeckId] = useState<string | null>(null);
+  const [selectedFlashcardMode, setSelectedFlashcardMode] = useState<'due_only' | 'all'>('due_only');
+
+  // QBank Admin Gate State
+  const [isQbankEnabled, setIsQbankEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      if ((window as any).__QBANK_ENABLED__ !== undefined) {
+        return Boolean((window as any).__QBANK_ENABLED__);
+      }
+      if ((window as any).VITE_QBANK_ADMIN_ENABLED !== undefined) {
+        return (window as any).VITE_QBANK_ADMIN_ENABLED === true || (window as any).VITE_QBANK_ADMIN_ENABLED === 'true';
+      }
+    }
+    const metaEnv = (import.meta as any)?.env?.VITE_QBANK_ADMIN_ENABLED;
+    const procEnv = typeof process !== 'undefined' ? (process as any).env?.VITE_QBANK_ADMIN_ENABLED : undefined;
+    return metaEnv === 'true' || procEnv === 'true';
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/qbank-status')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && typeof data.enabled === 'boolean') {
+          setIsQbankEnabled(data.enabled);
+        }
+      })
+      .catch(() => {
+        // Fallback to initial state on network or status endpoint absence
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // User Profile
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -149,35 +356,107 @@ export default function App() {
     studyTimeMinutes: 45,
   });
 
-  // Assignments state (synced with Firestore real-time)
-  const [assignments, setAssignments] = useState<AssignmentDoc[]>([
-    {
-      id: 'assign-001',
-      title: 'Bài tập tuần 1: Ôn tập 10 từ vựng cốt lõi HSK 1',
-      description: 'Hoàn thành bài kiểm tra trắc nghiệm 5 câu và ôn tập các từ chào hỏi, giáo viên, học sinh.',
-      target_type: 'level',
-      hsk_level: 1,
-      content_type: 'quiz',
-      content_ref_id: 'quiz-hsk1-sample',
-      due_date: new Date(Date.now() + 3 * 86400000).toISOString(),
-      created_by: 'admin@minnese.app',
-      created_at: new Date().toISOString(),
-      is_active: true,
-    },
-  ]);
-  const [submissions, setSubmissions] = useState<AssignmentSubmissionDoc[]>([]);
+  // Assignments state (synced with localStorage & Firestore real-time)
+  const [assignments, setAssignments] = useState<AssignmentDoc[]>(getInitialAssignments);
+  const [submissions, setSubmissions] = useState<AssignmentSubmissionDoc[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(SUBMISSIONS_STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+  const [activeExamRunning, setActiveExamRunning] = useState<OnlineExamDoc | null>(null);
+
+  // Sync assignments to localStorage whenever modified
+  useEffect(() => {
+    if (assignments && assignments.length > 0 && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+      } catch {}
+    }
+  }, [assignments]);
+
+  // Sync submissions to localStorage whenever modified
+  useEffect(() => {
+    if (submissions && submissions.length > 0 && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(submissions));
+      } catch {}
+    }
+  }, [submissions]);
+
+  const handleStartAssignment = async (asg: AssignmentDoc) => {
+    if (asg.content_type === 'quiz') {
+      let questions = asg.questions || [];
+      if (questions.length === 0 && asg.exam_code) {
+        try {
+          const found = await getOnlineExamByCodeFromFirestore(asg.exam_code);
+          if (found && found.questions && found.questions.length > 0) {
+            questions = found.questions;
+          }
+        } catch (e) {
+          console.warn('Could not fetch exam by code:', e);
+        }
+      }
+      if (questions.length === 0) {
+        const level = (asg.hsk_level as HSKLevel) || 1;
+        questions = getCuratedQuestions('pinyin_grammar', level, 'all').slice(0, asg.question_count || 5);
+      }
+
+      const examDoc: OnlineExamDoc = {
+        id: asg.id,
+        exam_code: asg.exam_code || `ASSIGN-${asg.id.slice(-6)}`,
+        title: asg.title,
+        description: asg.description,
+        hsk_level: (asg.hsk_level as HSKLevel) || 1,
+        duration_minutes: asg.duration_minutes || 15,
+        target_type: asg.target_type,
+        questions: questions,
+        total_points: questions.length * 10,
+        remix_mode: 'comprehensive',
+        created_by: asg.created_by,
+        created_at: asg.created_at,
+        is_active: true,
+      };
+
+      setActiveExamRunning(examDoc);
+      setActiveTab('quizzes');
+    } else if (asg.content_type === 'deck') {
+      if (asg.vocab_words && asg.vocab_words.length > 0) {
+        asg.vocab_words.forEach((w) => handleAddWordToSRS(w));
+      }
+      setSelectedFlashcardDeckId(`deck-asg-${asg.id}`);
+      setActiveTab('flashcards');
+    } else if (asg.content_type === 'writing') {
+      setActiveTab('quizzes');
+    } else {
+      setActiveTab('quizzes');
+    }
+  };
 
   // Subscribe to real-time assignments and submissions from Firestore
   useEffect(() => {
     const unsubAsg = subscribeAssignmentsFromFirestore((firestoreAssignments) => {
       if (firestoreAssignments && firestoreAssignments.length > 0) {
         setAssignments(firestoreAssignments);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(firestoreAssignments));
+          } catch {}
+        }
       }
     });
 
     const unsubSub = subscribeSubmissionsFromFirestore((firestoreSubmissions) => {
       if (firestoreSubmissions && firestoreSubmissions.length > 0) {
         setSubmissions(firestoreSubmissions);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(firestoreSubmissions));
+          } catch {}
+        }
       }
     });
 
@@ -213,12 +492,57 @@ export default function App() {
     });
   };
 
+  // Global Event Listeners for seamless cross-component navigation
+  useEffect(() => {
+    const handleSwitchTab = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab: NavTab }>;
+      if (customEvent.detail && customEvent.detail.tab) {
+        const targetTab = customEvent.detail.tab;
+        if (['dashboard', 'coursebook', 'tutor', 'flashcards', 'dictionary', 'quizzes', 'admin', 'qbank'].includes(targetTab)) {
+          setActiveTab(targetTab);
+        }
+      }
+    };
+
+    const handleLaunchExam = (e: Event) => {
+      const customEvent = e as CustomEvent<{ exam: OnlineExamDoc }>;
+      if (customEvent.detail && customEvent.detail.exam) {
+        setActiveExamRunning(customEvent.detail.exam);
+        setActiveTab('quizzes');
+      }
+    };
+
+    window.addEventListener('minnie_switch_tab', handleSwitchTab);
+    window.addEventListener('minnie_launch_exam', handleLaunchExam);
+    return () => {
+      window.removeEventListener('minnie_switch_tab', handleSwitchTab);
+      window.removeEventListener('minnie_launch_exam', handleLaunchExam);
+    };
+  }, []);
+
+  // Synchronize activeTab state to browser URL search parameter (?tab=...)
+  // Ensures that when ErrorBoundary remounts or user reloads/clears cache, the user returns
+  // directly to the tab they were trying to view (Coursebook, Quizzes, etc.) rather than resetting to Dashboard.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+      try {
+        const url = new URL(window.location.href);
+        if (activeTab === 'dashboard') {
+          url.searchParams.delete('tab');
+        } else {
+          url.searchParams.set('tab', activeTab);
+        }
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      } catch {}
+    }
+  }, [activeTab]);
+
   // Load SRS cards & stats on initial mount
   useEffect(() => {
     // Auto navigate to tabs if URL contains ?tab=... or ?exam=...
     const params = new URLSearchParams(window.location.search);
     const requestedTab = params.get('tab') as NavTab | null;
-    if (requestedTab && ['dashboard', 'coursebook', 'tutor', 'flashcards', 'dictionary', 'quizzes', 'admin'].includes(requestedTab)) {
+    if (requestedTab && ['dashboard', 'coursebook', 'tutor', 'flashcards', 'dictionary', 'quizzes', 'admin', 'qbank'].includes(requestedTab)) {
       setActiveTab(requestedTab);
     } else if (params.get('exam') || params.get('code') || params.get('exam_code')) {
       setActiveTab('quizzes');
@@ -476,25 +800,50 @@ export default function App() {
         onLogout={handleLogout}
         onOpenVoiceCall={handleOpenVoiceCall}
         onOpenJoinClass={() => setShowJoinClassModal(true)}
+        isQbankEnabled={isQbankEnabled}
+        assignments={assignments}
+        srsCards={srsCards}
+        onStartReview={(mode) => {
+          const m = mode || 'due_only';
+          setSelectedFlashcardDeckId('deck-coursebook-progress');
+          setSelectedFlashcardMode(m);
+          setActiveTab('flashcards');
+          window.dispatchEvent(
+            new CustomEvent('minnie_start_srs_review', {
+              detail: { deckId: 'deck-coursebook-progress', mode: m },
+            })
+          );
+        }}
+        onStartAssignment={handleStartAssignment}
       />
 
       {/* Main View Router */}
       <main className="flex-1 pb-16">
         {activeTab === 'dashboard' && (
-          <DashboardView
+          <ViewTransition tabKey="dashboard">
+            <DashboardView
             userProfile={userProfile}
             stats={stats}
             srsCards={srsCards}
             onNavigate={setActiveTab}
-            onStartReview={() => {
+            onStartReview={(mode) => {
+              const m = mode || 'due_only';
               setSelectedFlashcardDeckId('deck-coursebook-progress');
+              setSelectedFlashcardMode(m);
               setActiveTab('flashcards');
+              window.dispatchEvent(
+                new CustomEvent('minnie_start_srs_review', {
+                  detail: { deckId: 'deck-coursebook-progress', mode: m },
+                })
+              );
             }}
             assignments={assignments}
             submissions={submissions}
             onOpenVoiceCall={handleOpenVoiceCall}
             onOpenJoinClass={() => setShowJoinClassModal(true)}
+            onStartAssignment={handleStartAssignment}
           />
+          </ViewTransition>
         )}
         <Suspense
           fallback={
@@ -507,69 +856,120 @@ export default function App() {
           }
         >
           {activeTab === 'coursebook' && (
-            <CoursebookView
-              userProfile={userProfile}
-              srsCards={srsCards}
-              onAddWordToSRS={handleAddWordToSRS}
-              onSaveProfile={handleSaveProfile}
-              onStartFlashcards={(words, lessonNumber) => {
-                // Add words to SRS or navigate to flashcards
-                words.forEach((w) => handleAddWordToSRS(w.id));
-                if (lessonNumber) {
-                  setSelectedFlashcardDeckId(`deck-lesson-${userProfile.current_level || 1}-${lessonNumber}`);
-                } else {
-                  setSelectedFlashcardDeckId('deck-coursebook-progress');
-                }
-                setActiveTab('flashcards');
-              }}
-              onOpenAiTutorWithTopic={() => {
-                setActiveTab('tutor');
-              }}
-            />
+            <ViewTransition tabKey="coursebook">
+              <CoursebookView
+                userProfile={userProfile}
+                srsCards={srsCards}
+                onAddWordToSRS={handleAddWordToSRS}
+                onSaveProfile={handleSaveProfile}
+                onStartFlashcards={(words, lessonNumber) => {
+                  // Add words to SRS or navigate to flashcards
+                  words.forEach((w) => handleAddWordToSRS(w.id));
+                  if (lessonNumber) {
+                    setSelectedFlashcardDeckId(`deck-lesson-${userProfile.current_level || 1}-${lessonNumber}`);
+                  } else {
+                    setSelectedFlashcardDeckId('deck-coursebook-progress');
+                  }
+                  setActiveTab('flashcards');
+                }}
+                onOpenAiTutorWithTopic={() => {
+                  setActiveTab('tutor');
+                }}
+              />
+            </ViewTransition>
           )}
-          {activeTab === 'tutor' && <AITutorView userProfile={userProfile} />}
+          {activeTab === 'tutor' && (
+            <ViewTransition tabKey="tutor">
+              <AITutorView userProfile={userProfile} />
+            </ViewTransition>
+          )}
           {activeTab === 'flashcards' && (
-            <FlashcardsView
-              srsCards={srsCards}
-              onUpdateSRSCards={setSrsCards}
-              stats={stats}
-              onUpdateStats={handleUpdateStats}
-              userProfile={userProfile}
-              initialDeckId={selectedFlashcardDeckId}
-              onClearInitialDeckId={() => setSelectedFlashcardDeckId(null)}
-              onNavigateToCoursebook={() => setActiveTab('coursebook')}
-            />
+            <ViewTransition tabKey="flashcards">
+              <FlashcardsView
+                srsCards={srsCards}
+                onUpdateSRSCards={setSrsCards}
+                stats={stats}
+                onUpdateStats={handleUpdateStats}
+                userProfile={userProfile}
+                initialDeckId={selectedFlashcardDeckId}
+                initialStudyMode={selectedFlashcardMode}
+                onClearInitialDeckId={() => setSelectedFlashcardDeckId(null)}
+                onNavigateToCoursebook={() => setActiveTab('coursebook')}
+              />
+            </ViewTransition>
           )}
           {activeTab === 'dictionary' && (
-            <DictionaryView
-              srsCards={srsCards}
-              onAddWordToSRS={handleAddWordToSRS}
-              isAuthorizedAdminOrTeacher={isAuthorizedAdminOrTeacher}
-            />
+            <ViewTransition tabKey="dictionary">
+              <DictionaryView
+                srsCards={srsCards}
+                onAddWordToSRS={handleAddWordToSRS}
+                isAuthorizedAdminOrTeacher={isAuthorizedAdminOrTeacher}
+              />
+            </ViewTransition>
           )}
           {activeTab === 'quizzes' && (
-            <QuizzesView stats={stats} onUpdateStats={handleUpdateStats} userProfile={userProfile} />
+            <ViewTransition tabKey="quizzes">
+              <QuizzesView
+                stats={stats}
+                onUpdateStats={handleUpdateStats}
+                userProfile={userProfile}
+                activeExamToRun={activeExamRunning}
+                onExitExam={() => setActiveExamRunning(null)}
+              />
+            </ViewTransition>
           )}
           {activeTab === 'admin' && (
             isAuthorizedAdminOrTeacher ? (
-              <AdminDashboard currentAdmin={userProfile} />
+              <ViewTransition tabKey="admin">
+                <AdminDashboard currentAdmin={userProfile} />
+              </ViewTransition>
             ) : (
-              <div className="max-w-md mx-auto my-16 p-8 rounded-3xl bg-[var(--color-surface)] border border-rose-500/30 text-center space-y-4 shadow-xl">
-                <div className="w-16 h-16 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto text-2xl">
-                  🛡️
+              <ViewTransition tabKey="admin-denied">
+                <div className="max-w-md mx-auto my-16 p-8 rounded-3xl bg-[var(--color-surface)] border border-rose-500/30 text-center space-y-4 shadow-xl">
+                  <div className="w-16 h-16 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto text-2xl">
+                    🛡️
+                  </div>
+                  <h2 className="text-xl font-bold text-[var(--color-text-primary)] font-serif">Quyền Truy Cập Bị Giới Hạn</h2>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                    Khu vực Quản trị chỉ dành riêng cho Giáo viên và Ban Quản trị Minnese. Tài khoản học viên của bạn ({userProfile.email}) không có quyền truy cập trang này.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('dashboard')}
+                    className="px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white font-bold text-sm shadow-md hover:bg-[var(--color-primary-dark)] transition-all cursor-pointer"
+                  >
+                    Về trang chủ học tập
+                  </button>
                 </div>
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)] font-serif">Quyền Truy Cập Bị Giới Hạn</h2>
-                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                  Khu vực Quản trị chỉ dành riêng cho Giáo viên và Ban Quản trị Minnese. Tài khoản học viên của bạn ({userProfile.email}) không có quyền truy cập trang này.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('dashboard')}
-                  className="px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white font-bold text-sm shadow-md hover:bg-[var(--color-primary-dark)] transition-all cursor-pointer"
-                >
-                  Về trang chủ học tập
-                </button>
-              </div>
+              </ViewTransition>
+            )
+          )}
+          {activeTab === 'qbank' && (
+            isAuthorizedAdminOrTeacher && isQbankEnabled ? (
+              <ViewTransition tabKey="qbank">
+                <QBankAdmin />
+              </ViewTransition>
+            ) : (
+              <ViewTransition tabKey="qbank-denied">
+                <div className="max-w-md mx-auto my-16 p-8 rounded-3xl bg-[var(--color-surface)] border border-rose-500/30 text-center space-y-4 shadow-xl">
+                  <div className="w-16 h-16 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto text-2xl">
+                    🛡️
+                  </div>
+                  <h2 className="text-xl font-bold text-[var(--color-text-primary)] font-serif">Quyền Truy Cập Bị Giới Hạn</h2>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                    {!isQbankEnabled
+                      ? 'Cổng Quản trị QBank hiện đang tắt trên hệ thống máy chủ nội bộ hoặc môi trường production.'
+                      : `Khu vực Quản trị QBank chỉ dành riêng cho Giáo viên và Ban Quản trị Minnese. Tài khoản học viên của bạn (${userProfile.email}) không có quyền truy cập trang này.`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('dashboard')}
+                    className="px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white font-bold text-sm shadow-md hover:bg-[var(--color-primary-dark)] transition-all cursor-pointer"
+                  >
+                    Về trang chủ học tập
+                  </button>
+                </div>
+              </ViewTransition>
             )
           )}
         </Suspense>
@@ -624,7 +1024,7 @@ export default function App() {
           <button
             type="button"
             onClick={handleOpenVoiceCall}
-            className="group relative flex items-center justify-center w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 hover:from-emerald-500 hover:to-cyan-400 text-white shadow-xl shadow-teal-500/25 border border-white/20 active:scale-95 transition-all cursor-pointer"
+            className="silk-btn group relative flex items-center justify-center w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 hover:from-emerald-500 hover:to-cyan-400 text-white shadow-silk-hover border border-white/20 active:scale-95 transition-all cursor-pointer"
             title="Gọi thoại trực tiếp 2 chiều luyện nói AI (Live Voice Call)"
             id="floating-live-voice-call-btn"
           >
@@ -637,16 +1037,16 @@ export default function App() {
 
       {/* Sleek Mobile Bottom Navigation Bar (< 768px) */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-md border-t border-[var(--color-border)] px-2 py-1.5 flex items-center justify-around"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 silk-glass border-t border-[var(--color-border)]/70 px-1 py-1 flex items-stretch justify-around shadow-lg"
         id="mobile-bottom-nav"
+        aria-label="Điều hướng chính"
       >
         {[
           { id: 'dashboard' as NavTab, label: 'Tổng quan', icon: LayoutDashboard },
           { id: 'coursebook' as NavTab, label: 'Giáo trình', icon: GraduationCap },
-          { id: 'flashcards' as NavTab, label: 'Flashcards', icon: Layers },
-          { id: 'dictionary' as NavTab, label: 'Từ điển', icon: BookOpen },
-          { id: 'tutor' as NavTab, label: 'Gia sư AI', icon: Bot },
           { id: 'quizzes' as NavTab, label: 'Luyện tập', icon: HelpCircle },
+          { id: 'tutor' as NavTab, label: 'Gia sư AI', icon: Bot },
+          { id: 'dictionary' as NavTab, label: 'Từ điển', icon: BookOpen },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -655,14 +1055,26 @@ export default function App() {
               key={item.id}
               type="button"
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all cursor-pointer ${
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              className={`silk-btn relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 min-w-[52px] min-h-[48px] rounded-xl transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? 'text-[var(--color-primary)] font-bold'
+                  ? 'text-[var(--color-primary)]'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : ''}`} />
-              <span className="text-[10px] leading-none whitespace-nowrap">{item.label}</span>
+              {/* Active background pill */}
+              {isActive && (
+                <span className="nav-active-dot absolute inset-x-1 top-0.5 h-0.5 rounded-full bg-[var(--color-primary)]" />
+              )}
+              <Icon
+                className={`w-[18px] h-[18px] transition-transform duration-200 ${
+                  isActive ? 'stroke-[2.5] scale-110' : 'scale-100'
+                }`}
+              />
+              <span className={`text-[10px] leading-none whitespace-nowrap font-medium transition-all duration-200 ${isActive ? 'font-bold' : ''}`}>
+                {item.label}
+              </span>
             </button>
           );
         })}

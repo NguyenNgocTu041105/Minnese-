@@ -93,20 +93,33 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
     texts: [
       {
         id: "hsk1-l1-t1",
-        title: "课文 1 (Bài khóa 1)",
-        context: "在教室里，两个朋友互相打招呼。(Trong lớp học, hai người bạn chào nhau).",
+        title: "课文 1: 在办公室 (Trong văn phòng)",
+        context: "开学第一天，在办公室里，王一飞和AI助教小语打招呼。(Trong văn phòng, cô giáo Vương Nhất Phi chào trợ lý AI Tiểu Ngữ: 'AI小语，你好！')",
         lines: [
-          { speaker: "A", hanzi: "你好！", pinyin: "Nǐ hǎo!", vietnamese: "Chào bạn!" },
-          { speaker: "B", hanzi: "你好！", pinyin: "Nǐ hǎo!", vietnamese: "Chào bạn!" }
+          { speaker: "王一飞 (Cô Vương Nhất Phi)", avatar: "👩‍🏫", hanzi: "AI小语，你好！", pinyin: "AI Xiǎoyǔ, nǐ hǎo!", vietnamese: "Chào trợ lý AI Tiểu Ngữ!" },
+          { speaker: "小语 (Trợ lý AI Tiểu Ngữ)", avatar: "🤖", hanzi: "王老师，你好！", pinyin: "Wáng lǎoshī, nǐ hǎo!", vietnamese: "Chào cô giáo Vương ạ!" }
         ]
       },
       {
         id: "hsk1-l1-t2",
-        title: "课文 2 (Bài khóa 2)",
-        context: "在办公室，学生向老师问好。(Trong văn phòng, học sinh chào cô giáo).",
+        title: "课文 2: 在课堂上 (Trong lớp học)",
+        context: "开学第一天，课堂上，学生们学习打招呼用语。(Trong lớp học, các bạn học sinh học cách chào hỏi).",
         lines: [
-          { speaker: "学生 (Học sinh)", hanzi: "老师，您好！", pinyin: "Lǎoshī, nín hǎo!", vietnamese: "Chúng em kính chào cô giáo ạ!" },
-          { speaker: "老师 (Cô giáo)", hanzi: "你们好！", pinyin: "Nǐmen hǎo!", vietnamese: "Chào các em!" }
+          { speaker: "王一飞 (Cô Vương Nhất Phi)", avatar: "👩‍🏫", hanzi: "大家好！", pinyin: "Dàjiā hǎo!", vietnamese: "Chào cả lớp!" },
+          { speaker: "学生们 (Các bạn học sinh)", avatar: "👨‍🎓", hanzi: "老师，您好！", pinyin: "Lǎoshī, nín hǎo!", vietnamese: "Chúng em kính chào cô giáo ạ!" },
+          { speaker: "小语 (Trợ lý AI Tiểu Ngữ)", avatar: "🤖", hanzi: "你们好！", pinyin: "Nǐmen hǎo!", vietnamese: "Chào các bạn!" },
+          { speaker: "学生们 (Các bạn học sinh)", avatar: "👨‍🎓", hanzi: "你好，小语！", pinyin: "Nǐ hǎo, Xiǎoyǔ!", vietnamese: "Chào bạn Tiểu Ngữ!" }
+        ]
+      },
+      {
+        id: "hsk1-l1-t3",
+        title: "课文 3: 课堂致谢与告别 (Cảm ơn và Tạm biệt)",
+        context: "开学第一天，课堂上，学生们学习致谢语、告别语。(Cuối buổi học, học sinh nói lời cảm ơn và chào tạm biệt).",
+        lines: [
+          { speaker: "学生们 (Các bạn học sinh)", avatar: "👨‍🎓", hanzi: "谢谢！", pinyin: "Xièxie!", vietnamese: "Cảm ơn ạ!" },
+          { speaker: "小语 (Trợ lý AI Tiểu Ngữ)", avatar: "🤖", hanzi: "不客气！", pinyin: "Bú kèqi!", vietnamese: "Không có chi!" },
+          { speaker: "王一飞 (Cô Vương Nhất Phi)", avatar: "👩‍🏫", hanzi: "同学们，再见！", pinyin: "Tóngxuémen, zàijiàn!", vietnamese: "Tạm biệt các em!" },
+          { speaker: "学生们 (Các bạn học sinh)", avatar: "👨‍🎓", hanzi: "老师，再见！", pinyin: "Lǎoshī, zàijiàn!", vietnamese: "Chúng em chào cô ạ!" }
         ]
       }
     ],
@@ -220,9 +233,9 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
   // LESSON 2
   {
     lessonNumber: 2,
-    titleHanzi: "谢谢你",
-    titlePinyin: "Xièxie nǐ",
-    titleVietnamese: "Cảm ơn bạn",
+    titleHanzi: "我叫李文",
+    titlePinyin: "Wǒ jiào Lǐ Wén",
+    titleVietnamese: "Tên tôi là Lý Văn",
     pageStart: 8,
     objectives: [
       "Học cách cảm ơn (谢谢) và đáp lại lời cảm ơn (不客气).",
@@ -232,20 +245,33 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
     texts: [
       {
         id: "hsk1-l2-t1",
-        title: "课文 1 (Bài khóa 1)",
-        context: "朋友给你倒茶。(Bạn rót trà cho bạn).",
+        title: "课文 1: 在教室里 (Trong lớp học)",
+        context: "在教室里，王一飞在认识学生。(Trong lớp học, cô Vương Nhất Phi làm quen và hỏi tên học sinh).",
         lines: [
-          { speaker: "A", hanzi: "谢谢你！", pinyin: "Xièxie nǐ!", vietnamese: "Cảm ơn bạn!" },
-          { speaker: "B", hanzi: "不客气！", pinyin: "Bú kèqi!", vietnamese: "Không có gì đâu!" }
+          { speaker: "王一飞 (Cô Vương Nhất Phi)", avatar: "👩‍🏫", hanzi: "请问，你叫什么名字？", pinyin: "Qǐngwèn, nǐ jiào shénme míngzi?", vietnamese: "Xin hỏi, em tên là gì?" },
+          { speaker: "陈天中 (Trần Thiên Trung)", avatar: "👨‍🎓", hanzi: "我叫陈天中。", pinyin: "Wǒ jiào Chén Tiānzhōng.", vietnamese: "Em tên là Trần Thiên Trung ạ." }
         ]
       },
       {
         id: "hsk1-l2-t2",
-        title: "课文 2 (Bài khóa 2)",
-        context: "在路上不小心撞到人。(Vô tình va vào người khác trên đường).",
+        title: "课文 2: 在校园里 (Trên sân trường)",
+        context: "在校园里，陈天中和白家月打招呼时认错了人。(Trên sân trường, Trần Thiên Trung chào nhầm Bạch Gia Nguyệt thành Annie).",
         lines: [
-          { speaker: "A", hanzi: "对不起！", pinyin: "Duìbuqǐ!", vietnamese: "Xin lỗi bạn!" },
-          { speaker: "B", hanzi: "没关系！", pinyin: "Méi guānxi!", vietnamese: "Không sao đâu!" }
+          { speaker: "陈天中 (Trần Thiên Trung)", avatar: "👨‍🎓", hanzi: "你好，安妮！", pinyin: "Nǐ hǎo, Ānnī!", vietnamese: "Chào Annie!" },
+          { speaker: "白家月 (Bạch Gia Nguyệt)", avatar: "👩", hanzi: "你好，陈天中！我不是安妮，我是白家月。", pinyin: "Nǐ hǎo, Chén Tiānzhōng! Wǒ bú shì Ānnī, wǒ shì Bái Jiāyuè.", vietnamese: "Chào Trần Thiên Trung! Mình không phải Annie, mình là Bạch Gia Nguyệt." },
+          { speaker: "陈天中 (Trần Thiên Trung)", avatar: "👨‍🎓", hanzi: "对不起！", pinyin: "Duìbuqǐ!", vietnamese: "Xin lỗi bạn nhé!" },
+          { speaker: "白家月 (Bạch Gia Nguyệt)", avatar: "👩", hanzi: "没关系！", pinyin: "Méi guānxi!", vietnamese: "Không sao đâu!" }
+        ]
+      },
+      {
+        id: "hsk1-l2-t3",
+        title: "课文 3: 初次相遇 (Lần đầu gặp mặt)",
+        context: "在校园里，李文和白家月第一次相遇。(Trên sân trường, Lý Văn và Bạch Gia Nguyệt lần đầu gặp nhau).",
+        lines: [
+          { speaker: "李文 (Lý Văn)", avatar: "👨‍🎓", hanzi: "你好！我叫李文。", pinyin: "Nǐ hǎo! Wǒ jiào Lǐ Wén.", vietnamese: "Chào bạn! Tôi tên là Lý Văn." },
+          { speaker: "白家月 (Bạch Gia Nguyệt)", avatar: "👩", hanzi: "你好！我叫白家月。", pinyin: "Nǐ hǎo! Wǒ jiào Bái Jiāyuè.", vietnamese: "Chào bạn! Tôi tên là Bạch Gia Nguyệt." },
+          { speaker: "李文 (Lý Văn)", avatar: "👨‍🎓", hanzi: "很高兴认识你。", pinyin: "Hěn gāoxìng rènshi nǐ.", vietnamese: "Rất vui được làm quen với bạn." },
+          { speaker: "白家月 (Bạch Gia Nguyệt)", avatar: "👩", hanzi: "认识你我也很高兴。", pinyin: "Rènshi nǐ wǒ yě hěn gāoxìng.", vietnamese: "Tôi cũng rất vui được làm quen với bạn." }
         ]
       }
     ],
@@ -333,218 +359,351 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
     ]
   },
 
-  // LESSON 3
+// LESSON 3
   {
     lessonNumber: 3,
-    titleHanzi: "你叫什么名字",
-    titlePinyin: "Nǐ jiào shénme míngzi",
-    titleVietnamese: "Bạn tên là gì?",
-    pageStart: 15,
+    titleHanzi: "我是中国人",
+    titlePinyin: "Wǒ shì Zhōngguó rén",
+    titleVietnamese: "Tôi là người Trung Quốc",
+    pageStart: 10,
     objectives: [
-      "Hỏi và giới thiệu tên tuổi, quốc tịch.",
-      "Dùng đại từ nghi vấn '什么' (gì, cái gì).",
-      "Dùng câu vị ngữ động từ với '叫' và '是'."
+      "能听懂并使用“是”字句表达等同或类属。(Biết nghe hiểu và sử dụng câu chữ '是' để biểu đạt quan hệ bằng nhau hoặc thuộc chủng loại).",
+      "掌握结构助词“的”的用法。(Nắm vững cách dùng trợ từ kết cấu '的' biểu thị quan hệ sở hữu).",
+      "掌握用“吗”的是非问句的用法。(Nắm vững câu hỏi đúng - sai dùng trợ từ ngữ khí '吗')."
     ],
     texts: [
       {
         id: "hsk1-l3-t1",
-        title: "课文 1 (Bài khóa 1)",
-        context: "在学校，两个新同学初次见面。(Ở trường, hai bạn học mới lần đầu gặp mặt).",
+        title: "课文 1: 在校园里 (Bài khóa 1: Trên sân trường)",
+        context: "在校园里，李文和白家月第一次相遇，两人继续聊天儿。(Trên sân trường, Lý Văn và Bạch Gia Nguyệt lần đầu gặp nhau, hai người tiếp tục trò chuyện).",
         lines: [
-          { speaker: "李月 (Li Yue)", hanzi: "你叫什么名字？", pinyin: "Nǐ jiào shénme míngzi?", vietnamese: "Bạn tên là gì?" },
-          { speaker: "大卫 (David)", hanzi: "我叫大卫。", pinyin: "Wǒ jiào Dàwèi.", vietnamese: "Tôi tên là David." }
+          { speaker: "李文", hanzi: "我是中国人。", pinyin: "Wǒ shì Zhōngguó rén.", vietnamese: "Tôi là người Trung Quốc." },
+          { speaker: "白家月", hanzi: "我是法国人。我的中文老师也是中国人。", pinyin: "Wǒ shì Fǎguó rén. Wǒ de Zhōngwén lǎoshī yě shì Zhōngguó rén.", vietnamese: "Tôi là người Pháp. Giáo viên tiếng Trung của tôi cũng là người Trung Quốc." }
         ]
       },
       {
         id: "hsk1-l3-t2",
-        title: "课文 2 (Bài khóa 2)",
-        context: "谈论老师。(Trò chuyện về giáo viên).",
+        title: "课文 2: 在教室里 (Bài khóa 2: Trong lớp học)",
+        context: "在教室里，下课后，安妮在看陈天中手机里的照片。(Trong lớp học, sau giờ học, Annie xem ảnh trên điện thoại của Trần Thiên Trung).",
         lines: [
-          { speaker: "大卫 (David)", hanzi: "她是老师吗？", pinyin: "Tā shì lǎoshī ma?", vietnamese: "Cô ấy là giáo viên phải không?" },
-          { speaker: "李月 (Li Yue)", hanzi: "她不是老师，她是学生。", pinyin: "Tā bú shì lǎoshī, tā shì xuésheng.", vietnamese: "Cô ấy không phải là giáo viên, cô ấy là học sinh." }
+          { speaker: "安妮", hanzi: "这是谁？", pinyin: "Zhè shì shéi?", vietnamese: "Đây là ai?" },
+          { speaker: "陈天中", hanzi: "这是我女朋友。", pinyin: "Zhè shì wǒ nǚpéngyou.", vietnamese: "Đây là bạn gái của tôi." },
+          { speaker: "安妮", hanzi: "你女朋友是哪国人？", pinyin: "Nǐ nǚpéngyou shì nǎ guó rén?", vietnamese: "Bạn gái của bạn là người nước nào?" },
+          { speaker: "陈天中", hanzi: "她也是泰国人。", pinyin: "Tā yě shì Tàiguó rén.", vietnamese: "Cô ấy cũng là người Thái Lan." }
         ]
       },
       {
         id: "hsk1-l3-t3",
-        title: "课文 3 (Bài khóa 3)",
-        context: "问国籍。(Hỏi về quốc tịch).",
+        title: "课文 3: 在家里 (Bài khóa 3: Ở nhà)",
+        context: "在家里，王一雪给王一飞打视频电话。(Ở nhà, Vương Nhất Tuyết gọi điện thoại video cho cô giáo Vương Nhất Phi).",
         lines: [
-          { speaker: "李月 (Li Yue)", hanzi: "你是中国人吗？", pinyin: "Nǐ shì Zhōngguó rén ma?", vietnamese: "Bạn là người Trung Quốc à?" },
-          { speaker: "大卫 (David)", hanzi: "我不是中国人，我是美国人。", pinyin: "Wǒ bú shì Zhōngguó rén, wǒ shì Měiguó rén.", vietnamese: "Tôi không phải người Trung Quốc, tôi là người Mỹ." }
+          { speaker: "王一雪", hanzi: "喂，一飞！", pinyin: "Wèi, Yīfēi!", vietnamese: "A lô, Nhất Phi à!" },
+          { speaker: "王一飞", hanzi: "姐姐！", pinyin: "Jiějie!", vietnamese: "Chị gái!" },
+          { speaker: "王一雪", hanzi: "你工作还忙吗？", pinyin: "Nǐ gōngzuò hái máng ma?", vietnamese: "Công việc của em còn bận không?" },
+          { speaker: "王一飞", hanzi: "对，还很忙。你也很忙吗？", pinyin: "Duì, hái hěn máng. Nǐ yě hěn máng ma?", vietnamese: "Vâng, vẫn bận lắm ạ. Chị cũng bận lắm ạ?" },
+          { speaker: "王一雪", hanzi: "我不太忙。我们很想你。", pinyin: "Wǒ bú tài máng. Wǒmen hěn xiǎng nǐ.", vietnamese: "Chị không bận lắm. Cả nhà nhớ em lắm đấy." },
+          { speaker: "王一飞", hanzi: "我也很想你们。", pinyin: "Wǒ yě hěn xiǎng nǐmen.", vietnamese: "Em cũng rất nhớ mọi người ạ." }
         ]
       }
     ],
     grammarPoints: [
       {
         id: "hsk1-l3-g1",
-        title: "1. Đại từ nghi vấn '什么' (Cái gì)",
-        explanation: "'什么' dùng để hỏi sự vật, đồ vật, tên gọi. Cấu trúc: Động từ + 什么 (+ Danh từ)?",
+        title: "1. “是”字句 (Cấu trúc câu chữ '是')",
+        explanation: "Biểu thị người hoặc sự vật đồng nhất với cái gì hoặc thuộc về chủng loại gì. Dạng khẳng định: A 是 B (Ví dụ: 我是法国人 / 她是中文老师). Dạng phủ định: A 不是 B (Ví dụ: 我老师不是法国人).",
         examples: [
-          { hanzi: "你叫什么名字？", pinyin: "Nǐ jiào shénme míngzi?", vietnamese: "Bạn tên là gì?" },
-          { hanzi: "这是什么？", pinyin: "Zhè shì shénme?", vietnamese: "Đây là cái gì?" }
+          { hanzi: "我是法国人。", pinyin: "Wǒ shì Fǎguó rén.", vietnamese: "Tôi là người Pháp." },
+          { hanzi: "她是中文老师。", pinyin: "Tā shì Zhōngwén lǎoshī.", vietnamese: "Cô ấy là giáo viên tiếng Trung." },
+          { hanzi: "我老师不是法国人。", pinyin: "Wǒ lǎoshī bú shì Fǎguó rén.", vietnamese: "Thầy giáo của tôi không phải là người Pháp." }
         ]
       },
       {
         id: "hsk1-l3-g2",
-        title: "2. Câu chữ '是' (Là) và câu hỏi '吗'",
-        explanation: "Cấu trúc khẳng định: A + 是 + B. Phủ định: A + 不是 + B. Nghi vấn: A + 是 + B + 吗?",
+        title: "2. 结构助词“的” (Trợ từ kết cấu '的')",
+        explanation: "Đặt giữa định ngữ và trung tâm ngữ biểu thị quan hệ sở hữu. Cấu trúc: Định ngữ + 的 + Trung tâm ngữ. Lưu ý: Khi định ngữ là đại từ nhân xưng và trung tâm ngữ chỉ quan hệ thân tộc hoặc người thân thiết, chữ '的' thường có thể lược bỏ (ví dụ: 我老师, 我妈妈, 我女朋友).",
         examples: [
-          { hanzi: "我是学生。", pinyin: "Wǒ shì xuésheng.", vietnamese: "Tôi là học sinh." },
-          { hanzi: "你是中国人吗？", pinyin: "Nǐ shì Zhōngguó rén ma?", vietnamese: "Bạn là người Trung Quốc à?" }
+          { hanzi: "白家月的中文老师", pinyin: "Bái Jiāyuè de Zhōngwén lǎoshī.", vietnamese: "Giáo viên tiếng Trung của Bạch Gia Nguyệt." },
+          { hanzi: "这是我女朋友。", pinyin: "Zhè shì wǒ nǚpéngyou.", vietnamese: "Đây là bạn gái của tôi (lược bỏ '的')." },
+          { hanzi: "我妈妈也是中国人。", pinyin: "Wǒ māma yě shì Zhōngguó rén.", vietnamese: "Mẹ tôi cũng là người Trung Quốc (lược bỏ '的')." }
+        ]
+      },
+      {
+        id: "hsk1-l3-g3",
+        title: "3. 用“吗”的是非问句 (Câu hỏi đúng - sai dùng '吗')",
+        explanation: "Trợ từ ngữ khí '吗' đặt ở cuối câu trần thuật để biến câu đó thành câu nghi vấn đúng-sai. Trả lời khẳng định thường dùng động từ/tính từ chính hoặc '对' / '是', phủ định dùng '不'.",
+        examples: [
+          { hanzi: "你工作还忙吗？", pinyin: "Nǐ gōngzuò hái máng ma?", vietnamese: "Công việc của bạn còn bận không?" },
+          { hanzi: "你也很忙吗？", pinyin: "Nǐ yě hěn máng ma?", vietnamese: "Bạn cũng rất bận à?" },
+          { hanzi: "他是中国人吗？", pinyin: "Tā shì Zhōngguó rén ma?", vietnamese: "Anh ấy là người Trung Quốc phải không?" }
         ]
       }
     ],
     vocabulary: [
-      { id: "hsk1-l3-w1", hanzi: "叫", pinyin: "jiào", hanViet: "khiếu", vietnamese: "gọi là, tên là", hskLevel: 1, radical: "口", strokeCount: 5, example: "我叫李月。", exampleTranslation: "Tôi tên là Lý Nguyệt.", tags: ["Bài 3", "Động từ"] },
-      { id: "hsk1-l3-w2", hanzi: "什么", pinyin: "shénme", hanViet: "thập ma", vietnamese: "gì, cái gì", hskLevel: 1, radical: "亻", strokeCount: 7, example: "这是什么书？", exampleTranslation: "Đây là sách gì?", tags: ["Bài 3", "Đại từ nghi vấn"] },
-      { id: "hsk1-l3-w3", hanzi: "名字", pinyin: "míngzi", hanViet: "danh tự", vietnamese: "tên", hskLevel: 1, radical: "夕", strokeCount: 12, example: "我的名字叫大卫。", exampleTranslation: "Tên của tôi là David.", tags: ["Bài 3", "Danh từ"] },
-      { id: "hsk1-l3-w4", hanzi: "我", pinyin: "wǒ", hanViet: "ngã", vietnamese: "tôi, mình", hskLevel: 1, radical: "戈", strokeCount: 7, example: "我是中国人。", exampleTranslation: "Tôi là người Trung Quốc.", tags: ["Bài 3", "Đại từ"] },
-      { id: "hsk1-l3-w5", hanzi: "是", pinyin: "shì", hanViet: "thị", vietnamese: "là (động từ)", hskLevel: 1, radical: "日", strokeCount: 9, example: "他是老师。", exampleTranslation: "Anh ấy là giáo viên.", tags: ["Bài 3", "Động từ"] },
-      { id: "hsk1-l3-w6", hanzi: "老师", pinyin: "lǎoshī", hanViet: "lão sư", vietnamese: "thầy giáo, cô giáo", hskLevel: 1, radical: "耂", strokeCount: 16, example: "王老师很好。", exampleTranslation: "Cô giáo Vương rất tốt.", tags: ["Bài 3", "Danh từ"] },
-      { id: "hsk1-l3-w7", hanzi: "学生", pinyin: "xuésheng", hanViet: "học sinh", vietnamese: "học sinh, sinh viên", hskLevel: 1, radical: "子", strokeCount: 13, example: "我们都是学生。", exampleTranslation: "Chúng tôi đều là học sinh.", tags: ["Bài 3", "Danh từ"] },
-      { id: "hsk1-l3-w8", hanzi: "人", pinyin: "rén", hanViet: "nhân", vietnamese: "người", hskLevel: 1, radical: "人", strokeCount: 2, example: "中国人 / 越南人", exampleTranslation: "Người Trung Quốc / Người Việt Nam", tags: ["Bài 3", "Danh từ"] },
-      { id: "hsk1-l3-w9", hanzi: "中国", pinyin: "Zhōngguó", hanViet: "Trung Quốc", vietnamese: "nước Trung Quốc", hskLevel: 1, radical: "丨", strokeCount: 12, example: "我去中国。", exampleTranslation: "Tôi đi Trung Quốc.", tags: ["Bài 3", "Địa danh"] },
-      { id: "hsk1-l3-w10", hanzi: "美国", pinyin: "Měiguó", hanViet: "Mỹ Quốc", vietnamese: "nước Mỹ", hskLevel: 1, radical: "八", strokeCount: 17, example: "美国人", exampleTranslation: "người Mỹ", tags: ["Bài 3", "Địa danh"] }
+      { id: "hsk1-l3-w1", hanzi: "人", pinyin: "rén", hanViet: "nhân", vietnamese: "người", hskLevel: 1, radical: "人", strokeCount: 2, example: "中国人", exampleTranslation: "người Trung Quốc", tags: ["Bài 3", "Danh từ"] },
+      { id: "hsk1-l3-w2", hanzi: "的", pinyin: "de", hanViet: "đích", vietnamese: "của (trợ từ sở hữu)", hskLevel: 1, radical: "白", strokeCount: 8, example: "我的老师", exampleTranslation: "thầy giáo của tôi", tags: ["Bài 3", "Trợ từ"] },
+      { id: "hsk1-l3-w3", hanzi: "这", pinyin: "zhè", hanViet: "giá", vietnamese: "đây, này", hskLevel: 1, radical: "辶", strokeCount: 7, example: "这是谁？", exampleTranslation: "Đây là ai?", tags: ["Bài 3", "Đại từ chỉ thị"] },
+      { id: "hsk1-l3-w4", hanzi: "谁", pinyin: "shéi / shuí", hanViet: "thùy", vietnamese: "ai", hskLevel: 1, radical: "讠", strokeCount: 10, example: "他是谁？", exampleTranslation: "Anh ấy là ai?", tags: ["Bài 3", "Đại từ nghi vấn"] },
+      { id: "hsk1-l3-w5", hanzi: "女朋友", pinyin: "nǚpéngyou", hanViet: "nữ bằng hữu", vietnamese: "bạn gái", hskLevel: 1, radical: "女", strokeCount: 15, example: "我女朋友", exampleTranslation: "bạn gái tôi", tags: ["Bài 3", "Danh từ"] },
+      { id: "hsk1-l3-w6", hanzi: "哪", pinyin: "nǎ", hanViet: "na", vietnamese: "nào", hskLevel: 1, radical: "口", strokeCount: 9, example: "哪国人？", exampleTranslation: "người nước nào?", tags: ["Bài 3", "Đại từ nghi vấn"] },
+      { id: "hsk1-l3-w7", hanzi: "国", pinyin: "guó", hanViet: "quốc", vietnamese: "nước, quốc gia", hskLevel: 1, radical: "囗", strokeCount: 8, example: "中国", exampleTranslation: "Trung Quốc", tags: ["Bài 3", "Danh từ"] },
+      { id: "hsk1-l3-w8", hanzi: "她", pinyin: "tā", hanViet: "tha", vietnamese: "cô ấy, bà ấy", hskLevel: 1, radical: "女", strokeCount: 6, example: "她也是泰国人。", exampleTranslation: "Cô ấy cũng là người Thái Lan.", tags: ["Bài 3", "Đại từ"] },
+      { id: "hsk1-l3-w9", hanzi: "喂", pinyin: "wèi", hanViet: "ủy", vietnamese: "a lô, này", hskLevel: 1, radical: "口", strokeCount: 12, example: "喂，一飞！", exampleTranslation: "A lô, Nhất Phi à!", tags: ["Bài 3", "Thán từ"] },
+      { id: "hsk1-l3-w10", hanzi: "姐姐", pinyin: "jiějie", hanViet: "tỷ tỷ", vietnamese: "chị gái", hskLevel: 1, radical: "女", strokeCount: 8, example: "我姐姐", exampleTranslation: "chị gái tôi", tags: ["Bài 3", "Danh từ"] },
+      { id: "hsk1-l3-w11", hanzi: "工作", pinyin: "gōngzuò", hanViet: "công tác", vietnamese: "công việc, làm việc", hskLevel: 1, radical: "亻", strokeCount: 7, example: "你工作忙吗？", exampleTranslation: "Công việc của bạn có bận không?", tags: ["Bài 3", "Danh từ", "Động từ"] },
+      { id: "hsk1-l3-w12", hanzi: "还", pinyin: "hái", hanViet: "hoàn", vietnamese: "vẫn, còn", hskLevel: 1, radical: "辶", strokeCount: 7, example: "还很忙", exampleTranslation: "vẫn rất bận", tags: ["Bài 3", "Phó từ"] },
+      { id: "hsk1-l3-w13", hanzi: "忙", pinyin: "máng", hanViet: "mang", vietnamese: "bận", hskLevel: 1, radical: "忄", strokeCount: 6, example: "很忙", exampleTranslation: "rất bận", tags: ["Bài 3", "Tính từ"] },
+      { id: "hsk1-l3-w14", hanzi: "吗", pinyin: "ma", hanViet: "ma", vietnamese: "không, hả (hỏi)", hskLevel: 1, radical: "口", strokeCount: 6, example: "忙吗？", exampleTranslation: "Bận không?", tags: ["Bài 3", "Trợ từ"] },
+      { id: "hsk1-l3-w15", hanzi: "对", pinyin: "duì", hanViet: "đối", vietnamese: "đúng, vâng", hskLevel: 1, radical: "寸", strokeCount: 5, example: "对，还很忙。", exampleTranslation: "Đúng, vẫn bận lắm.", tags: ["Bài 3", "Tính từ"] },
+      { id: "hsk1-l3-w16", hanzi: "太", pinyin: "tài", hanViet: "thái", vietnamese: "quá, lắm", hskLevel: 1, radical: "大", strokeCount: 4, example: "不太忙", exampleTranslation: "không bận lắm", tags: ["Bài 3", "Phó từ"] },
+      { id: "hsk1-l3-w17", hanzi: "我们", pinyin: "wǒmen", hanViet: "ngã môn", vietnamese: "chúng tôi, chúng ta", hskLevel: 1, radical: "亻", strokeCount: 12, example: "我们很想你。", exampleTranslation: "Chúng tôi rất nhớ bạn.", tags: ["Bài 3", "Đại từ"] },
+      { id: "hsk1-l3-w18", hanzi: "想", pinyin: "xiǎng", hanViet: "tưởng", vietnamese: "nhớ, muốn, nghĩ", hskLevel: 1, radical: "心", strokeCount: 13, example: "很想你", exampleTranslation: "rất nhớ bạn", tags: ["Bài 3", "Động từ"] },
+      { id: "hsk1-l3-w19", hanzi: "中国", pinyin: "Zhōngguó", hanViet: "Trung Quốc", vietnamese: "Trung Quốc", hskLevel: 1, radical: "囗", strokeCount: 12, example: "中国人", exampleTranslation: "người Trung Quốc", tags: ["Bài 3", "Địa danh"] },
+      { id: "hsk1-l3-w20", hanzi: "法国", pinyin: "Fǎguó", hanViet: "Pháp Quốc", vietnamese: "Nước Pháp", hskLevel: 1, radical: "氵", strokeCount: 16, example: "法国人", exampleTranslation: "người Pháp", tags: ["Bài 3", "Địa danh"] },
+      { id: "hsk1-l3-w21", hanzi: "中文", pinyin: "Zhōngwén", hanViet: "Trung Văn", vietnamese: "Tiếng Trung", hskLevel: 1, radical: "文", strokeCount: 8, example: "中文老师", exampleTranslation: "giáo viên tiếng Trung", tags: ["Bài 3", "Ngôn ngữ"] },
+      { id: "hsk1-l3-w22", hanzi: "泰国", pinyin: "Tàiguó", hanViet: "Thái Quốc", vietnamese: "Thái Lan", hskLevel: 1, radical: "艹", strokeCount: 17, example: "泰国人", exampleTranslation: "người Thái Lan", tags: ["Bài 3", "Địa danh"] }
     ],
     exercises: [
       {
         id: "hsk1-l3-ex1",
-        type: "multiple_choice",
-        question: "Chọn câu tiếng Trung chính xác cho: 'Tôi không phải là người Mỹ, tôi là người Việt Nam.'",
-        hanziPrompt: "我不是美国人，我是越南人。",
-        pinyinPrompt: "Wǒ bú shì Měiguó rén, wǒ shì Yuènán rén.",
-        options: [
-          "A. 我不是美国人，我是越南人。",
-          "B. 我是美国人，我不是越南人。",
-          "C. 我不叫美国人，我叫越南人。",
-          "D. 他不是美国人，他是越南人。"
-        ],
-        correctAnswer: "A. 我不是美国人，我是越南人。",
-        explanation: "Phủ định của 是 là 不是 (bú shì). Cấu trúc: [Chủ ngữ] + 不是 + [Danh từ], [Chủ ngữ] + 是 + [Danh từ].",
-        grammarFocus: "Cấu trúc phủ định với 不是",
-        audioText: "我不是美国人，我是越南人。"
+        type: "fill_blank",
+        question: "Điền phó từ thích hợp vào chỗ trống: '我是法国人。我的中文老师 ______ 是中国人。'",
+        hanziPrompt: "我是法国人。我的中文老师 ______ 是中国人。",
+        pinyinPrompt: "Wǒ shì Fǎguó rén. Wǒ de Zhōngwén lǎoshī ______ shì Zhōngguó rén.",
+        vietnamesePrompt: "Tôi là người Pháp. Giáo viên tiếng Trung của tôi ______ là người Trung Quốc.",
+        options: ["A. 也", "B. 都", "C. 吗", "D. 不"],
+        correctAnswer: "A. 也",
+        explanation: "Phó từ '也' (cũng) biểu thị sự tương đồng, đứng trước động từ '是'.",
+        grammarFocus: "Phó từ biểu thị tương đồng 也",
+        audioText: "我是法国人。我的中文老师也是中国人。"
       },
       {
         id: "hsk1-l3-ex2",
-        type: "sentence_scramble",
-        question: "Sắp xếp các từ sau thành câu hỏi tên người khác:",
-        hanziPrompt: "[ 你 / 叫 / 什么 / 名字 / ？ ]",
-        vietnamesePrompt: "Bạn tên là gì?",
-        scrambleSegments: ["你", "叫", "什么", "名字", "？"],
+        type: "dialogue_match",
+        question: "Chọn câu trả lời thích hợp cho câu hỏi: '这是谁？'",
+        hanziPrompt: "A: 这是谁？ — B: ______",
+        pinyinPrompt: "A: Zhè shì shéi? — B: ______",
+        vietnamesePrompt: "A: Đây là ai? — B: Đây là bạn gái của tôi.",
         options: [
-          "你叫什么名字？",
-          "什么名字你叫？",
-          "你名字叫什么？",
-          "名字叫你什么？"
+          "这是我女朋友。",
+          "她也是泰国人。",
+          "我是中国人。",
+          "我不太忙。"
         ],
-        correctAnswer: "你叫什么名字？",
-        explanation: "Cấu trúc hỏi tên: [Chủ ngữ] + 叫 (tên là/gọi là) + 什么 + 名字 (tên gì).",
-        grammarFocus: "Đại từ nghi vấn 什么",
-        audioText: "你叫什么名字？"
+        correctAnswer: "这是我女朋友。",
+        explanation: "Câu hỏi đại từ chỉ người '这是谁？' (Đây là ai?) trả lời bằng câu giới thiệu người: '这是我女朋友。'",
+        grammarFocus: "Đại từ nghi vấn 谁",
+        audioText: "这是我女朋友。"
       },
       {
         id: "hsk1-l3-ex3",
-        type: "fill_blank",
-        question: "Điền từ thích hợp vào chỗ trống để hỏi quốc tịch: 你是______人？",
-        hanziPrompt: "你是______国人？",
-        pinyinPrompt: "Nǐ shì ______ guó rén?",
-        vietnamesePrompt: "Bạn là người nước nào?",
-        options: ["哪", "什么", "谁", "吗"],
-        correctAnswer: "哪",
-        explanation: "Đại từ '哪' (nǎ) kết hợp với lượng từ hoặc danh từ '国' (nước) để hỏi 'nước nào' (哪国人).",
-        grammarFocus: "Đại từ nghi vấn 哪",
-        audioText: "你是哪国人？"
+        type: "sentence_scramble",
+        question: "Sắp xếp các từ sau thành câu hỏi quốc tịch hoàn chỉnh:",
+        hanziPrompt: "[ 你女朋友 / 哪国人 / 是 / ？ ]",
+        vietnamesePrompt: "Bạn gái bạn là người nước nào?",
+        scrambleSegments: ["你女朋友", "是", "哪国人", "？"],
+        options: [
+          "你女朋友是哪国人？",
+          "哪国人是你女朋友？",
+          "你女朋友哪国人是？",
+          "是哪国人你女朋友？"
+        ],
+        correctAnswer: "你女朋友是哪国人？",
+        explanation: "Trật tự câu hỏi chữ 是: Chủ ngữ (你女朋友) + 是 + Đại từ nghi vấn quốc tịch (哪国人) + ？",
+        grammarFocus: "Câu hỏi quốc tịch với 哪国人",
+        audioText: "你女朋友是哪国人？"
       },
       {
         id: "hsk1-l3-ex4",
-        type: "dialogue_match",
-        question: "Chọn câu đáp lại tự nhiên nhất cho câu hỏi: '你是中国人吗？'",
-        hanziPrompt: "A: 你是中国人吗？ — B: ______",
-        pinyinPrompt: "A: Nǐ shì Zhōngguó rén ma? — B: ______",
-        vietnamesePrompt: "A: Bạn là người Trung Quốc à? — B: Tôi không phải, tôi là người Việt Nam.",
+        type: "translation",
+        question: "Dịch sang tiếng Trung: 'Chúng tôi rất nhớ bạn.'",
+        vietnamesePrompt: "Chúng tôi rất nhớ bạn.",
         options: [
-          "我不是中国人，我是越南人。",
-          "我是老师，他是学生。",
-          "我叫李月，你呢？",
-          "不客气，谢谢你。"
+          "我们很想你。",
+          "我很想你们。",
+          "我们不太忙。",
+          "我也很忙。"
         ],
-        correctAnswer: "我不是中国人，我是越南人。",
-        explanation: "Khi hỏi nghi vấn '...吗', câu trả lời phủ định cần xác nhận lại danh tính chính xác.",
-        grammarFocus: "Câu hỏi nghi vấn với trợ từ 吗",
-        audioText: "我不是中国人，我是越南人。"
+        correctAnswer: "我们很想你。",
+        explanation: "Chủ ngữ số nhiều '我们' (chúng tôi) + phó từ '很' + động từ '想' (nhớ) + tân ngữ '你' (bạn).",
+        grammarFocus: "Cấu trúc Chủ ngữ + 很 + Động từ tâm lý + Tân ngữ",
+        audioText: "我们很想你。"
       }
     ]
   },
 
-  // LESSON 4
+// LESSON 4
   {
     lessonNumber: 4,
-    titleHanzi: "她是我的汉语老师",
-    titlePinyin: "Tā shì wǒ de Hànyǔ lǎoshī",
-    titleVietnamese: "Cô ấy là giáo viên tiếng Trung của tôi",
-    pageStart: 22,
+    titleHanzi: "我有两个孩子",
+    titlePinyin: "Wǒ yǒu liǎng gè háizi",
+    titleVietnamese: "Tôi có hai đứa con",
+    pageStart: 18,
     objectives: [
-      "Dùng đại từ nghi vấn '谁' (ai) và '哪' (nào).",
-      "Dùng trợ từ kết cấu '的' để biểu thị quan hệ sở hữu.",
-      "Phân biệt 他 (anh ấy), 她 (cô ấy), 它 (nó)."
+      "能听懂并使用“有”字句（1）表达领有人或物品。(Biết nghe hiểu và sử dụng câu chữ '有' biểu đạt sở hữu người hoặc đồ vật).",
+      "掌握“A……，B呢？”的用法。(Nắm vững cách dùng câu hỏi tỉnh lược 'A..., B呢?').",
+      "掌握本课数词、量词的用法 (Nắm vững cách dùng số từ và lượng từ trong bài, đặc biệt là cách dùng '两' trước lượng từ).",
+      "了解中国人如何问答年龄，能使用合适的词语进行年龄问答 (Biết cách hỏi tuổi: trẻ em dưới 10 tuổi dùng '几岁', trên 10 tuổi dùng '多大')."
     ],
     texts: [
       {
         id: "hsk1-l4-t1",
-        title: "课文 1 (Bài khóa 1)",
-        context: "在教室，看着照片问人。(Trong lớp học, nhìn ảnh hỏi về người).",
+        title: "课文 1: 在家里 (Bài khóa 1: Ở nhà)",
+        context: "在家里，刘明和王一雪在聊天儿。(Ở nhà, Lưu Minh và Vương Nhất Tuyết trò chuyện).",
         lines: [
-          { speaker: "A", hanzi: "她是哪国人？", pinyin: "Tā shì nǎ guó rén?", vietnamese: "Cô ấy là người nước nào?" },
-          { speaker: "B", hanzi: "她是美国人。她是我的汉语老师，她叫王老师。", pinyin: "Tā shì Měiguó rén. Tā shì wǒ de Hànyǔ lǎoshī, tā jiào Wáng lǎoshī.", vietnamese: "Cô ấy là người Mỹ. Cô ấy là giáo viên tiếng Trung của tôi, cô ấy tên là cô Vương." }
+          { speaker: "刘明", hanzi: "一飞忙吗？", pinyin: "Yīfēi máng ma?", vietnamese: "Nhất Phi có bận không?" },
+          { speaker: "王一雪", hanzi: "她很忙。", pinyin: "Tā hěn máng.", vietnamese: "Em ấy rất bận." },
+          { speaker: "刘明", hanzi: "她有多少个学生？", pinyin: "Tā yǒu duōshao gè xuésheng?", vietnamese: "Em ấy có bao nhiêu học sinh?" },
+          { speaker: "王一雪", hanzi: "她有二十个学生。", pinyin: "Tā yǒu èrshí gè xuésheng.", vietnamese: "Em ấy có hai mươi học sinh." }
         ]
       },
       {
         id: "hsk1-l4-t2",
-        title: "课文 2 (Bài khóa 2)",
-        context: "在图书馆。(Trong thư viện).",
+        title: "课文 2: 在公司里 (Bài khóa 2: Ở công ty)",
+        context: "在公司里，王一雪和杨同乐休息时聊天儿。(Ở công ty, Vương Nhất Tuyết và Dương Đồng Lạc nghỉ giải lao trò chuyện).",
         lines: [
-          { speaker: "A", hanzi: "他是谁？", pinyin: "Tā shì shéi?", vietnamese: "Anh ấy là ai?" },
-          { speaker: "B", hanzi: "他是我的同学，他叫大卫。", pinyin: "Tā shì wǒ de tóngxué, tā jiào Dàwèi.", vietnamese: "Anh ấy là bạn học của tôi, anh ấy tên là David." }
+          { speaker: "王一雪", hanzi: "我有两个哥哥，你呢？", pinyin: "Wǒ yǒu liǎng gè gēge, nǐ ne?", vietnamese: "Chị có hai người anh trai, còn em thì sao?" },
+          { speaker: "杨同乐", hanzi: "我没有哥哥。", pinyin: "Wǒ méiyǒu gēge.", vietnamese: "Em không có anh trai." },
+          { speaker: "王一雪", hanzi: "你家有几口人？", pinyin: "Nǐ jiā yǒu jǐ kǒu rén?", vietnamese: "Nhà em có mấy người?" },
+          { speaker: "杨同乐", hanzi: "我家有四口人，爸爸、妈妈、妹妹和我。", pinyin: "Wǒ jiā yǒu sì kǒu rén, bàba, māma, mèimei hé wǒ.", vietnamese: "Nhà em có bốn người: bố, mẹ, em gái và em." }
+        ]
+      },
+      {
+        id: "hsk1-l4-t3",
+        title: "课文 3: 在街上 (Bài khóa 3: Trên đường phố)",
+        context: "在街上，王一雪带着儿子偶遇杨同乐。(Trên đường, Vương Nhất Tuyết dắt con trai tình cờ gặp Dương Đồng Lạc).",
+        lines: [
+          { speaker: "杨同乐", hanzi: "这是您儿子吗？", pinyin: "Zhè shì nín érzi ma?", vietnamese: "Đây là con trai chị phải không ạ?" },
+          { speaker: "王一雪", hanzi: "是的。我有两个孩子，一个儿子，一个女儿。", pinyin: "Shì de. Wǒ yǒu liǎng gè háizi, yí gè érzi, yí gè nǚ'ér.", vietnamese: "Đúng vậy. Chị có hai đứa con, một con trai, một con gái." },
+          { speaker: "杨同乐", hanzi: "您儿子几岁？", pinyin: "Nín érzi jǐ suì?", vietnamese: "Cháu trai năm nay mấy tuổi rồi ạ?" },
+          { speaker: "王一雪", hanzi: "他今年五岁。", pinyin: "Tā jīnnián wǔ suì.", vietnamese: "Cháu năm nay năm tuổi." },
+          { speaker: "杨同乐", hanzi: "您女儿多大？", pinyin: "Nín nǚ'ér duō dà?", vietnamese: "Con gái chị bao nhiêu tuổi rồi ạ?" },
+          { speaker: "王一雪", hanzi: "她今年十二。", pinyin: "Tā jīnnián shí'èr.", vietnamese: "Cháu năm nay mười hai tuổi." }
         ]
       }
     ],
     grammarPoints: [
       {
         id: "hsk1-l4-g1",
-        title: "1. Đại từ nghi vấn '谁' (Ai)",
-        explanation: "'谁' dùng để hỏi về người hoặc thân phận. Ví dụ: 他是谁？ (Anh ấy là ai?)",
+        title: "1. “有”字句（1）(Cấu trúc câu chữ '有' biểu thị sở hữu)",
+        explanation: "Biểu thị sự sở hữu người hoặc vật. Dạng khẳng định: Chủ ngữ + 有 + Tân ngữ. Dạng phủ định: Chủ ngữ + 没有 + Tân ngữ (LƯU Ý: Không dùng '不有').",
         examples: [
-          { hanzi: "他是谁？ - 他是我的朋友。", pinyin: "Tā shì shéi? - Tā shì wǒ de péngyou.", vietnamese: "Anh ấy là ai? - Anh ấy là bạn của tôi." }
+          { hanzi: "她有二十个学生。", pinyin: "Tā yǒu èrshí gè xuésheng.", vietnamese: "Cô ấy có hai mươi học sinh." },
+          { hanzi: "我有两个孩子。", pinyin: "Wǒ yǒu liǎng gè háizi.", vietnamese: "Tôi có hai đứa con." },
+          { hanzi: "我没有哥哥。", pinyin: "Wǒ méiyǒu gēge.", vietnamese: "Tôi không có anh trai." }
         ]
       },
       {
         id: "hsk1-l4-g2",
-        title: "2. Trợ từ kết cấu '的' (Của)",
-        explanation: "Biểu thị quan hệ sở hữu hoặc định ngữ hạn định. Cấu trúc: Người sở hữu + 的 + Danh từ.",
+        title: "2. 数词与量词结构 (Số từ và lượng từ: '两' vs '二')",
+        explanation: "Khi biểu thị số lượng 2 đứng trước lượng từ, bắt buộc dùng '两' (liǎng), không dùng '二' (èr). Cấu trúc: 两 + Lượng từ + Danh từ (ví dụ: 两个孩子, 两口人, 两本书). Chỉ dùng '二' khi đếm số thứ tự hoặc số ghép (ví dụ: 第二, 十二, 二十).",
         examples: [
-          { hanzi: "我的汉语老师", pinyin: "wǒ de Hànyǔ lǎoshī", vietnamese: "giáo viên tiếng Trung của tôi" },
-          { hanzi: "他的同学", pinyin: "tā de tóngxué", vietnamese: "bạn học của anh ấy" }
+          { hanzi: "我有两个哥哥。", pinyin: "Wǒ yǒu liǎng gè gēge.", vietnamese: "Tôi có hai người anh trai." },
+          { hanzi: "她今年十二岁。", pinyin: "Tā jīnnián shí'èr suì.", vietnamese: "Năm nay cô bé 12 tuổi." }
+        ]
+      },
+      {
+        id: "hsk1-l4-g3",
+        title: "3. 语气助词“呢”（1）(Trợ từ ngữ khí '呢' trong câu hỏi tỉnh lược)",
+        explanation: "Dùng ở cuối câu để hỏi về tình huống của đối tượng khác dựa trên ngữ cảnh vừa nhắc đến. Cấu trúc: A……，B呢？",
+        examples: [
+          { hanzi: "我有两个哥哥，你呢？", pinyin: "Wǒ yǒu liǎng gè gēge, nǐ ne?", vietnamese: "Tôi có hai người anh trai, còn bạn thì sao?" },
+          { hanzi: "我是中国人，你呢？", pinyin: "Wǒ shì Zhōngguó rén, nǐ ne?", vietnamese: "Tôi là người Trung Quốc, còn bạn thì sao?" }
+        ]
+      },
+      {
+        id: "hsk1-l4-g4",
+        title: "4. 年龄的问答 (Hỏi và trả lời tuổi tác)",
+        explanation: "Đối với trẻ em dưới 10 tuổi: dùng '几岁？' (Nín érzi jǐ suì?). Đối với người từ 10 tuổi trở lên hoặc người lớn: dùng '多大？' (Nín nǚ'ér duō dà?).",
+        examples: [
+          { hanzi: "您儿子几岁？ - 他今年五岁。", pinyin: "Nín érzi jǐ suì? - Tā jīnnián wǔ suì.", vietnamese: "Cháu trai mấy tuổi? - Cháu năm nay 5 tuổi." },
+          { hanzi: "您女儿多大？ - 她今年十二。", pinyin: "Nín nǚ'ér duō dà? - Tā jīnnián shí'èr.", vietnamese: "Con gái chị bao nhiêu tuổi? - Cháu năm nay 12 tuổi." }
         ]
       }
     ],
     vocabulary: [
-      { id: "hsk1-l4-w1", hanzi: "她", pinyin: "tā", hanViet: "tha", vietnamese: "cô ấy, bà ấy, chị ấy", hskLevel: 1, radical: "女", strokeCount: 6, example: "她是老师。", exampleTranslation: "Cô ấy là giáo viên.", tags: ["Bài 4", "Đại từ"] },
-      { id: "hsk1-l4-w2", hanzi: "谁", pinyin: "shéi / shuí", hanViet: "thùy", vietnamese: "ai (đại từ nghi vấn)", hskLevel: 1, radical: "讠", strokeCount: 10, example: "他是谁？", exampleTranslation: "Anh ấy là ai?", tags: ["Bài 4", "Nghi vấn"] },
-      { id: "hsk1-l4-w3", hanzi: "的", pinyin: "de", hanViet: "đích", vietnamese: "của (trợ từ sở hữu)", hskLevel: 1, radical: "白", strokeCount: 8, example: "我的书", exampleTranslation: "sách của tôi", tags: ["Bài 4", "Trợ từ"] },
-      { id: "hsk1-l4-w4", hanzi: "汉语", pinyin: "Hànyǔ", hanViet: "Hán ngữ", vietnamese: "tiếng Trung, tiếng Hán", hskLevel: 1, radical: "氵", strokeCount: 19, example: "学汉语", exampleTranslation: "học tiếng Trung", tags: ["Bài 4", "Ngôn ngữ"] },
-      { id: "hsk1-l4-w5", hanzi: "哪", pinyin: "nǎ / něi", hanViet: "na", vietnamese: "nào (đại từ nghi vấn)", hskLevel: 1, radical: "口", strokeCount: 9, example: "哪国人？", exampleTranslation: "người nước nào?", tags: ["Bài 4", "Nghi vấn"] },
-      { id: "hsk1-l4-w6", hanzi: "国", pinyin: "guó", hanViet: "quốc", vietnamese: "nước, quốc gia", hskLevel: 1, radical: "囗", strokeCount: 8, example: "国家 / 哪个国家", exampleTranslation: "quốc gia / quốc gia nào", tags: ["Bài 4", "Danh từ"] },
-      { id: "hsk1-l4-w7", hanzi: "同学", pinyin: "tóngxué", hanViet: "đồng học", vietnamese: "bạn học, bạn cùng lớp", hskLevel: 1, radical: "口", strokeCount: 14, example: "我的大学同学", exampleTranslation: "bạn đại học của tôi", tags: ["Bài 4", "Danh từ"] },
-      { id: "hsk1-l4-w8", hanzi: "朋友", pinyin: "péngyou", hanViet: "bằng hữu", vietnamese: "bạn bè", hskLevel: 1, radical: "月", strokeCount: 12, example: "好朋友", exampleTranslation: "bạn tốt, bạn thân", tags: ["Bài 4", "Danh từ"] }
+      { id: "hsk1-l4-w1", hanzi: "有", pinyin: "yǒu", hanViet: "hữu", vietnamese: "có", hskLevel: 1, radical: "月", strokeCount: 6, example: "有学生", exampleTranslation: "có học sinh", tags: ["Bài 4", "Động từ"] },
+      { id: "hsk1-l4-w2", hanzi: "多少", pinyin: "duōshao", hanViet: "đa thiểu", vietnamese: "bao nhiêu", hskLevel: 1, radical: "夕", strokeCount: 9, example: "多少个学生？", exampleTranslation: "Bao nhiêu học sinh?", tags: ["Bài 4", "Đại từ nghi vấn"] },
+      { id: "hsk1-l4-w3", hanzi: "个", pinyin: "gè", hanViet: "cá", vietnamese: "cái, người (lượng từ chung)", hskLevel: 1, radical: "人", strokeCount: 3, example: "两个孩子", exampleTranslation: "hai đứa con", tags: ["Bài 4", "Lượng từ"] },
+      { id: "hsk1-l4-w4", hanzi: "两", pinyin: "liǎng", hanViet: "lưỡng", vietnamese: "hai (dùng trước lượng từ)", hskLevel: 1, radical: "一", strokeCount: 7, example: "两个哥哥", exampleTranslation: "hai người anh trai", tags: ["Bài 4", "Số từ"] },
+      { id: "hsk1-l4-w5", hanzi: "哥哥", pinyin: "gēge", hanViet: "ca ca", vietnamese: "anh trai", hskLevel: 1, radical: "口", strokeCount: 10, example: "我哥哥", exampleTranslation: "anh trai tôi", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w6", hanzi: "呢", pinyin: "ne", hanViet: "ni", vietnamese: "còn... thì sao? (trợ từ ngữ khí)", hskLevel: 1, radical: "口", strokeCount: 8, example: "你呢？", exampleTranslation: "Còn bạn thì sao?", tags: ["Bài 4", "Trợ từ"] },
+      { id: "hsk1-l4-w7", hanzi: "没有", pinyin: "méiyǒu", hanViet: "một hữu", vietnamese: "không có", hskLevel: 1, radical: "氵", strokeCount: 10, example: "我没有哥哥。", exampleTranslation: "Tôi không có anh trai.", tags: ["Bài 4", "Động từ"] },
+      { id: "hsk1-l4-w8", hanzi: "家", pinyin: "jiā", hanViet: "gia", vietnamese: "nhà, gia đình", hskLevel: 1, radical: "宀", strokeCount: 10, example: "我家", exampleTranslation: "nhà tôi", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w9", hanzi: "几", pinyin: "jǐ", hanViet: "kỷ", vietnamese: "mấy", hskLevel: 1, radical: "几", strokeCount: 2, example: "几口人？", exampleTranslation: "Mấy người?", tags: ["Bài 4", "Đại từ nghi vấn"] },
+      { id: "hsk1-l4-w10", hanzi: "口", pinyin: "kǒu", hanViet: "khẩu", vietnamese: "người (lượng từ nhân khẩu gia đình)", hskLevel: 1, radical: "口", strokeCount: 3, example: "四口人", exampleTranslation: "bốn người", tags: ["Bài 4", "Lượng từ"] },
+      { id: "hsk1-l4-w11", hanzi: "爸爸", pinyin: "bàba", hanViet: "ba ba", vietnamese: "bố, ba", hskLevel: 1, radical: "父", strokeCount: 8, example: "我爸爸", exampleTranslation: "bố tôi", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w12", hanzi: "妈妈", pinyin: "māma", hanViet: "ma ma", vietnamese: "mẹ, má", hskLevel: 1, radical: "女", strokeCount: 6, example: "我妈妈", exampleTranslation: "mẹ tôi", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w13", hanzi: "妹妹", pinyin: "mèimei", hanViet: "muội muội", vietnamese: "em gái", hskLevel: 1, radical: "女", strokeCount: 8, example: "我妹妹", exampleTranslation: "em gái tôi", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w14", hanzi: "和", pinyin: "hé", hanViet: "hòa", vietnamese: "và, cùng", hskLevel: 1, radical: "口", strokeCount: 8, example: "妹妹和我", exampleTranslation: "em gái và tôi", tags: ["Bài 4", "Liên từ"] },
+      { id: "hsk1-l4-w15", hanzi: "儿子", pinyin: "érzi", hanViet: "nhi tử", vietnamese: "con trai", hskLevel: 1, radical: "儿", strokeCount: 5, example: "您儿子", exampleTranslation: "con trai của chị", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w16", hanzi: "孩子", pinyin: "háizi", hanViet: "hài tử", vietnamese: "con cái, trẻ em", hskLevel: 1, radical: "子", strokeCount: 12, example: "两个孩子", exampleTranslation: "hai đứa con", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w17", hanzi: "女儿", pinyin: "nǚ'ér", hanViet: "nữ nhi", vietnamese: "con gái", hskLevel: 1, radical: "女", strokeCount: 5, example: "一个女儿", exampleTranslation: "một cô con gái", tags: ["Bài 4", "Danh từ"] },
+      { id: "hsk1-l4-w18", hanzi: "岁", pinyin: "suì", hanViet: "tuế", vietnamese: "tuổi", hskLevel: 1, radical: "山", strokeCount: 6, example: "五岁", exampleTranslation: "năm tuổi", tags: ["Bài 4", "Lượng từ"] },
+      { id: "hsk1-l4-w19", hanzi: "今年", pinyin: "jīnnián", hanViet: "kim niên", vietnamese: "năm nay", hskLevel: 1, radical: "人", strokeCount: 10, example: "今年五岁", exampleTranslation: "năm nay 5 tuổi", tags: ["Bài 4", "Danh từ thời gian"] },
+      { id: "hsk1-l4-w20", hanzi: "多大", pinyin: "duō dà", hanViet: "đa đại", vietnamese: "bao nhiêu tuổi (trên 10 tuổi)", hskLevel: 1, radical: "大", strokeCount: 9, example: "您女儿多大？", exampleTranslation: "Con gái chị bao nhiêu tuổi?", tags: ["Bài 4", "Cụm nghi vấn"] }
     ],
     exercises: [
       {
         id: "hsk1-l4-ex1",
-        type: "multiple_choice",
-        question: "Chọn từ đúng: '李月是 ______ 汉语老师。'",
-        options: ["A. 我", "B. 我的", "C. 我在", "D. 我吗"],
-        correctAnswer: "B. 我的",
-        explanation: "Dùng trợ từ '的' để biểu thị quan hệ sở hữu: 我的汉语老师 (cô giáo tiếng Trung của tôi)."
+        type: "fill_blank",
+        question: "Chọn từ phủ định chính xác cho câu chữ '有': '我 ______ 哥哥。'",
+        hanziPrompt: "我 ______ 哥哥。",
+        pinyinPrompt: "Wǒ ______ gēge.",
+        vietnamesePrompt: "Tôi không có anh trai.",
+        options: ["A. 没有", "B. 不有", "C. 没", "D. 不"],
+        correctAnswer: "A. 没有",
+        explanation: "Phủ định của động từ '有' (có) bắt buộc dùng '没有' (hoặc '没'), tuyệt đối không dùng '不有'.",
+        grammarFocus: "Phủ định của động từ 有",
+        audioText: "我没有哥哥。"
+      },
+      {
+        id: "hsk1-l4-ex2",
+        type: "fill_blank",
+        question: "Chọn số từ biểu thị số lượng hai trước lượng từ '个': '我有 ______ 个孩子。'",
+        hanziPrompt: "我有 ______ 个孩子。",
+        pinyinPrompt: "Wǒ yǒu ______ gè háizi.",
+        vietnamesePrompt: "Tôi có hai đứa con.",
+        options: ["A. 两", "B. 二", "C. 几", "D. 俩个"],
+        correctAnswer: "A. 两",
+        explanation: "Trước lượng từ chỉ số lượng phải dùng '两' (liǎng), không dùng '二' (èr).",
+        grammarFocus: "Quy tắc dùng 两 trước lượng từ",
+        audioText: "我有两个孩子。"
+      },
+      {
+        id: "hsk1-l4-ex3",
+        type: "sentence_scramble",
+        question: "Sắp xếp các từ sau thành câu hoàn chỉnh:",
+        hanziPrompt: "[ 四口人 / 我家 / 有 / 。 ]",
+        vietnamesePrompt: "Nhà tôi có bốn người.",
+        scrambleSegments: ["我家", "有", "四口人", "。"],
+        options: [
+          "我家有四口人。",
+          "有四口人我家。",
+          "四口人有我家。",
+          "我家四口人有。"
+        ],
+        correctAnswer: "我家有四口人。",
+        explanation: "Trật tự câu chữ 有: Chủ ngữ (我家) + 有 + Số lượng từ (四口人).",
+        grammarFocus: "Cấu trúc câu chữ 有 biểu thị số thành viên gia đình",
+        audioText: "我家有四口人。"
+      },
+      {
+        id: "hsk1-l4-ex4",
+        type: "dialogue_match",
+        question: "Chọn câu hỏi tuổi thích hợp cho một em bé 5 tuổi:",
+        hanziPrompt: "A: ______ ？ — B: 他今年五岁。",
+        pinyinPrompt: "A: ______ ? — B: Tā jīnnián wǔ suì.",
+        vietnamesePrompt: "A: Cháu trai mấy tuổi? — B: Cháu năm nay năm tuổi.",
+        options: [
+          "您儿子几岁",
+          "您儿子多大",
+          "这是谁",
+          "你家有几口人"
+        ],
+        correctAnswer: "您儿子几岁",
+        explanation: "Đối với trẻ nhỏ dưới 10 tuổi, người Trung Quốc dùng '几岁？' để hỏi tuổi.",
+        grammarFocus: "Cách hỏi tuổi trẻ em với 几岁",
+        audioText: "您儿子几岁？"
       }
     ]
   },
@@ -565,28 +724,36 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l5-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在学校问家庭。(Ở trường hỏi về gia đình).",
+        context: "在家里，刘明和王一雪在聊天儿。(Ở nhà, Lưu Minh và Vương Nhất Tuyết đang trò chuyện.)",
         lines: [
-          { speaker: "A", hanzi: "你家有几口人？", pinyin: "Nǐ jiā yǒu jǐ kǒu rén?", vietnamese: "Nhà bạn có mấy người?" },
-          { speaker: "B", hanzi: "我家有三口人：爸爸、妈妈和我。", pinyin: "Wǒ jiā yǒu sān kǒu rén: bàba, māma hé wǒ.", vietnamese: "Nhà tôi có ba người: bố, mẹ và tôi." }
+          { speaker: "王一雪", hanzi: "今天几号？", pinyin: "Jīntiān jǐ hào?", vietnamese: "Hôm nay ngày mấy?" },
+          { speaker: "刘明", hanzi: "今天9月8号。", pinyin: "Jīntiān jiǔ yuè bā hào.", vietnamese: "Hôm nay ngày 8 tháng 9." },
+          { speaker: "王一雪", hanzi: "星期几？", pinyin: "Xīngqī jǐ?", vietnamese: "Thứ mấy?" },
+          { speaker: "刘明", hanzi: "星期日。今天我休息。", pinyin: "Xīngqīrì. Jīntiān wǒ xiūxi.", vietnamese: "Chủ nhật. Hôm nay tôi nghỉ." }
         ]
       },
       {
         id: "hsk1-l5-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "问年龄。(Hỏi về tuổi tác).",
+        context: "在公司里，王一雪和杨同乐休息时聊天儿。(Ở công ty, Vương Nhất Tuyết và Dương Đồng Nhạc trò chuyện lúc nghỉ giải lao.)",
         lines: [
-          { speaker: "A", hanzi: "你女儿几岁了？", pinyin: "Nǐ nǚ'ér jǐ suì le?", vietnamese: "Con gái bạn mấy tuổi rồi?" },
-          { speaker: "B", hanzi: "她今年四岁了。", pinyin: "Tā jīnnián sì suì le.", vietnamese: "Bé năm nay bốn tuổi rồi." }
+          { speaker: "王一雪", hanzi: "你会做饭吗？", pinyin: "Nǐ huì zuòfàn ma?", vietnamese: "Bạn có biết nấu ăn không?" },
+          { speaker: "杨同乐", hanzi: "我会做。", pinyin: "Wǒ huì zuò.", vietnamese: "Tôi biết nấu." },
+          { speaker: "王一雪", hanzi: "你会做什么？", pinyin: "Nǐ huì zuò shénme?", vietnamese: "Bạn biết làm món gì?" },
+          { speaker: "杨同乐", hanzi: "我会做面条儿、饺子，也会做一些菜。星期天我也做饭。", pinyin: "Wǒ huì zuò miàntiáor, jiǎozi, yě huì zuò yīxiē cài. Xīngqītiān wǒ yě zuòfàn.", vietnamese: "Tôi biết làm mì, sủi cảo và cũng biết làm một số món. Chủ nhật tôi cũng nấu ăn." }
         ]
       },
       {
         id: "hsk1-l5-t3",
         title: "课文 3 (Bài khóa 3)",
-        context: "问成年人的年龄。(Hỏi tuổi người lớn).",
+        context: "在公司里，王一雪和杨同乐下班时聊天儿。(Ở công ty, Vương Nhất Tuyết và Dương Đồng Nhạc nói chuyện lúc tan ca.)",
         lines: [
-          { speaker: "A", hanzi: "李老师多大了？", pinyin: "Lǐ lǎoshī duō dà le?", vietnamese: "Cô giáo Lý bao nhiêu tuổi rồi?" },
-          { speaker: "B", hanzi: "她今年五十岁了。她女儿今年二十岁。", pinyin: "Tā jīnnián wǔshí suì le. Tā nǚ'ér jīnnián èrshí suì.", vietnamese: "Cô ấy năm nay năm mươi tuổi rồi. Con gái cô ấy năm nay hai mươi tuổi." }
+          { speaker: "王一雪", hanzi: "同乐，下班吗？", pinyin: "Tónglè, xiàbān ma?", vietnamese: "Đồng Nhạc, tan ca rồi à?" },
+          { speaker: "杨同乐", hanzi: "下班。", pinyin: "Xiàbān.", vietnamese: "Tan ca rồi." },
+          { speaker: "王一雪", hanzi: "这是你的新电脑吗？", pinyin: "Zhè shì nǐ de xīn diànnǎo ma?", vietnamese: "Đây là máy tính mới của bạn à?" },
+          { speaker: "杨同乐", hanzi: "是的，是我的新电脑。", pinyin: "Shì de, shì wǒ de xīn diànnǎo.", vietnamese: "Vâng, đây là máy tính mới của tôi." },
+          { speaker: "王一雪", hanzi: "真好看！", pinyin: "Zhēn hǎokàn!", vietnamese: "Đẹp thật!" },
+          { speaker: "杨同乐", hanzi: "我也很喜欢它。", pinyin: "Wǒ yě hěn xǐhuan tā.", vietnamese: "Tôi cũng rất thích nó." }
         ]
       }
     ],
@@ -648,32 +815,36 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l6-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在学校谈论语言技能。(Ở trường nói về khả năng ngôn ngữ).",
+        context: "在校园里，李文向白家月要手机号。(Trong khuôn viên trường, Lý Văn hỏi xin số điện thoại của Bạch Gia Nguyệt.)",
         lines: [
-          { speaker: "A", hanzi: "你会说汉语吗？", pinyin: "Nǐ huì shuō Hànyǔ ma?", vietnamese: "Bạn biết nói tiếng Trung không?" },
-          { speaker: "B", hanzi: "我会说汉语。我妈妈也会说汉语。", pinyin: "Wǒ huì shuō Hànyǔ. Wǒ māma yě huì shuō Hànyǔ.", vietnamese: "Tôi biết nói tiếng Trung. Mẹ tôi cũng biết nói tiếng Trung." }
+          { speaker: "李文", hanzi: "家月，你的手机号是多少？", pinyin: "Jiāyuè, nǐ de shǒujīhào shì duōshao?", vietnamese: "Gia Nguyệt, số điện thoại của bạn là bao nhiêu?" },
+          { speaker: "白家月", hanzi: "我的手机号是+33 601493190。", pinyin: "Wǒ de shǒujīhào shì +33 601493190.", vietnamese: "Số điện thoại của tôi là +33 601493190." },
+          { speaker: "李文", hanzi: "我的手机号是+86 13552721160。", pinyin: "Wǒ de shǒujīhào shì +86 13552721160.", vietnamese: "Số điện thoại của tôi là +86 13552721160." },
+          { speaker: "白家月", hanzi: "好的。", pinyin: "Hǎo de.", vietnamese: "Được rồi." }
         ]
       },
       {
         id: "hsk1-l6-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "在厨房谈论中国菜。(Trong bếp trò chuyện về món ăn Trung Quốc).",
+        context: "在教室里，下课后，白家月和陈天中在聊天儿。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt và Trần Thiên Trung đang trò chuyện.)",
         lines: [
-          { speaker: "A", hanzi: "中国菜好吃吗？", pinyin: "Zhōngguó cài hǎochī ma?", vietnamese: "Món ăn Trung Quốc có ngon không?" },
-          { speaker: "B", hanzi: "中国菜很好吃。", pinyin: "Zhōngguó cài hěn hǎochī.", vietnamese: "Món ăn Trung Quốc rất ngon." },
-          { speaker: "A", hanzi: "你会做中国菜吗？", pinyin: "Nǐ huì zuò Zhōngguó cài ma?", vietnamese: "Bạn biết nấu món ăn Trung Quốc không?" },
-          { speaker: "B", hanzi: "我不会做。", pinyin: "Wǒ bú huì zuò.", vietnamese: "Tôi không biết nấu." }
+          { speaker: "陈天中", hanzi: "家月，明天你去哪儿？", pinyin: "Jiāyuè, míngtiān nǐ qù nǎr?", vietnamese: "Gia Nguyệt, ngày mai bạn đi đâu?" },
+          { speaker: "白家月", hanzi: "我想去超市买东西。", pinyin: "Wǒ xiǎng qù chāoshì mǎi dōngxi.", vietnamese: "Tôi muốn đi siêu thị mua đồ." },
+          { speaker: "陈天中", hanzi: "你去超市买什么？", pinyin: "Nǐ qù chāoshì mǎi shénme?", vietnamese: "Bạn đi siêu thị mua gì vậy?" },
+          { speaker: "白家月", hanzi: "我想买些牛奶。", pinyin: "Wǒ xiǎng mǎi xiē niúnǎi.", vietnamese: "Tôi muốn mua sữa." }
         ]
       },
       {
         id: "hsk1-l6-t3",
         title: "课文 3 (Bài khóa 3)",
-        context: "在办公室写汉字。(Trong văn phòng viết chữ Hán).",
+        context: "在家里，王一雪全家在讨论周末晚餐安排。(Ở nhà, cả gia đình Vương Nhất Tuyết bàn về kế hoạch ăn tối cuối tuần.)",
         lines: [
-          { speaker: "A", hanzi: "你会写汉字吗？", pinyin: "Nǐ huì xiě Hànzì ma?", vietnamese: "Bạn biết viết chữ Hán không?" },
-          { speaker: "B", hanzi: "我会写。", pinyin: "Wǒ huì xiě.", vietnamese: "Tôi biết viết." },
-          { speaker: "A", hanzi: "这个字怎么写？", pinyin: "Zhè gè zì zěnme xiě?", vietnamese: "Chữ này viết như thế nào?" },
-          { speaker: "B", hanzi: "对不起，这个字我会读，不会写。", pinyin: "Duìbuqǐ, zhè gè zì wǒ huì dú, bú huì xiě.", vietnamese: "Xin lỗi, chữ này tôi biết đọc nhưng không biết viết." }
+          { speaker: "王一雪", hanzi: "星期天我们去哪儿吃晚饭？", pinyin: "Xīngqītiān wǒmen qù nǎr chī wǎnfàn?", vietnamese: "Chủ nhật chúng ta đi đâu ăn tối?" },
+          { speaker: "刘明", hanzi: "我还想去西安饭店。", pinyin: "Wǒ hái xiǎng qù Xī'ān fàndiàn.", vietnamese: "Anh vẫn muốn đến nhà hàng Tây An." },
+          { speaker: "刘小雪", hanzi: "那边的包子非常好吃，我想吃包子。", pinyin: "Nà biān de bāozi fēicháng hǎochī, wǒ xiǎng chī bāozi.", vietnamese: "Bánh bao ở đó ngon lắm, con muốn ăn bánh bao." },
+          { speaker: "刘小明", hanzi: "妈妈，我想吃米饭，不想吃包子。", pinyin: "Māma, wǒ xiǎng chī mǐfàn, bù xiǎng chī bāozi.", vietnamese: "Mẹ ơi, con muốn ăn cơm, không muốn ăn bánh bao." },
+          { speaker: "王一雪", hanzi: "好的。我们怎么去？", pinyin: "Hǎo de. Wǒmen zěnme qù?", vietnamese: "Được rồi. Chúng ta đi thế nào?" },
+          { speaker: "刘明", hanzi: "坐出租车去。", pinyin: "Zuò chūzūchē qù.", vietnamese: "Đi taxi đi." }
         ]
       }
     ],
@@ -739,26 +910,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l7-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "看日历问日期。(Xem lịch hỏi ngày tháng).",
+        context: "白家月和安妮在打电话。(Bạch Gia Nguyệt và An Ni đang gọi điện thoại cho nhau.)",
         lines: [
-          { speaker: "A", hanzi: "请问，今天几号？", pinyin: "Qǐngwèn, jīntiān jǐ hào?", vietnamese: "Xin hỏi, hôm nay ngày mấy?" },
-          { speaker: "B", hanzi: "今天9月1号。", pinyin: "Jīntiān jiǔ yuè yī hào.", vietnamese: "Hôm nay ngày 1 tháng 9." },
-          { speaker: "A", hanzi: "今天星期几？", pinyin: "Jīntiān xīngqī jǐ?", vietnamese: "Hôm nay thứ mấy?" },
-          { speaker: "B", hanzi: "星期三。", pinyin: "Xīngqīsān.", vietnamese: "Thứ tư." }
+          { speaker: "白家月", hanzi: "现在几点？", pinyin: "Xiànzài jǐ diǎn?", vietnamese: "Bây giờ là mấy giờ?" },
+          { speaker: "安妮", hanzi: "早上八点四十。", pinyin: "Zǎoshang bā diǎn sìshí.", vietnamese: "Sáng tám giờ bốn mươi phút." },
+          { speaker: "白家月", hanzi: "我上午十点十分有课。", pinyin: "Wǒ shàngwǔ shí diǎn shí fēn yǒu kè.", vietnamese: "Tôi có lớp học lúc mười giờ mười phút sáng." },
+          { speaker: "安妮", hanzi: "好的，我们下午两点见吧。", pinyin: "Hǎo de, wǒmen xiàwǔ liǎng diǎn jiàn ba.", vietnamese: "Được rồi, chúng ta gặp nhau lúc hai giờ chiều nhé." }
         ]
       },
       {
         id: "hsk1-l7-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "谈论昨天与明天。(Nói về hôm qua và ngày mai).",
+        context: "在校园里，李文遇到白家月。(Trong khuôn viên trường, Lý Văn tình cờ gặp Bạch Gia Nguyệt.)",
         lines: [
-          { speaker: "A", hanzi: "昨天是几月几号？", pinyin: "Zuótiān shì jǐ yuè jǐ hào?", vietnamese: "Hôm qua là ngày mấy tháng mấy?" },
-          { speaker: "B", hanzi: "昨天是8月31号，星期二。", pinyin: "Zuótiān shì bā yuè sānshíyī hào, xīngqī'èr.", vietnamese: "Hôm qua là ngày 31 tháng 8, thứ ba." },
-          { speaker: "A", hanzi: "明天呢？", pinyin: "Míngtiān ne?", vietnamese: "Còn ngày mai thì sao?" },
-          { speaker: "B", hanzi: "明天是9月2号，星期四。", pinyin: "Míngtiān shì jiǔ yuè èr hào, xīngqīsì.", vietnamese: "Ngày mai là ngày 2 tháng 9, thứ năm." }
+          { speaker: "李文", hanzi: "下午我想去电影院看电影，你去吗？", pinyin: "Xiàwǔ wǒ xiǎng qù diànyǐngyuàn kàn diànyǐng, nǐ qù ma?", vietnamese: "Chiều nay tôi muốn đi rạp xem phim, bạn có đi không?" },
+          { speaker: "白家月", hanzi: "我不想去，下午还有事。", pinyin: "Wǒ bù xiǎng qù, xiàwǔ hái yǒu shì.", vietnamese: "Tôi không muốn đi, chiều còn có việc." },
+          { speaker: "李文", hanzi: "好的。明天呢？", pinyin: "Hǎo de. Míngtiān ne?", vietnamese: "Được rồi. Còn ngày mai thì sao?" },
+          { speaker: "白家月", hanzi: "我明天下午两点还上课呢，四点半下课。", pinyin: "Wǒ míngtiān xiàwǔ liǎng diǎn hái shàngkè ne, sì diǎn bàn xiàkè.", vietnamese: "Ngày mai chiều hai giờ tôi vẫn còn học, bốn rưỡi mới tan học." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l7-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "王一雪给丈夫刘明打电话。(Vương Nhất Tuyết gọi điện cho chồng là Lưu Minh.)",
+        lines: [
+          { speaker: "王一雪", hanzi: "喂，你在哪儿呢？", pinyin: "Wèi, nǐ zài nǎr ne?", vietnamese: "A-lô, anh đang ở đâu vậy?" },
+          { speaker: "刘明", hanzi: "我在家里呢。", pinyin: "Wǒ zài jiā li ne.", vietnamese: "Anh đang ở nhà." },
+          { speaker: "王一雪", hanzi: "我晚上六点半下班。", pinyin: "Wǒ wǎnshang liù diǎn bàn xiàbān.", vietnamese: "Em tan ca lúc sáu rưỡi tối." },
+          { speaker: "刘明", hanzi: "我八点去医院上班。", pinyin: "Wǒ bā diǎn qù yīyuàn shàngbān.", vietnamese: "Anh đi làm ở bệnh viện lúc tám giờ." },
+          { speaker: "王一雪", hanzi: "好的，你去店里买些菜吧。", pinyin: "Hǎo de, nǐ qù diàn lǐ mǎi xiē cài ba.", vietnamese: "Được rồi, anh ra cửa hàng mua ít rau nhé." },
+          { speaker: "刘明", hanzi: "好，我十分钟后去。", pinyin: "Hǎo, wǒ shí fēnzhōng hòu qù.", vietnamese: "Được, mười phút nữa anh đi." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l7-g1",
@@ -815,26 +1000,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l8-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在餐厅点饮品。(Trong nhà hàng gọi đồ uống).",
+        context: "在王一飞家，白家月和陈天中来做客。(Ở nhà Vương Nhất Phi, Bạch Gia Nguyệt và Trần Thiên Trung đến thăm.)",
         lines: [
-          { speaker: "服务员", hanzi: "你想喝什么？", pinyin: "Nǐ xiǎng hē shénme?", vietnamese: "Bạn muốn uống gì?" },
-          { speaker: "客人", hanzi: "我想喝茶。", pinyin: "Wǒ xiǎng hē chá.", vietnamese: "Tôi muốn uống trà." },
-          { speaker: "服务员", hanzi: "你想吃什么？", pinyin: "Nǐ xiǎng chī shénme?", vietnamese: "Bạn muốn ăn gì?" },
-          { speaker: "客人", hanzi: "我想吃米饭。", pinyin: "Wǒ xiǎng chī mǐfàn.", vietnamese: "Tôi muốn ăn cơm." }
+          { speaker: "白家月", hanzi: "房间外有一只小猫。", pinyin: "Fángjiān wài yǒu yī zhī xiǎo māo.", vietnamese: "Ngoài phòng có một con mèo nhỏ." },
+          { speaker: "陈天中", hanzi: "我没看见，它在哪儿呢？", pinyin: "Wǒ méi kànjiàn, tā zài nǎr ne?", vietnamese: "Tôi không thấy, nó đang ở đâu vậy?" },
+          { speaker: "白家月", hanzi: "它在桌子下呢。", pinyin: "Tā zài zhuōzi xià ne.", vietnamese: "Nó đang ở dưới bàn." },
+          { speaker: "陈天中", hanzi: "这只小猫真漂亮！", pinyin: "Zhè zhī xiǎo māo zhēn piàoliang!", vietnamese: "Con mèo nhỏ này đẹp quá!" }
         ]
       },
       {
         id: "hsk1-l8-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "在商店买东西。(Trong cửa hàng mua đồ).",
+        context: "在教室里，下课后，白家月给李文打电话。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt gọi điện cho Lý Văn.)",
         lines: [
-          { speaker: "客人", hanzi: "你好！这个杯子多少钱？", pinyin: "Nǐ hǎo! Zhè gè bēizi duōshao qián?", vietnamese: "Xin chào! Chiếc cốc này bao nhiêu tiền?" },
-          { speaker: "售货员", hanzi: "28块。", pinyin: "Èrshíbā kuài.", vietnamese: "28 tệ." },
-          { speaker: "客人", hanzi: "那个杯子呢？", pinyin: "Nà gè bēizi ne?", vietnamese: "Còn chiếc cốc kia thì sao?" },
-          { speaker: "售货员", hanzi: "那个杯子18块。", pinyin: "Nà gè bēizi shíbā kuài.", vietnamese: "Chiếc cốc kia 18 tệ." }
+          { speaker: "白家月", hanzi: "我们在哪儿见呢？", pinyin: "Wǒmen zài nǎr jiàn ne?", vietnamese: "Chúng ta gặp nhau ở đâu nhỉ?" },
+          { speaker: "李文", hanzi: "在学校书店前见吧。", pinyin: "Zài xuéxiào shūdiàn qián jiàn ba.", vietnamese: "Gặp nhau trước nhà sách trường nhé." },
+          { speaker: "白家月", hanzi: "好的。下午两点你能到吗？", pinyin: "Hǎo de. Xiàwǔ liǎng diǎn nǐ néng dào ma?", vietnamese: "Được. Hai giờ chiều bạn đến được không?" },
+          { speaker: "李文", hanzi: "我能到。我在学校吃午饭。", pinyin: "Wǒ néng dào. Wǒ zài xuéxiào chī wǔfàn.", vietnamese: "Tôi đến được. Tôi ăn trưa ở trường." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l8-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "在医院里，刘明和同事小胡聊天儿。(Ở bệnh viện, Lưu Minh trò chuyện với đồng nghiệp là tiểu Hồ.)",
+        lines: [
+          { speaker: "刘明", hanzi: "小胡，还没吃饭呢？", pinyin: "Xiǎo Hú, hái méi chīfàn ne?", vietnamese: "Tiểu Hồ, chưa ăn cơm à?" },
+          { speaker: "小胡", hanzi: "没吃呢。", pinyin: "Méi chī ne.", vietnamese: "Chưa ăn." },
+          { speaker: "刘明", hanzi: "大医院病人多，医生非常忙。", pinyin: "Dà yīyuàn bìngrén duō, yīshēng fēicháng máng.", vietnamese: "Bệnh viện lớn bệnh nhân nhiều, bác sĩ rất bận." },
+          { speaker: "小胡", hanzi: "是的。我爸爸也在医院工作，他也非常忙。", pinyin: "Shì de. Wǒ bàba yě zài yīyuàn gōngzuò, tā yě fēicháng máng.", vietnamese: "Đúng vậy. Bố tôi cũng làm ở bệnh viện, ông ấy cũng rất bận." },
+          { speaker: "刘明", hanzi: "你家有两个医生？", pinyin: "Nǐ jiā yǒu liǎng gè yīshēng?", vietnamese: "Nhà bạn có hai bác sĩ à?" },
+          { speaker: "小胡", hanzi: "对。", pinyin: "Duì.", vietnamese: "Đúng vậy." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l8-g1",
@@ -893,25 +1092,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l9-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在客厅谈论宠物。(Ở phòng khách nói về thú cưng).",
+        context: "在校园里，李文和白家月在聊天儿。(Trong khuôn viên trường, Lý Văn và Bạch Gia Nguyệt đang trò chuyện.)",
         lines: [
-          { speaker: "A", hanzi: "小猫在哪儿？", pinyin: "Xiǎomāo zài nǎr?", vietnamese: "Mèo con ở đâu thế?" },
-          { speaker: "B", hanzi: "小猫在那儿，在椅子下面。", pinyin: "Xiǎomāo zài nàr, zài yǐzi xiàmiàn.", vietnamese: "Mèo con ở đằng kia, ở dưới gầm ghế." },
-          { speaker: "A", hanzi: "小狗在哪儿？", pinyin: "Xiǎogǒu zài nǎr?", vietnamese: "Chó con ở đâu?" },
-          { speaker: "B", hanzi: "小狗在椅子上面。", pinyin: "Xiǎogǒu zài yǐzi shàngmiàn.", vietnamese: "Chó con ở trên ghế." }
+          { speaker: "李文", hanzi: "学校前边有一家电影院。", pinyin: "Xuéxiào qiánbian yǒu yī jiā diànyǐngyuàn.", vietnamese: "Phía trước trường có một rạp chiếu phim." },
+          { speaker: "白家月", hanzi: "对。我们晚上去那个电影院看电影吧。", pinyin: "Duì. Wǒmen wǎnshang qù nàge diànyǐngyuàn kàn diànyǐng ba.", vietnamese: "Đúng rồi. Tối nay chúng ta đến rạp đó xem phim nhé." },
+          { speaker: "李文", hanzi: "好！我们七点在电影院外边见，好吗？", pinyin: "Hǎo! Wǒmen qī diǎn zài diànyǐngyuàn wàibian jiàn, hǎo ma?", vietnamese: "Tốt! Bảy giờ chúng ta gặp nhau bên ngoài rạp, được không?" },
+          { speaker: "白家月", hanzi: "好的，晚上七点见！", pinyin: "Hǎo de, wǎnshang qī diǎn jiàn!", vietnamese: "Được rồi, tối bảy giờ gặp nhau!" }
         ]
       },
       {
         id: "hsk1-l9-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "谈论工作。(Nói về công việc).",
+        context: "在教室里，下课后，白家月和陈天中在聊天儿。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt và Trần Thiên Trung đang trò chuyện.)",
         lines: [
-          { speaker: "A", hanzi: "你在哪儿工作？", pinyin: "Nǐ zài nǎr gōngzuò?", vietnamese: "Bạn làm việc ở đâu?" },
-          { speaker: "B", hanzi: "我在学校工作。你儿子在哪儿工作？", pinyin: "Wǒ zài xuéxiào gōngzuò. Nǐ érzi zài nǎr gōngzuò?", vietnamese: "Tôi làm việc ở trường học. Con trai bạn làm việc ở đâu?" },
-          { speaker: "A", hanzi: "我儿子在医院工作，他是医生。", pinyin: "Wǒ érzi zài yīyuàn gōngzuò, tā shì yīshēng.", vietnamese: "Con trai tôi làm việc ở bệnh viện, nó là bác sĩ." }
+          { speaker: "陈天中", hanzi: "椅子上有一本中文书，那是谁的书？", pinyin: "Yǐzi shang yǒu yī běn Zhōngwén shū, nà shì shéi de shū?", vietnamese: "Trên ghế có một quyển sách tiếng Trung, đó là sách của ai?" },
+          { speaker: "白家月", hanzi: "是我的书，谢谢。这是我的第二本中文书。", pinyin: "Shì wǒ de shū, xièxie. Zhè shì wǒ de dì-èr běn Zhōngwén shū.", vietnamese: "Là sách của tôi, cảm ơn. Đây là quyển sách tiếng Trung thứ hai của tôi." },
+          { speaker: "陈天中", hanzi: "不客气。你明天上午在哪儿？", pinyin: "Bù kèqi. Nǐ míngtiān shàngwǔ zài nǎr?", vietnamese: "Không có gì. Sáng mai bạn ở đâu?" },
+          { speaker: "白家月", hanzi: "我明天上午在学校学习。", pinyin: "Wǒ míngtiān shàngwǔ zài xuéxiào xuéxí.", vietnamese: "Sáng mai tôi ở trường học bài." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l9-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "在公司里，王一雪和杨同乐休息时聊天儿，谈论周末生活。(Ở công ty, Vương Nhất Tuyết và Dương Đồng Nhạc trò chuyện lúc nghỉ giải lao về cuộc sống cuối tuần.)",
+        lines: [
+          { speaker: "王一雪", hanzi: "明天星期六，你做什么？", pinyin: "Míngtiān Xīngqīliù, nǐ zuò shénme?", vietnamese: "Ngày mai thứ Bảy, bạn làm gì?" },
+          { speaker: "杨同乐", hanzi: "我白天在家里读书，晚上和朋友们去外边唱歌。", pinyin: "Wǒ báitiān zài jiā lǐ dúshū, wǎnshang hé péngyoumen qù wàibian chàng gē.", vietnamese: "Tôi ban ngày ở nhà đọc sách, tối đi hát với bạn bè." },
+          { speaker: "王一雪", hanzi: "你唱歌很好听。", pinyin: "Nǐ chànggē hěn hǎotīng.", vietnamese: "Bạn hát rất hay." },
+          { speaker: "杨同乐", hanzi: "谢谢！您星期六做什么？", pinyin: "Xièxie! Nín Xīngqīliù zuò shénme?", vietnamese: "Cảm ơn! Thứ Bảy chị làm gì?" },
+          { speaker: "王一雪", hanzi: "我在家里做饭，看电视，和孩子们、小狗玩。", pinyin: "Wǒ zài jiā lǐ zuòfàn, kàn diànshì, hé háizimen, xiǎo gǒu wán.", vietnamese: "Tôi ở nhà nấu ăn, xem TV, chơi với các con và cún nhỏ." },
+          { speaker: "杨同乐", hanzi: "我也有一只小狗。", pinyin: "Wǒ yě yǒu yī zhī xiǎo gǒu.", vietnamese: "Tôi cũng có một con cún nhỏ." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l9-g1",
@@ -975,17 +1189,42 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l10-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在图书馆找座位。(Tìm chỗ ngồi trong thư viện).",
+        context: "在小店里，王一雪在买杯子。(Ở cửa hàng nhỏ, Vương Nhất Tuyết đang mua cốc.)",
         lines: [
-          { speaker: "A", hanzi: "桌子上有什么？", pinyin: "Zhuōzi shang yǒu shénme?", vietnamese: "Trên bàn có cái gì thế?" },
-          { speaker: "B", hanzi: "桌子上有一个电脑和一本书。", pinyin: "Zhuōzi shang yǒu yí gè diànnǎo hé yì běn shū.", vietnamese: "Trên bàn có một chiếc máy tính và một quyển sách." },
-          { speaker: "A", hanzi: "这儿有人吗？", pinyin: "Zhèr yǒu rén ma?", vietnamese: "Ở đây có người ngồi không?" },
-          { speaker: "B", hanzi: "没有。", pinyin: "Méiyǒu.", vietnamese: "Không có ai cả." },
-          { speaker: "A", hanzi: "我能坐这儿吗？", pinyin: "Wǒ néng zuò zhèr ma?", vietnamese: "Tôi có thể ngồi đây được không?" },
-          { speaker: "B", hanzi: "请坐。", pinyin: "Qǐng zuò.", vietnamese: "Xin mời ngồi." }
+          { speaker: "王一雪", hanzi: "请问，有杯子吗？", pinyin: "Qǐngwèn, yǒu bēizi ma?", vietnamese: "Cho hỏi, có cốc không ạ?" },
+          { speaker: "店员", hanzi: "有，杯子在这边。", pinyin: "Yǒu, bēizi zài zhèbian.", vietnamese: "Có ạ, cốc ở phía này." },
+          { speaker: "王一雪", hanzi: "多少钱一个？", pinyin: "Duōshao qián yī gè?", vietnamese: "Mỗi cái bao nhiêu tiền?" },
+          { speaker: "店员", hanzi: "这些五块钱一个，那些十块钱一个。", pinyin: "Zhèxiē wǔ kuài qián yī gè, nàxiē shí kuài qián yī gè.", vietnamese: "Những cái này năm tệ một cái, những cái kia mười tệ một cái." },
+          { speaker: "王一雪", hanzi: "我买这个吧。", pinyin: "Wǒ mǎi zhège ba.", vietnamese: "Tôi mua cái này nhé." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l10-t2",
+        title: "课文 2 (Bài khóa 2)",
+        context: "在集市上，王一雪在买水果。(Ở chợ, Vương Nhất Tuyết đang mua hoa quả.)",
+        lines: [
+          { speaker: "王一雪", hanzi: "这儿的水果真不少！", pinyin: "Zhèr de shuǐguǒ zhēn bù shǎo!", vietnamese: "Hoa quả ở đây thật là nhiều!" },
+          { speaker: "摊主", hanzi: "您想买什么？", pinyin: "Nín xiǎng mǎi shénme?", vietnamese: "Bà muốn mua gì ạ?" },
+          { speaker: "王一雪", hanzi: "我想买两斤苹果。", pinyin: "Wǒ xiǎng mǎi liǎng jīn píngguǒ.", vietnamese: "Tôi muốn mua hai cân táo." },
+          { speaker: "摊主", hanzi: "苹果三块五一斤。这些七块二，七块钱吧。", pinyin: "Píngguǒ sān kuài wǔ yī jīn. Zhèxiē qī kuài èr, qī kuài qián ba.", vietnamese: "Táo ba phẩy năm tệ một cân. Những quả này bảy phẩy hai tệ, bảy tệ thôi nhé." },
+          { speaker: "王一雪", hanzi: "好的，这儿的苹果真便宜！", pinyin: "Hǎo de, zhèr de píngguǒ zhēn piányí!", vietnamese: "Được rồi, táo ở đây thật rẻ!" }
+        ]
+      },
+      {
+        id: "hsk1-l10-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "在商场里，刘明和王一雪在给孩子们买衣服。(Ở trung tâm thương mại, Lưu Minh và Vương Nhất Tuyết đang mua quần áo cho các con.)",
+        lines: [
+          { speaker: "王一雪", hanzi: "这家商店衣服真多！这件一百元，怎么样？", pinyin: "Zhè jiā shāngdiàn yīfu zhēn duō! Zhè jiàn yī bǎi yuán, zěnmeyàng?", vietnamese: "Cửa hàng này quần áo thật nhiều! Cái này một trăm tệ, thế nào?" },
+          { speaker: "刘明", hanzi: "好看，也不贵。", pinyin: "Hǎokàn, yě bù guì.", vietnamese: "Đẹp, cũng không đắt." },
+          { speaker: "王一雪", hanzi: "小雪能穿，买一件吧。", pinyin: "Xiǎo Xuě néng chuān, mǎi yī jiàn ba.", vietnamese: "Tiểu Tuyết mặc được, mua một cái nhé." },
+          { speaker: "刘明", hanzi: "好的。小明能穿吗？", pinyin: "Hǎo de. Xiǎo Míng néng chuān ma?", vietnamese: "Được. Tiểu Minh mặc được không?" },
+          { speaker: "王一雪", hanzi: "不能。这些是女孩子穿的衣服，男孩子的衣服在那儿。", pinyin: "Bù néng. Zhèxiē shì nǚ háizi chuān de yīfu, nán háizi de yīfu zài nàr.", vietnamese: "Không được. Những cái này là quần áo con gái, quần áo con trai ở kia." },
+          { speaker: "刘明", hanzi: "好的。", pinyin: "Hǎo de.", vietnamese: "Được rồi." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l10-g1",
@@ -1043,26 +1282,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l11-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "看手表问时间。(Xem đồng hồ hỏi giờ).",
+        context: "在路上，李文正在找饭店，王一飞给他打电话。(Trên đường, Lý Văn đang tìm nhà hàng, Vương Nhất Phi gọi điện cho anh.)",
         lines: [
-          { speaker: "A", hanzi: "现在几点？", pinyin: "Xiànzài jǐ diǎn?", vietnamese: "Bây giờ là mấy giờ rồi?" },
-          { speaker: "B", hanzi: "现在十点十分。", pinyin: "Xiànzài shí diǎn shí fēn.", vietnamese: "Bây giờ là 10 giờ 10 phút." },
-          { speaker: "A", hanzi: "我们中午几点吃饭？", pinyin: "Wǒmen zhōngwǔ jǐ diǎn chīfàn?", vietnamese: "Buổi trưa tụi mình ăn cơm lúc mấy giờ?" },
-          { speaker: "B", hanzi: "十二点吃饭。", pinyin: "Shí'èr diǎn chīfàn.", vietnamese: "Mười hai giờ ăn cơm." }
+          { speaker: "王一飞", hanzi: "喂，李文，你什么时候能到饭店？", pinyin: "Wèi, Lǐ Wén, nǐ shénme shíhou néng dào fàndiàn?", vietnamese: "A-lô, Lý Văn, bao giờ bạn đến nhà hàng được?" },
+          { speaker: "李文", hanzi: "还不知道，正在找呢。它是不是在超市后边？", pinyin: "Hái bù zhīdào, zhèngzài zhǎo ne. Tā shì bu shì zài chāoshì hòubian?", vietnamese: "Chưa biết, đang tìm. Nó có phải ở phía sau siêu thị không?" },
+          { speaker: "王一飞", hanzi: "是的。你开车没开车？", pinyin: "Shì de. Nǐ kāichē méi kāichē?", vietnamese: "Đúng rồi. Bạn có lái xe không?" },
+          { speaker: "李文", hanzi: "我没开车，坐车呢。", pinyin: "Wǒ méi kāichē, zuò chē ne.", vietnamese: "Tôi không lái xe, đang đi xe buýt." }
         ]
       },
       {
         id: "hsk1-l11-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "安排日程。(Sắp xếp lịch trình đi xem phim).",
+        context: "在饭店里，王一飞和李文见面后聊天儿。(Ở nhà hàng, Vương Nhất Phi và Lý Văn gặp nhau và trò chuyện.)",
         lines: [
-          { speaker: "A", hanzi: "爸爸什么时候回家？", pinyin: "Bàba shénme shíhou huí jiā?", vietnamese: "Bố khi nào thì về nhà?" },
-          { speaker: "B", hanzi: "下午五点。", pinyin: "Xiàwǔ wǔ diǎn.", vietnamese: "Năm giờ chiều." },
-          { speaker: "A", hanzi: "我们什么时候去看电影？", pinyin: "Wǒmen shénme shíhou qù kàn diànyǐng?", vietnamese: "Khi nào thì chúng ta đi xem phim?" },
-          { speaker: "B", hanzi: "六点三十分。", pinyin: "Liù diǎn sānshí fēn.", vietnamese: "Sáu giờ ba mươi phút." }
+          { speaker: "王一飞", hanzi: "你还在上大学吗？", pinyin: "Nǐ hái zài shàng dàxué ma?", vietnamese: "Bạn có vẫn đang học đại học không?" },
+          { speaker: "李文", hanzi: "对，我上大学呢，还是大学生。", pinyin: "Duì, wǒ shàng dàxué ne, hái shì dàxuéshēng.", vietnamese: "Đúng vậy, tôi đang học đại học, vẫn còn là sinh viên." },
+          { speaker: "王一飞", hanzi: "你们学习忙不忙？", pinyin: "Nǐmen xuéxí máng bu máng?", vietnamese: "Các bạn có bận học không?" },
+          { speaker: "李文", hanzi: "非常忙，我学语言，我们的课很多。", pinyin: "Fēicháng máng, wǒ xué yǔyán, wǒmen de kè hěn duō.", vietnamese: "Rất bận, tôi học ngôn ngữ, chúng tôi có rất nhiều tiết học." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l11-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "星期六早上，刘明要去医院加班，出门前和女儿聊天儿。(Sáng thứ Bảy, Lưu Minh sắp đi làm thêm giờ ở bệnh viện, trước khi ra ngoài trò chuyện với con gái.)",
+        lines: [
+          { speaker: "刘明", hanzi: "弟弟起床没起床呢？", pinyin: "Dìdi qǐchuáng méi qǐchuáng ne?", vietnamese: "Em trai dậy chưa?" },
+          { speaker: "刘小雪", hanzi: "没起床呢，还在睡觉。", pinyin: "Méi qǐchuáng ne, hái zài shuìjiào.", vietnamese: "Chưa dậy, vẫn còn ngủ." },
+          { speaker: "刘明", hanzi: "还睡呢？他今天去不去哪里？", pinyin: "Hái shuì ne? Tā jīntiān qù bu qù nǎlǐ?", vietnamese: "Còn ngủ à? Hôm nay nó có đi đâu không?" },
+          { speaker: "刘小雪", hanzi: "去哪里？", pinyin: "Qù nǎlǐ?", vietnamese: "Đi đâu ấy?" },
+          { speaker: "刘明", hanzi: "去超市。", pinyin: "Qù chāoshì.", vietnamese: "Đi siêu thị." },
+          { speaker: "刘小雪", hanzi: "我昨天晚问他，他对我说，他不去，他今天要和小朋友玩。", pinyin: "Wǒ zuótiān wǎn wèn tā, tā duì wǒ shuō, tā bù qù, tā jīntiān yào hé xiǎopéngyou wán.", vietnamese: "Tối qua tôi có hỏi nó, nó nói với tôi rằng nó không đi, hôm nay nó muốn chơi với bạn nhỏ." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l11-g1",
@@ -1126,26 +1379,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l12-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "谈论天气。(Trò chuyện về thời tiết).",
+        context: "王一雪给王一飞打电话，问那边的情况。(Vương Nhất Tuyết gọi điện cho Vương Nhất Phi, hỏi về tình hình bên đó.)",
         lines: [
-          { speaker: "A", hanzi: "昨天北京的天气怎么样？", pinyin: "Zuótiān Běijīng de tiānqì zěnmeyàng?", vietnamese: "Hôm qua thời tiết Bắc Kinh thế nào?" },
-          { speaker: "B", hanzi: "太热了。", pinyin: "Tài rè le.", vietnamese: "Nóng quá đi mất." },
-          { speaker: "A", hanzi: "明天天气怎么样？", pinyin: "Míngtiān tiānqì zěnmeyàng?", vietnamese: "Thời tiết ngày mai thế nào?" },
-          { speaker: "B", hanzi: "明天天气很好，不冷也不热。", pinyin: "Míngtiān tiānqì hěn hǎo, bù lěng yě bú rè.", vietnamese: "Thời tiết ngày mai rất đẹp, không lạnh cũng không nóng." }
+          { speaker: "王一雪", hanzi: "今天天气怎么样？", pinyin: "Jīntiān tiānqì zěnmeyàng?", vietnamese: "Hôm nay thời tiết thế nào?" },
+          { speaker: "王一飞", hanzi: "这里的天不太好，下雨了。", pinyin: "Zhèlǐ de tiān bù tài hǎo, xià yǔ le.", vietnamese: "Thời tiết ở đây không tốt lắm, trời mưa rồi." },
+          { speaker: "王一雪", hanzi: "雨大吗？", pinyin: "Yǔ dà ma?", vietnamese: "Mưa to không?" },
+          { speaker: "王一飞", hanzi: "有点儿大，我觉得很冷。", pinyin: "Yǒudiǎnr dà, wǒ juéde hěn lěng.", vietnamese: "Hơi to, tôi thấy rất lạnh." }
         ]
       },
       {
         id: "hsk1-l12-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "关心身体。(Hỏi thăm sức khỏe).",
+        context: "在公司电梯里，王一雪和杨同乐在聊天儿。(Trong thang máy công ty, Vương Nhất Tuyết và Dương Đồng Nhạc đang trò chuyện.)",
         lines: [
-          { speaker: "A", hanzi: "今天会下雨吗？", pinyin: "Jīntiān huì xiàyǔ ma?", vietnamese: "Hôm nay trời có mưa không nhỉ?" },
-          { speaker: "B", hanzi: "今天不会下雨。", pinyin: "Jīntiān bú huì xiàyǔ.", vietnamese: "Hôm nay trời sẽ không mưa đâu." },
-          { speaker: "A", hanzi: "王小姐今天会来吗？", pinyin: "Wáng xiǎojiě jīntiān huì lái ma?", vietnamese: "Cô Vương hôm nay có đến không?" },
-          { speaker: "B", hanzi: "不会来，天气太冷了。", pinyin: "Bú huì lái, tiānqì tài lěng le.", vietnamese: "Sẽ không đến đâu, thời tiết lạnh quá." }
+          { speaker: "王一雪", hanzi: "昨天下雪了。", pinyin: "Zuótiān xià xuě le.", vietnamese: "Hôm qua có tuyết rơi." },
+          { speaker: "杨同乐", hanzi: "是的，太冷了。", pinyin: "Shì de, tài lěng le.", vietnamese: "Đúng vậy, lạnh quá." },
+          { speaker: "王一雪", hanzi: "你昨天没来公司，生病了？", pinyin: "Nǐ zuótiān méi lái gōngsī, shēngbìng le?", vietnamese: "Hôm qua bạn không đến công ty, bị ốm à?" },
+          { speaker: "杨同乐", hanzi: "对，我昨天去医院看病了。", pinyin: "Duì, wǒ zuótiān qù yīyuàn kànbìng le.", vietnamese: "Đúng vậy, hôm qua tôi đi bệnh viện khám bệnh." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l12-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "昨天在医院里，医生给杨同乐看病。(Hôm qua ở bệnh viện, bác sĩ khám bệnh cho Dương Đồng Nhạc.)",
+        lines: [
+          { speaker: "杨同乐", hanzi: "医生，我病了。", pinyin: "Yīshēng, wǒ bìng le.", vietnamese: "Bác sĩ ơi, tôi bị ốm rồi." },
+          { speaker: "医生", hanzi: "我看看。你觉得怎么样？", pinyin: "Wǒ kànkan. Nǐ juéde zěnmeyàng?", vietnamese: "Để tôi xem. Bạn cảm thấy thế nào?" },
+          { speaker: "杨同乐", hanzi: "我很冷。", pinyin: "Wǒ hěn lěng.", vietnamese: "Tôi rất lạnh." },
+          { speaker: "医生", hanzi: "好的，吃一点儿药，今天休息半天吧。", pinyin: "Hǎo de, chī yīdiǎnr yào, jīntiān xiūxi bàn tiān ba.", vietnamese: "Được rồi, uống một ít thuốc, hôm nay nghỉ nửa ngày nhé." },
+          { speaker: "杨同乐", hanzi: "好的。", pinyin: "Hǎo de.", vietnamese: "Được rồi." },
+          { speaker: "医生", hanzi: "回家后再喝些热水。", pinyin: "Huí jiā hòu zài hē xiē rè shuǐ.", vietnamese: "Về nhà nhớ uống thêm nước ấm nhé." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l12-g1",
@@ -1204,15 +1471,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l13-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "打电话。(Gọi điện thoại).",
+        context: "在教室里，下课后，白家月向王老师问问题。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt hỏi thầy Vương một câu hỏi.)",
         lines: [
-          { speaker: "A", hanzi: "喂，你在做什么呢？", pinyin: "Wèi, nǐ zài zuò shénme ne?", vietnamese: "Alo, bạn đang làm gì thế?" },
-          { speaker: "B", hanzi: "我在看书呢。", pinyin: "Wǒ zài kàn shū ne.", vietnamese: "Tôi đang đọc sách nè." },
-          { speaker: "A", hanzi: "大卫在做什么呢？", pinyin: "Dàwèi zài zuò shénme ne?", vietnamese: "David đang làm gì vậy?" },
-          { speaker: "B", hanzi: "他在学做中国菜呢。", pinyin: "Tā zài xué zuò Zhōngguó cài ne.", vietnamese: "Anh ấy đang học nấu món ăn Trung Quốc." }
+          { speaker: "白家月", hanzi: "王老师，我可以再问您一个问题吗？", pinyin: "Wáng lǎoshī, wǒ kěyǐ zài wèn nín yī gè wèntí ma?", vietnamese: "Thầy Vương ơi, em có thể hỏi thầy thêm một câu không?" },
+          { speaker: "王一飞", hanzi: "可以。你有什么问题？", pinyin: "Kěyǐ. Nǐ yǒu shénme wèntí?", vietnamese: "Được. Em có câu hỏi gì?" },
+          { speaker: "白家月", hanzi: "那个小店买不买手机？", pinyin: "Nàge xiǎo diàn mǎi bu mǎi shǒujī?", vietnamese: "Cái cửa hàng nhỏ đó có bán điện thoại không ạ?" },
+          { speaker: "王一飞", hanzi: "我不知道。你可以打电话问一下。", pinyin: "Wǒ bù zhīdào. Nǐ kěyǐ dǎ diànhuà wèn yīxià.", vietnamese: "Thầy không biết. Em có thể gọi điện hỏi xem." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l13-t2",
+        title: "课文 2 (Bài khóa 2)",
+        context: "在咖啡馆里，王一雪想吃早饭。(Ở quán cà phê, Vương Nhất Tuyết muốn ăn sáng.)",
+        lines: [
+          { speaker: "服务员", hanzi: "女士，请坐！您喝什么？", pinyin: "Nǚshì, qǐng zuò! Nín hē shénme?", vietnamese: "Thưa cô, mời ngồi! Cô muốn uống gì?" },
+          { speaker: "王一雪", hanzi: "我看一下。请给我一杯牛奶。", pinyin: "Wǒ kàn yīxià. Qǐng gěi wǒ yī bēi niúnǎi.", vietnamese: "Để tôi xem đã. Làm ơn cho tôi một ly sữa." },
+          { speaker: "服务员", hanzi: "好的。您还要什么？", pinyin: "Hǎo de. Nín hái yào shénme?", vietnamese: "Được ạ. Cô còn muốn gì nữa không?" },
+          { speaker: "王一雪", hanzi: "我还没吃早饭，再要这个面包和鸡蛋吧。", pinyin: "Wǒ hái méi chī zǎofàn, zài yào zhège miànbāo hé jīdàn ba.", vietnamese: "Tôi chưa ăn sáng, cho thêm bánh mì và trứng này nhé." }
+        ]
+      },
+      {
+        id: "hsk1-l13-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "在餐厅里，刘明在点餐。(Ở nhà hàng, Lưu Minh đang gọi đồ ăn.)",
+        lines: [
+          { speaker: "服务员", hanzi: "先生，请坐！您要什么？", pinyin: "Xiānsheng, qǐng zuò! Nín yào shénme?", vietnamese: "Thưa anh, mời ngồi! Anh muốn gì ạ?" },
+          { speaker: "刘明", hanzi: "我要一斤饺子。", pinyin: "Wǒ yào yī jīn jiǎozi.", vietnamese: "Cho tôi một cân sủi cảo." },
+          { speaker: "服务员", hanzi: "好的。一斤饺子40个。", pinyin: "Hǎo de. Yī jīn jiǎozi sìshí gè.", vietnamese: "Vâng. Một cân sủi cảo là 40 cái." },
+          { speaker: "刘明", hanzi: "40个太多了，我要一半吧。", pinyin: "Sìshí gè tài duō le, wǒ yào yībàn ba.", vietnamese: "40 cái nhiều quá, cho tôi một nửa thôi." },
+          { speaker: "服务员", hanzi: "半斤20个。您想喝什么？", pinyin: "Bàn jīn èrshí gè. Nín xiǎng hē shénme?", vietnamese: "Nửa cân 20 cái. Anh muốn uống gì?" },
+          { speaker: "刘明", hanzi: "请给我一杯茶吧。", pinyin: "Qǐng gěi wǒ yī bēi chá ba.", vietnamese: "Làm ơn cho tôi một chén trà nhé." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l13-g1",
@@ -1275,26 +1567,41 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l14-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在宿舍门前。(Trước cửa ký túc xá).",
+        context: "在教室里，下课后，白家月和陈天中在谈论上一次课外旅行。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt và Trần Thiên Trung đang nói về chuyến dã ngoại vừa rồi.)",
         lines: [
-          { speaker: "A", hanzi: "昨天上午你去哪儿了？", pinyin: "Zuótiān shàngwǔ nǐ qù nǎr le?", vietnamese: "Sáng hôm qua bạn đã đi đâu thế?" },
-          { speaker: "B", hanzi: "我去商店买东西了。", pinyin: "Wǒ qù shāngdiàn mǎi dōngxi le.", vietnamese: "Tôi đã đến cửa hàng mua đồ." },
-          { speaker: "A", hanzi: "你买什么了？", pinyin: "Nǐ mǎi shénme le?", vietnamese: "Bạn đã mua những gì?" },
-          { speaker: "B", hanzi: "我买了一点儿苹果和不少衣服。", pinyin: "Wǒ mǎile yìdiǎnr píngguǒ hé bù shǎo yīfu.", vietnamese: "Tôi đã mua một ít táo và không ít quần áo." }
+          { speaker: "白家月", hanzi: "你们上火车后看见王老师了吗？", pinyin: "Nǐmen shàng huǒchē hòu kànjiàn Wáng lǎoshī le ma?", vietnamese: "Các bạn sau khi lên tàu có thấy thầy Vương không?" },
+          { speaker: "陈天中", hanzi: "没看见。中午车开后，有些人在看书，有些人睡觉了。", pinyin: "Méi kànjiàn. Zhōngwǔ chē kāi hòu, yǒuxiē rén zài kàn shū, yǒuxiē rén shuìjiào le.", vietnamese: "Không thấy. Trưa tàu chạy rồi, có người đang đọc sách, có người ngủ." },
+          { speaker: "白家月", hanzi: "你呢？", pinyin: "Nǐ ne?", vietnamese: "Còn bạn thì sao?" },
+          { speaker: "陈天中", hanzi: "我看了一个电影。", pinyin: "Wǒ kànle yī gè diànyǐng.", vietnamese: "Tôi đã xem một bộ phim." }
         ]
       },
       {
         id: "hsk1-l14-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "谈论朋友。(Trò chuyện về bạn bè).",
+        context: "在课堂上，王一飞在询问学生们的学习情况。(Trong lớp học, Vương Nhất Phi đang hỏi về tình hình học tập của học sinh.)",
         lines: [
-          { speaker: "A", hanzi: "你看见张先生了吗？", pinyin: "Nǐ kànjiàn Zhāng xiānsheng le ma?", vietnamese: "Bạn có nhìn thấy ông Trương không?" },
-          { speaker: "B", hanzi: "看见了，他去学开车了。", pinyin: "Kànjiàn le, tā qù xué kāichē le.", vietnamese: "Thấy rồi, ông ấy đi học lái xe rồi." },
-          { speaker: "A", hanzi: "他什么时候能回来？", pinyin: "Tā shénme shíhou néng huílái?", vietnamese: "Khi nào ông ấy có thể về?" },
-          { speaker: "B", hanzi: "40分钟后回来。", pinyin: "Sìshí fēnzhōng hòu huílái.", vietnamese: "Sau 40 phút nữa sẽ về." }
+          { speaker: "王一飞", hanzi: "你们会说汉语了，也会写汉字了吗？", pinyin: "Nǐmen huì shuō Hànyǔ le, yě huì xiě Hànzì le ma?", vietnamese: "Các em bây giờ đã biết nói tiếng Trung, vậy đã biết viết chữ Hán chưa?" },
+          { speaker: "白家月", hanzi: "我们都会写了。", pinyin: "Wǒmen dōu huì xiě le.", vietnamese: "Chúng em đều đã biết viết rồi ạ." },
+          { speaker: "陈天中", hanzi: "老师，我听不见。", pinyin: "Lǎoshī, wǒ tīng bu jiàn.", vietnamese: "Thưa thầy, em không nghe thấy ạ." },
+          { speaker: "王一飞", hanzi: "请大家不要说话！请听老师的问题：你们都会写哪些汉字了？", pinyin: "Qǐng dàjiā bùyào shuōhuà! Qǐng tīng lǎoshī de wèntí: Nǐmen dōu huì xiě nǎxiē Hànzì le?", vietnamese: "Mọi người không được nói chuyện! Hãy nghe câu hỏi của thầy: Các em đã biết viết những chữ Hán nào rồi?" },
+          { speaker: "陈天中", hanzi: "我会写这些字了，您看！", pinyin: "Wǒ huì xiě zhèxiē zì le, nín kàn!", vietnamese: "Em đã biết viết những chữ này rồi, thầy xem này!" }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l14-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "在家里，刘明和王一雪在谈论孩子的升学情况。(Ở nhà, Lưu Minh và Vương Nhất Tuyết đang nói về việc con cái lên cấp học mới.)",
+        lines: [
+          { speaker: "刘明", hanzi: "明年女儿上中学。", pinyin: "Míngnián nǚ'ér shàng zhōngxué.", vietnamese: "Năm sau con gái lên trung học." },
+          { speaker: "王一雪", hanzi: "对。儿子也上小学了。", pinyin: "Duì. Érzi yě shàng xiǎoxué le.", vietnamese: "Đúng rồi. Con trai cũng vào tiểu học rồi." },
+          { speaker: "刘明", hanzi: "我们家有了一个中学生。", pinyin: "Wǒmen jiā yǒule yī gè zhōngxuéshēng.", vietnamese: "Nhà mình có một học sinh trung học rồi." },
+          { speaker: "王一雪", hanzi: "还有了一个小学生。", pinyin: "Hái yǒule yī gè xiǎoxuéshēng.", vietnamese: "Còn thêm một học sinh tiểu học nữa." },
+          { speaker: "刘明", hanzi: "上学后，他们都忙了。", pinyin: "Shàngxué hòu, tāmen dōu máng le.", vietnamese: "Sau khi đi học, chúng đều bận rồi." },
+          { speaker: "王一雪", hanzi: "是的。太晚了，睡觉吧。", pinyin: "Shì de. Tài wǎn le, shuìjiào ba.", vietnamese: "Đúng vậy. Muộn rồi, đi ngủ thôi." }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l14-g1",
@@ -1360,26 +1667,40 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l15-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在学校谈论出行方式。(Ở trường nói về phương tiện đến đây).",
+        context: "在李文家，李文邀请陈天中、白家月等朋友品尝中餐。(Ở nhà Lý Văn, Lý Văn mời Trần Thiên Trung, Bạch Gia Nguyệt và các bạn thưởng thức ẩm thực Trung Quốc.)",
         lines: [
-          { speaker: "A", hanzi: "你是什么时候来的？", pinyin: "Nǐ shì shénme shíhou lái de?", vietnamese: "Bạn đến từ lúc nào thế?" },
-          { speaker: "B", hanzi: "我是昨天早上来的。", pinyin: "Wǒ shì zuótiān zǎoshang lái de.", vietnamese: "Tôi đến sáng hôm qua." },
-          { speaker: "A", hanzi: "你是怎么来的？", pinyin: "Nǐ shì zěnme lái de?", vietnamese: "Bạn đến đây bằng cách nào?" },
-          { speaker: "B", hanzi: "我是坐飞机来的。", pinyin: "Wǒ shì zuò fēijī lái de.", vietnamese: "Tôi đến bằng máy bay." }
+          { speaker: "李文", hanzi: "你们爱吃哪个菜？", pinyin: "Nǐmen ài chī nǎge cài?", vietnamese: "Các bạn thích ăn món nào?" },
+          { speaker: "白家月", hanzi: "我喜欢这个，也喜欢那个。", pinyin: "Wǒ xǐhuan zhège, yě xǐhuan nàge.", vietnamese: "Tôi thích cái này, cũng thích cái kia." },
+          { speaker: "陈天中", hanzi: "这些菜都好吃，还很好看。", pinyin: "Zhèxiē cài dōu hǎochī, hái hěn hǎokàn.", vietnamese: "Những món này đều ngon, lại còn rất đẹp mắt." },
+          { speaker: "李文", hanzi: "我爱吃中国菜，也喜欢做。大家多吃点儿。", pinyin: "Wǒ ài chī Zhōngguó cài, yě xǐhuan zuò. Dàjiā duō chī diǎnr.", vietnamese: "Tôi thích ăn món Trung Quốc, cũng thích nấu. Mọi người ăn nhiều vào nhé." }
         ]
       },
       {
         id: "hsk1-l15-t2",
         title: "课文 2 (Bài khóa 2)",
-        context: "谈论相识。(Kể về lần đầu quen nhau).",
+        context: "在李文家，大家边吃饭边谈论假期计划。(Ở nhà Lý Văn, mọi người vừa ăn vừa bàn về kế hoạch nghỉ lễ.)",
         lines: [
-          { speaker: "A", hanzi: "你和李小姐是什么时候认识的？", pinyin: "Nǐ hé Lǐ xiǎojiě shì shénme shíhou rènshi de?", vietnamese: "Bạn và cô Lý quen nhau khi nào thế?" },
-          { speaker: "B", hanzi: "我们是2011年9月认识的。", pinyin: "Wǒmen shì èr líng yī yī nián jiǔ yuè rènshi de.", vietnamese: "Chúng tôi quen nhau vào tháng 9 năm 2011." },
-          { speaker: "A", hanzi: "你们是在哪儿认识的？", pinyin: "Nǐmen shì zài nǎr rènshi de?", vietnamese: "Các bạn quen nhau ở đâu?" },
-          { speaker: "B", hanzi: "我们是在大学认识的，她是我的大学同学。", pinyin: "Wǒmen shì zài dàxué rènshi de, tā shì wǒ de dàxué tóngxué.", vietnamese: "Chúng tôi quen nhau ở trường đại học, cô ấy là bạn đại học của tôi." }
+          { speaker: "李文", hanzi: "你们都想去哪儿？", pinyin: "Nǐmen dōu xiǎng qù nǎr?", vietnamese: "Mọi người muốn đi đâu?" },
+          { speaker: "安妮", hanzi: "去年我和男朋友去了西安，今年我想去北京。", pinyin: "Qùnián wǒ hé nánpéngyou qùle Xī'ān, jīnnián wǒ xiǎng qù Běijīng.", vietnamese: "Năm ngoái tôi và bạn trai đã đến Tây An, năm nay tôi muốn đến Bắc Kinh." },
+          { speaker: "白家月", hanzi: "前几年我去了西安，非常好玩儿。今年我也想去北京。", pinyin: "Qián jǐ nián wǒ qùle Xī'ān, fēicháng hǎowánr. Jīnnián wǒ yě xiǎng qù Běijīng.", vietnamese: "Vài năm trước tôi đã đến Tây An, vui lắm. Năm nay tôi cũng muốn đến Bắc Kinh." },
+          { speaker: "李文", hanzi: "我和王老师都是北京人，北京非常漂亮。", pinyin: "Wǒ hé Wáng lǎoshī dōu shì Běijīng rén, Běijīng fēicháng piàoliang.", vietnamese: "Tôi và thầy Vương đều là người Bắc Kinh, Bắc Kinh rất đẹp." }
         ]
       }
-    ],
+    ,
+      {
+        id: "hsk1-l15-t3",
+        title: "课文 3 (Bài khóa 3)",
+        context: "在教室外，白家月、安妮和王老师在谈论去北京旅游的事。(Ngoài lớp học, Bạch Gia Nguyệt, An Ni và thầy Vương đang nói về chuyện đi du lịch Bắc Kinh.)",
+        lines: [
+          { speaker: "王一飞", hanzi: "你们的飞机到北京要几个小时？", pinyin: "Nǐmen de fēijī dào Běijīng yào jǐ gè xiǎoshí?", vietnamese: "Chuyến bay của các em đến Bắc Kinh mất mấy tiếng?" },
+          { speaker: "白家月", hanzi: "九个小时。", pinyin: "Jiǔ gè xiǎoshí.", vietnamese: "Chín tiếng ạ." },
+          { speaker: "王一飞", hanzi: "我家人都在北京，星期天我姐姐也有时间，她可以去机场接你们，你们也可以住我家。", pinyin: "Wǒ jiārén dōu zài Běijīng, Xīngqītiān wǒ jiějie yě yǒu shíjiān, tā kěyǐ qù jīchǎng jiē nǐmen, nǐmen yě kěyǐ zhù wǒ jiā.", vietnamese: "Gia đình thầy đều ở Bắc Kinh, Chủ nhật chị gái thầy cũng có thời gian, chị ấy có thể ra sân bay đón các em, các em cũng có thể ở nhà thầy." },
+          { speaker: "安妮", hanzi: "我们星期日早上八点到大兴机场，早不早？", pinyin: "Wǒmen Xīngqīrì zǎoshang bā diǎn dào Dàxīng Jīchǎng, zǎo bu zǎo?", vietnamese: "Chúng em đến sân bay Đại Hưng lúc tám giờ sáng Chủ nhật, có sớm không ạ?" },
+          { speaker: "王一飞", hanzi: "不早。", pinyin: "Bù zǎo.", vietnamese: "Không sớm đâu." },
+          { speaker: "白家月", hanzi: "谢谢老师！那我们和您姐姐在大兴机场见！", pinyin: "Xièxie lǎoshī! Nà wǒmen hé nín jiějie zài Dàxīng Jīchǎng jiàn!", vietnamese: "Cảm ơn thầy! Vậy chúng em sẽ gặp chị thầy ở sân bay Đại Hưng!" }
+        ]
+      }
+],
     grammarPoints: [
       {
         id: "hsk1-l15-g1",

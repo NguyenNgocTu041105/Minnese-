@@ -1201,7 +1201,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                       <div className="w-full max-w-2xl mx-auto overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-sm bg-[var(--color-bg-secondary)]">
                         <div className="relative aspect-video w-full overflow-hidden">
                           <img
-                            src={illustration.src}
+                            src={`${illustration.src}?v=20261106_v2`}
                             alt={textItem.title}
                             className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
                             loading="lazy"

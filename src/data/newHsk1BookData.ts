@@ -1471,12 +1471,12 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk1-l13-t1",
         title: "课文 1 (Bài khóa 1)",
-        context: "在教室里，下课后，白家月向王老师问问题。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt hỏi thầy Vương một câu hỏi.)",
+        context: "在教室里，下课后，白家月向王老师问问题。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt hỏi cô giáo Vương một câu hỏi.)",
         lines: [
-          { speaker: "白家月", hanzi: "王老师，我可以再问您一个问题吗？", pinyin: "Wáng lǎoshī, wǒ kěyǐ zài wèn nín yī gè wèntí ma?", vietnamese: "Thầy Vương ơi, em có thể hỏi thầy thêm một câu không?" },
+          { speaker: "白家月", hanzi: "王老师，我可以再问您一个问题吗？", pinyin: "Wáng lǎoshī, wǒ kěyǐ zài wèn nín yī gè wèntí ma?", vietnamese: "Cô Vương ơi, em có thể hỏi cô thêm một câu không?" },
           { speaker: "王一飞", hanzi: "可以。你有什么问题？", pinyin: "Kěyǐ. Nǐ yǒu shénme wèntí?", vietnamese: "Được. Em có câu hỏi gì?" },
           { speaker: "白家月", hanzi: "那个小店买不买手机？", pinyin: "Nàge xiǎo diàn mǎi bu mǎi shǒujī?", vietnamese: "Cái cửa hàng nhỏ đó có bán điện thoại không ạ?" },
-          { speaker: "王一飞", hanzi: "我不知道。你可以打电话问一下。", pinyin: "Wǒ bù zhīdào. Nǐ kěyǐ dǎ diànhuà wèn yīxià.", vietnamese: "Thầy không biết. Em có thể gọi điện hỏi xem." }
+          { speaker: "王一飞", hanzi: "我不知道。你可以打电话问一下。", pinyin: "Wǒ bù zhīdào. Nǐ kěyǐ dǎ diànhuà wèn yīxià.", vietnamese: "Cô không biết. Em có thể gọi điện hỏi xem." }
         ]
       }
     ,
@@ -1569,7 +1569,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1 (Bài khóa 1)",
         context: "在教室里，下课后，白家月和陈天中在谈论上一次课外旅行。(Ở lớp học, sau giờ học, Bạch Gia Nguyệt và Trần Thiên Trung đang nói về chuyến dã ngoại vừa rồi.)",
         lines: [
-          { speaker: "白家月", hanzi: "你们上火车后看见王老师了吗？", pinyin: "Nǐmen shàng huǒchē hòu kànjiàn Wáng lǎoshī le ma?", vietnamese: "Các bạn sau khi lên tàu có thấy thầy Vương không?" },
+          { speaker: "白家月", hanzi: "你们上火车后看见王老师了吗？", pinyin: "Nǐmen shàng huǒchē hòu kànjiàn Wáng lǎoshī le ma?", vietnamese: "Các bạn sau khi lên tàu có thấy cô Vương không?" },
           { speaker: "陈天中", hanzi: "没看见。中午车开后，有些人在看书，有些人睡觉了。", pinyin: "Méi kànjiàn. Zhōngwǔ chē kāi hòu, yǒuxiē rén zài kàn shū, yǒuxiē rén shuìjiào le.", vietnamese: "Không thấy. Trưa tàu chạy rồi, có người đang đọc sách, có người ngủ." },
           { speaker: "白家月", hanzi: "你呢？", pinyin: "Nǐ ne?", vietnamese: "Còn bạn thì sao?" },
           { speaker: "陈天中", hanzi: "我看了一个电影。", pinyin: "Wǒ kànle yī gè diànyǐng.", vietnamese: "Tôi đã xem một bộ phim." }
@@ -1582,9 +1582,9 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
         lines: [
           { speaker: "王一飞", hanzi: "你们会说汉语了，也会写汉字了吗？", pinyin: "Nǐmen huì shuō Hànyǔ le, yě huì xiě Hànzì le ma?", vietnamese: "Các em bây giờ đã biết nói tiếng Trung, vậy đã biết viết chữ Hán chưa?" },
           { speaker: "白家月", hanzi: "我们都会写了。", pinyin: "Wǒmen dōu huì xiě le.", vietnamese: "Chúng em đều đã biết viết rồi ạ." },
-          { speaker: "陈天中", hanzi: "老师，我听不见。", pinyin: "Lǎoshī, wǒ tīng bu jiàn.", vietnamese: "Thưa thầy, em không nghe thấy ạ." },
-          { speaker: "王一飞", hanzi: "请大家不要说话！请听老师的问题：你们都会写哪些汉字了？", pinyin: "Qǐng dàjiā bùyào shuōhuà! Qǐng tīng lǎoshī de wèntí: Nǐmen dōu huì xiě nǎxiē Hànzì le?", vietnamese: "Mọi người không được nói chuyện! Hãy nghe câu hỏi của thầy: Các em đã biết viết những chữ Hán nào rồi?" },
-          { speaker: "陈天中", hanzi: "我会写这些字了，您看！", pinyin: "Wǒ huì xiě zhèxiē zì le, nín kàn!", vietnamese: "Em đã biết viết những chữ này rồi, thầy xem này!" }
+          { speaker: "陈天中", hanzi: "老师，我听不见。", pinyin: "Lǎoshī, wǒ tīng bu jiàn.", vietnamese: "Thưa cô, em không nghe thấy ạ." },
+          { speaker: "王一飞", hanzi: "请大家不要说话！请听老师的问题：你们都会写哪些汉字了？", pinyin: "Qǐng dàjiā bùyào shuōhuà! Qǐng tīng lǎoshī de wèntí: Nǐmen dōu huì xiě nǎxiē Hànzì le?", vietnamese: "Mọi người không được nói chuyện! Hãy nghe câu hỏi của cô: Các em đã biết viết những chữ Hán nào rồi?" },
+          { speaker: "陈天中", hanzi: "我会写这些字了，您看！", pinyin: "Wǒ huì xiě zhèxiē zì le, nín kàn!", vietnamese: "Em đã biết viết những chữ này rồi, cô xem này!" }
         ]
       }
     ,
@@ -1683,21 +1683,21 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
           { speaker: "李文", hanzi: "你们都想去哪儿？", pinyin: "Nǐmen dōu xiǎng qù nǎr?", vietnamese: "Mọi người muốn đi đâu?" },
           { speaker: "安妮", hanzi: "去年我和男朋友去了西安，今年我想去北京。", pinyin: "Qùnián wǒ hé nánpéngyou qùle Xī'ān, jīnnián wǒ xiǎng qù Běijīng.", vietnamese: "Năm ngoái tôi và bạn trai đã đến Tây An, năm nay tôi muốn đến Bắc Kinh." },
           { speaker: "白家月", hanzi: "前几年我去了西安，非常好玩儿。今年我也想去北京。", pinyin: "Qián jǐ nián wǒ qùle Xī'ān, fēicháng hǎowánr. Jīnnián wǒ yě xiǎng qù Běijīng.", vietnamese: "Vài năm trước tôi đã đến Tây An, vui lắm. Năm nay tôi cũng muốn đến Bắc Kinh." },
-          { speaker: "李文", hanzi: "我和王老师都是北京人，北京非常漂亮。", pinyin: "Wǒ hé Wáng lǎoshī dōu shì Běijīng rén, Běijīng fēicháng piàoliang.", vietnamese: "Tôi và thầy Vương đều là người Bắc Kinh, Bắc Kinh rất đẹp." }
+          { speaker: "李文", hanzi: "我和王老师都是北京人，北京非常漂亮。", pinyin: "Wǒ hé Wáng lǎoshī dōu shì Běijīng rén, Běijīng fēicháng piàoliang.", vietnamese: "Tôi và cô giáo Vương đều là người Bắc Kinh, Bắc Kinh rất đẹp." }
         ]
       }
     ,
       {
         id: "hsk1-l15-t3",
         title: "课文 3 (Bài khóa 3)",
-        context: "在教室外，白家月、安妮和王老师在谈论去北京旅游的事。(Ngoài lớp học, Bạch Gia Nguyệt, An Ni và thầy Vương đang nói về chuyện đi du lịch Bắc Kinh.)",
+        context: "在教室外，白家月、安妮和王老师在谈论去北京旅游的事。(Ngoài lớp học, Bạch Gia Nguyệt, An Ni và cô giáo Vương đang nói về chuyện đi du lịch Bắc Kinh.)",
         lines: [
           { speaker: "王一飞", hanzi: "你们的飞机到北京要几个小时？", pinyin: "Nǐmen de fēijī dào Běijīng yào jǐ gè xiǎoshí?", vietnamese: "Chuyến bay của các em đến Bắc Kinh mất mấy tiếng?" },
           { speaker: "白家月", hanzi: "九个小时。", pinyin: "Jiǔ gè xiǎoshí.", vietnamese: "Chín tiếng ạ." },
-          { speaker: "王一飞", hanzi: "我家人都在北京，星期天我姐姐也有时间，她可以去机场接你们，你们也可以住我家。", pinyin: "Wǒ jiārén dōu zài Běijīng, Xīngqītiān wǒ jiějie yě yǒu shíjiān, tā kěyǐ qù jīchǎng jiē nǐmen, nǐmen yě kěyǐ zhù wǒ jiā.", vietnamese: "Gia đình thầy đều ở Bắc Kinh, Chủ nhật chị gái thầy cũng có thời gian, chị ấy có thể ra sân bay đón các em, các em cũng có thể ở nhà thầy." },
+          { speaker: "王一飞", hanzi: "我家人都在北京，星期天我姐姐也有时间，她可以去机场接你们，你们也可以住我家。", pinyin: "Wǒ jiārén dōu zài Běijīng, Xīngqītiān wǒ jiějie yě yǒu shíjiān, tā kěyǐ qù jīchǎng jiē nǐmen, nǐmen yě kěyǐ zhù wǒ jiā.", vietnamese: "Gia đình cô đều ở Bắc Kinh, Chủ nhật chị gái cô cũng có thời gian, chị ấy có thể ra sân bay đón các em, các em cũng có thể ở nhà cô." },
           { speaker: "安妮", hanzi: "我们星期日早上八点到大兴机场，早不早？", pinyin: "Wǒmen Xīngqīrì zǎoshang bā diǎn dào Dàxīng Jīchǎng, zǎo bu zǎo?", vietnamese: "Chúng em đến sân bay Đại Hưng lúc tám giờ sáng Chủ nhật, có sớm không ạ?" },
           { speaker: "王一飞", hanzi: "不早。", pinyin: "Bù zǎo.", vietnamese: "Không sớm đâu." },
-          { speaker: "白家月", hanzi: "谢谢老师！那我们和您姐姐在大兴机场见！", pinyin: "Xièxie lǎoshī! Nà wǒmen hé nín jiějie zài Dàxīng Jīchǎng jiàn!", vietnamese: "Cảm ơn thầy! Vậy chúng em sẽ gặp chị thầy ở sân bay Đại Hưng!" }
+          { speaker: "白家月", hanzi: "谢谢老师！那我们和您姐姐在大兴机场见！", pinyin: "Xièxie lǎoshī! Nà wǒmen hé nín jiějie zài Dàxīng Jīchǎng jiàn!", vietnamese: "Cảm ơn cô! Vậy chúng em sẽ gặp chị của cô ở sân bay Đại Hưng!" }
         ]
       }
 ],

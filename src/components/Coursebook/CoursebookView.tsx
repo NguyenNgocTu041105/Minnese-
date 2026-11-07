@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   BookOpen,
   Volume2,
@@ -24,7 +24,7 @@ import {
   Pause,
   Radio,
 } from 'lucide-react';
-import { NEW_HSK1_FULL_LESSONS, DetailedTextbookLesson } from '../../data/newHsk1BookData';
+import { NEW_HSK1_FULL_LESSONS, DetailedTextbookLesson, LessonText } from '../../data/newHsk1BookData';
 import { NEW_HSK2_FULL_LESSONS } from '../../data/newHsk2BookData';
 import { NEW_HSK3_FULL_LESSONS } from '../../data/newHsk3BookData';
 import { NEW_HSK4_FULL_LESSONS } from '../../data/newHsk4BookData';
@@ -32,6 +32,12 @@ import { NEW_HSK5_FULL_LESSONS } from '../../data/newHsk5BookData';
 import { NEW_HSK6_FULL_LESSONS } from '../../data/newHsk6BookData';
 import { COURSEBOOK_AUDIO_MANIFEST } from '../../data/coursebookAudioManifest';
 import { COURSEBOOK_CHARACTER_ANCHORS, CharacterAnchor2D } from '../../data/coursebookCharacterAnchors';
+import {
+  getHsk1BubbleConfig,
+  calculateFallbackBubblePos,
+  resolveSmartBubbleBox,
+  CharacterBubbleConfig,
+} from '../../data/hsk1BubbleLayouts';
 import { LessonExercisesStudio } from './LessonExercisesStudio';
 import { WorkbookView } from './WorkbookView';
 import { playChineseAudio } from '../../utils/chineseAudio';
@@ -268,250 +274,250 @@ const LESSON_ILLUSTRATIONS: Record<string, { src: string; caption: string }> = {
 
   // HSK 2 - Bài 1: 她请我们吃了北京烤鸭
   'hsk2-l1-t1': {
-    src: '/textbook_art/cartoon_hsk2_l1_t1.jpg',
+    src: '/textbook_art/hsk2_30_l1_t1.png',
     caption: '在机场，王一雪接到了白家月和安妮。(Ở sân bay, Vương Nhất Tuyết nồng nhiệt vẫy tay đón Bạch Gia Nguyệt và Annie).',
   },
   'hsk2-l1-t2': {
-    src: '/textbook_art/cartoon_hsk2_l1_t2.jpg',
+    src: '/textbook_art/hsk2_30_l1_t2.png',
     caption: '在王一雪的车里，白家月、安妮和王一雪在聊天儿。(Trong xe của Vương Nhất Tuyết trên đường phố Bắc Kinh, mọi người vui vẻ trò chuyện).',
   },
   'hsk2-l1-t3': {
-    src: '/textbook_art/cartoon_hsk2_l1_t3.jpg',
+    src: '/textbook_art/hsk2_30_l1_t3.png',
     caption: '在王一雪的车里，白家月接到了陈天中的电话。(Trong xe, Bạch Gia Nguyệt nghe điện thoại của Trần Thiên Trung báo tin đã đến Bắc Kinh).',
   },
   'hsk2-l1-t4': {
-    src: '/textbook_art/cartoon_hsk2_l1_t4.jpg',
+    src: '/textbook_art/hsk2_30_l1_t4.png',
     caption: '在酒店，白家月给王一飞老师发信息。(Ở khách sạn buổi tối, Bạch Gia Nguyệt vui vẻ nhắn tin cho cô giáo kể về món vịt quay Bắc Kinh).',
   },
   // HSK 2 - Bài 2: 还是打车去北大吧
   'hsk2-l2-t1': {
-    src: '/textbook_art/cartoon_hsk2_l2_t1.jpg',
+    src: '/textbook_art/hsk2_30_l2_t1.png',
     caption: '在宾馆前台，白家月和安妮向服务员咨询。(Ở quầy lễ tân khách sạn, Bạch Gia Nguyệt và Annie hỏi đường đi Đại học Bắc Kinh).',
   },
   'hsk2-l2-t2': {
-    src: '/textbook_art/cartoon_hsk2_l2_t2.jpg',
+    src: '/textbook_art/hsk2_30_l2_t2.png',
     caption: '在北京大学，白家月和安妮在参观校园。(Ở Đại học Bắc Kinh, Bạch Gia Nguyệt và Annie đi dạo ngắm khuôn viên trường rộng lớn).',
   },
   'hsk2-l2-t3': {
-    src: '/textbook_art/cartoon_hsk2_l2_t3.jpg',
+    src: '/textbook_art/hsk2_30_l2_t3.png',
     caption: '在北京大学，白家月和安妮在参观校园。(Ở khuôn viên trường, Annie chỉ vào rạp chiếu phim Bách Niên Kỷ Niệm Đường bên trong trường).',
   },
   'hsk2-l2-t4': {
-    src: '/textbook_art/cartoon_hsk2_l2_t4.jpg',
+    src: '/textbook_art/hsk2_30_l2_t4.png',
     caption: '在北京大学门口，白家月给陈天中发信息。(Ở cổng Đại học Bắc Kinh, Bạch Gia Nguyệt gửi tin nhắn chia sẻ về ngôi trường cho Trần Thiên Trung).',
   },
   // HSK 2 - Bài 3: 我想去西安旅游
   'hsk2-l3-t1': {
-    src: '/textbook_art/cartoon_hsk2_l3_t1.jpg',
+    src: '/textbook_art/hsk2_30_l3_t1.png',
     caption: '在家门口，刘明开门进到家里。(Ở cửa nhà, bác sĩ Lưu Minh mở cửa bước vào nhà sau ngày làm việc vất vả).',
   },
   'hsk2-l3-t2': {
-    src: '/textbook_art/cartoon_hsk2_l3_t2.jpg',
+    src: '/textbook_art/hsk2_30_l3_t2.png',
     caption: '在客厅，刘明和王一雪在聊天儿。(Ở phòng khách, Lưu Minh và Vương Nhất Tuyết bàn về việc thu xếp thời gian đi du lịch).',
   },
   'hsk2-l3-t3': {
-    src: '/textbook_art/cartoon_hsk2_l3_t3.jpg',
+    src: '/textbook_art/hsk2_30_l3_t3.png',
     caption: '在客厅，刘明和王一雪在聊天儿。(Lưu Minh mời vợ ăn táo đã rửa sạch, Vương Nhất Tuyết đề xuất đi du lịch Tây An).',
   },
   'hsk2-l3-t4': {
-    src: '/textbook_art/cartoon_hsk2_l3_t4.jpg',
+    src: '/textbook_art/hsk2_30_l3_t4.png',
     caption: '在家里，王一雪给好朋友打电话。(Ở nhà, Vương Nhất Tuyết gọi điện chia sẻ với bạn thân mong muốn chồng được nghỉ ngơi).',
   },
   // HSK 2 - Bài 4: 你穿红色的很好看
   'hsk2-l4-t1': {
-    src: '/textbook_art/cartoon_hsk2_l4_t1.jpg',
+    src: '/textbook_art/hsk2_30_l4_t1.png',
     caption: '在商场外，王一雪和刘小雪在走路。(Bên ngoài trung tâm thương mại mới mở, hai mẹ con vui vẻ cùng nhau đi dạo sắm đồ).',
   },
   'hsk2-l4-t2': {
-    src: '/textbook_art/cartoon_hsk2_l4_t2.jpg',
+    src: '/textbook_art/hsk2_30_l4_t2.png',
     caption: '在服装店，王一雪和刘小雪在买裤子。(Ở tiệm thời trang, mẹ gợi ý Tiểu Tuyết thử chiếc quần màu đỏ tươi tắn).',
   },
   'hsk2-l4-t3': {
-    src: '/textbook_art/cartoon_hsk2_l4_t3.jpg',
+    src: '/textbook_art/hsk2_30_l4_t3.png',
     caption: '在商场店里，王一雪和刘小雪在买书包。(Trong cửa hàng, Tiểu Tuyết chọn chiếc ba lô màu xanh lá cây rất ưng ý).',
   },
   'hsk2-l4-t4': {
-    src: '/textbook_art/cartoon_hsk2_l4_t4.jpg',
+    src: '/textbook_art/hsk2_30_l4_t4.png',
     caption: '在房间，刘小雪在写日记。(Trong phòng ngủ ấm cúng, Lưu Tiểu Tuyết vui vẻ viết nhật ký về chiếc ba lô xanh và quần đỏ vừa mua).',
   },
   // HSK 2 - Bài 5: 第一次去中国朋友家
   'hsk2-l5-t1': {
-    src: '/textbook_art/cartoon_hsk2_l5_t1.jpg',
+    src: '/textbook_art/hsk2_30_l5_t1.png',
     caption: '在宾馆楼下，安妮给白家月打电话。(Ở dưới sảnh khách sạn, Annie gọi điện hối Bạch Gia Nguyệt xuống để kịp sang nhà bạn Trung Quốc).',
   },
   'hsk2-l5-t2': {
-    src: '/textbook_art/cartoon_hsk2_l5_t2.jpg',
+    src: '/textbook_art/hsk2_30_l5_t2.png',
     caption: '在王一雪家，白家月和安妮来做客。(Tại nhà chị Nhất Tuyết, Bạch Gia Nguyệt và Annie chào hỏi và tặng quà ông bà nội).',
   },
   'hsk2-l5-t3': {
-    src: '/textbook_art/cartoon_hsk2_l5_t3.jpg',
+    src: '/textbook_art/hsk2_30_l5_t3.png',
     caption: '在王一雪家，白家月和安妮在吃饭。(Tại bàn ăn, mọi người quây quần thưởng thức bữa cơm ấm cúng và trà sữa thơm ngon).',
   },
   'hsk2-l5-t4': {
-    src: '/textbook_art/cartoon_hsk2_l5_t4.jpg',
+    src: '/textbook_art/hsk2_30_l5_t4.png',
     caption: '在宾馆，白家月给李文发信息。(Ở khách sạn, Bạch Gia Nguyệt vui vẻ nhắn tin cho Lý Văn kể về chuyến thăm nhà và đi bộ về khách sạn).',
   },
   // HSK 2 - Bài 6: 小雪，生日快乐！
   'hsk2-l6-t1': {
-    src: '/textbook_art/cartoon_hsk2_l6_t1.jpg',
+    src: '/textbook_art/hsk2_30_l6_t1.png',
     caption: '在家里，刘明和王一雪在聊天儿。(Ở phòng khách ấm áp, bác sĩ Lưu Minh và Vương Nhất Tuyết bàn nhau tặng bút vẽ và đặt bánh sinh nhật thật to cho con gái).',
   },
   'hsk2-l6-t2': {
-    src: '/textbook_art/cartoon_hsk2_l6_t2.jpg',
+    src: '/textbook_art/hsk2_30_l6_t2.png',
     caption: '在客厅，刘明一家人在聊天儿。(Ở phòng khách, cả nhà chúc mừng sinh nhật Lưu Tiểu Tuyết, em trai Tiểu Minh háo hức nhìn chị mở hộp quà toàn bút vẽ màu mới).',
   },
   'hsk2-l6-t3': {
-    src: '/textbook_art/cartoon_hsk2_l6_t3.jpg',
+    src: '/textbook_art/hsk2_30_l6_t3.png',
     caption: '在客厅，刘明一家人在给刘小雪过生日。(Bữa tiệc sinh nhật ấm cúng bên bàn ăn với bánh kem cắm nến, bát mì trường thọ dài và các món cá thịt thơm ngon).',
   },
   'hsk2-l6-t4': {
-    src: '/textbook_art/cartoon_hsk2_l6_t4.jpg',
+    src: '/textbook_art/hsk2_30_l6_t4.png',
     caption: '在房间，王一雪在写日记。(Đêm muộn trong phòng ngủ bên ánh đèn bàn, Vương Nhất Tuyết hạnh phúc viết nhật ký khi hai con đã ngủ say giấc).',
   },
   // HSK 2 - Bài 7: 你想不想跟我一起去？
   'hsk2-l7-t1': {
-    src: '/textbook_art/cartoon_hsk2_l7_t1.jpg',
+    src: '/textbook_art/hsk2_30_l7_t1.png',
     caption: '在教室门外，安妮和陈天中在聊天儿。(Ngoài phòng học, Trần Thiên Trung cầm bóng rổ chuẩn bị ra sân, Annie gọi hỏi thăm xem bạn đi đâu).',
   },
   'hsk2-l7-t2': {
-    src: '/textbook_art/cartoon_hsk2_l7_t2.jpg',
+    src: '/textbook_art/hsk2_30_l7_t2.png',
     caption: '在校园路上，安妮和陈天中在散步聊天儿。(Trên đường dạo rợp bóng cây trong khuôn viên trường, Thiên Trung chia sẻ thói quen chạy bộ và bơi lội mỗi ngày).',
   },
   'hsk2-l7-t3': {
-    src: '/textbook_art/cartoon_hsk2_l7_t3.jpg',
+    src: '/textbook_art/hsk2_30_l7_t3.png',
     caption: '在篮球场边，陈天中和安妮在聊天儿。(Bên sân thể thao, Thiên Trung hào hứng rủ Annie cùng tham gia chơi bóng rổ để rèn luyện sức khỏe).',
   },
   'hsk2-l7-t4': {
-    src: '/textbook_art/cartoon_hsk2_l7_t4.jpg',
+    src: '/textbook_art/hsk2_30_l7_t4.png',
     caption: '在宿舍房间，陈天中在写日记。(Trong phòng ký túc xá bên ánh đèn bàn, Thiên Trung vui vẻ viết nhật ký ghi lại một ngày vận động thể thao bổ ích).',
   },
   // HSK 2 - Bài 8: 虽然你忘了，但是我记得
   'hsk2-l8-t1': {
-    src: '/textbook_art/cartoon_hsk2_l8_t1.jpg',
+    src: '/textbook_art/hsk2_30_l8_t1.png',
     caption: '在商场，王一雪和刘明在挑选精美的手表。(Ở trung tâm thương mại sang trọng, Vương Nhất Tuyết thích thú chỉ vào chiếc đồng hồ bên trái, Lưu Minh mỉm cười tán thành).',
   },
   'hsk2-l8-t2': {
-    src: '/textbook_art/cartoon_hsk2_l8_t2.jpg',
+    src: '/textbook_art/hsk2_30_l8_t2.png',
     caption: '在电影院外，王一雪和刘明商量看电影并用手机网购电影票。(Trước sảnh rạp chiếu phim ấm cúng, Vương Nhất Tuyết cầm điện thoại vui vẻ gợi ý mua vé qua mạng vừa rẻ vừa tiện).',
   },
   'hsk2-l8-t3': {
-    src: '/textbook_art/cartoon_hsk2_l8_t3.jpg',
+    src: '/textbook_art/hsk2_30_l8_t3.png',
     caption: '在饭馆，刘明 bất ngờ tặng đồng hồ chúc mừng sinh nhật Vương Nhất Tuyết。(Bên bàn tiệc nhà hàng lung linh ấm áp, Lưu Minh bất ngờ trao hộp đồng hồ quý giá chúc mừng sinh nhật vợ khiến cô xúc động nghẹn ngào).',
   },
   'hsk2-l8-t4': {
-    src: '/textbook_art/cartoon_hsk2_l8_t4.jpg',
+    src: '/textbook_art/hsk2_30_l8_t4.png',
     caption: '晚上在家，夫妻俩 hạnh phúc ngắm nhìn chiếc đồng hồ mới。(Buổi tối đầm ấm ở phòng khách, Vương Nhất Tuyết hạnh phúc đeo chiếc đồng hồ mới trên tay bên cạnh người chồng chu đáo).',
   },
   'hsk2-l9-t1': {
-    src: '/textbook_art/cartoon_hsk2_l9_t1.jpg',
+    src: '/textbook_art/hsk2_30_l9_t1.png',
     caption: '在服装店，王一雪和刘明在认真为儿子挑选新裤子。(Trong tiệm trang phục, vợ chồng Vương Nhất Tuyết và Lưu Minh chu đáo chọn lựa chiếc quần đen mới cho cậu con trai).',
   },
   'hsk2-l9-t2': {
-    src: '/textbook_art/cartoon_hsk2_l9_t2.jpg',
+    src: '/textbook_art/hsk2_30_l9_t2.png',
     caption: '在商店门口，王一雪拿着奶茶，刘明端着热咖啡开心交谈。(Trước cửa tiệm mua sắm, vợ vui vẻ cầm ly trà sữa, chồng cầm ly cà phê thơm cùng trò chuyện thân mật).',
   },
   'hsk2-l9-t3': {
-    src: '/textbook_art/cartoon_hsk2_l9_t3.jpg',
+    src: '/textbook_art/hsk2_30_l9_t3.png',
     caption: '在绿树成荫的路上，夫妻俩迎着夕阳一边散步一边聊天走回家。(Dưới hàng cây xanh ngập nắng chiều, hai vợ chồng thong thả tản bộ tập thể dục trên đường về nhà).',
   },
   'hsk2-l9-t4': {
-    src: '/textbook_art/cartoon_hsk2_l9_t4.jpg',
+    src: '/textbook_art/hsk2_30_l9_t4.png',
     caption: '夜晚在温馨的书房里，王一雪在台灯下幸福地写下生活日记。(Buổi tối trong góc phòng yên ả bên ánh đèn bàn, Vương Nhất Tuyết hạnh phúc ghi lại từng dòng nhật ký gia đình).',
   },
   'hsk2-l10-t1': {
-    src: '/textbook_art/cartoon_hsk2_l10_t1.jpg',
+    src: '/textbook_art/hsk2_30_l10_t1.png',
     caption: '在早晨的房间里，刘明看着手表叮嘱准备出发。(Trong căn phòng buổi sáng, bác sĩ Lưu Minh xem đồng hồ chu đáo nhắc nhở chuẩn bị đồ đạc sẵn sàng xuất phát).',
   },
   'hsk2-l10-t2': {
-    src: '/textbook_art/cartoon_hsk2_l10_t2.jpg',
+    src: '/textbook_art/hsk2_30_l10_t2.png',
     caption: '在书房里，王一雪温和地陪伴女儿刘小雪复习功课准备考试。(Trong phòng học sáng rực, Vương Nhất Tuyết dịu dàng đồng hành cùng con gái Lưu Tiểu Tuyết xem lại bài vở chuẩn bị thi cử).',
   },
   'hsk2-l10-t3': {
-    src: '/textbook_art/cartoon_hsk2_l10_t3.jpg',
+    src: '/textbook_art/hsk2_30_l10_t3.png',
     caption: '在餐厅里，妈妈端出奶茶与饭菜，姐姐考完试开心回家，弟弟自豪地举起洗干净的双手。(Trong phòng ăn gia đình, mẹ dọn trà sữa và cơm nóng, con gái thi tốt về nhà, cậu em trai khoe đôi bàn tay đã rửa sạch tinh).',
   },
   'hsk2-l10-t4': {
-    src: '/textbook_art/cartoon_hsk2_l10_t4.jpg',
+    src: '/textbook_art/hsk2_30_l10_t4.png',
     caption: '夜晚窗外月色皎洁，在书桌前静心写下一天的生活日记。(Đêm về dưới ánh trăng dịu êm qua khung cửa sổ, bên bàn học khẽ ghi lại từng khoảnh khắc gia đình yêu thương).',
   },
   'hsk2-l11-t1': {
-    src: '/textbook_art/cartoon_hsk2_l11_t1.jpg',
+    src: '/textbook_art/hsk2_30_l11_t1.png',
     caption: '在明亮的教室里，老师和学生亲切交流，关切询问。(Trong lớp học ngập tràn ánh nắng, cô giáo ân cần trò chuyện và hỏi thăm học trò thân yêu).',
   },
   'hsk2-l11-t2': {
-    src: '/textbook_art/cartoon_hsk2_l11_t2.jpg',
+    src: '/textbook_art/hsk2_30_l11_t2.png',
     caption: '在行驶的汽车上，大家一边看窗外风景一边通电话。(Trên chuyến xe ô tô êm ả, mọi người vừa ngắm phố xá vừa vui vẻ trao đổi qua điện thoại).',
   },
   'hsk2-l11-t3': {
-    src: '/textbook_art/cartoon_hsk2_l11_t3.jpg',
+    src: '/textbook_art/hsk2_30_l11_t3.png',
     caption: '在老师温暖的家中，大家围坐在摆满中国美食的餐桌旁。(Tại phòng ăn ấm cúng nhà cô giáo, mọi người cùng quây quần bên bàn tiệc đầy ắp món ngon truyền thống).',
   },
   'hsk2-l11-t4': {
-    src: '/textbook_art/cartoon_hsk2_l11_t4.jpg',
+    src: '/textbook_art/hsk2_30_l11_t4.png',
     caption: '夜晚在温馨的房间里，白家月在台灯下感动地写日记。(Đêm về trong căn phòng yên bình bên ánh đèn ấm áp, Bạch Gia Nguyệt xúc động ghi lại từng dòng nhật ký biết ơn cô giáo và bạn bè).',
   },
   'hsk2-l12-t1': {
-    src: '/textbook_art/cartoon_hsk2_l12_t1.jpg',
+    src: '/textbook_art/hsk2_30_l12_t1.png',
     caption: '在阳光明媚的房间里，王一雪接听电话关切询问天气。(Bên khung cửa sổ ngập tràn nắng vàng Bắc Kinh, Vương Nhất Tuyết ấm áp nghe điện thoại hỏi han thời tiết).',
   },
   'hsk2-l12-t2': {
-    src: '/textbook_art/cartoon_hsk2_l12_t2.jpg',
+    src: '/textbook_art/hsk2_30_l12_t2.png',
     caption: '雪花纷飞的窗前，王一飞老师手握电话温暖交谈。(Bên khung cửa sổ tuyết trắng lất phất bay, cô giáo Vương Nhất Phi ấm áp trò chuyện và dặn dò em gái).',
   },
   'hsk2-l12-t3': {
-    src: '/textbook_art/cartoon_hsk2_l12_t3.jpg',
+    src: '/textbook_art/hsk2_30_l12_t3.png',
     caption: '阳光灿烂的公园小道上，李文手握手机开心地约朋友跑步。(Trên con đường công viên ngập nắng, Lý Văn tươi cười cầm điện thoại rủ bạn bè cùng chạy bộ).',
   },
   'hsk2-l12-t4': {
-    src: '/textbook_art/cartoon_hsk2_l12_t4.jpg',
+    src: '/textbook_art/hsk2_30_l12_t4.png',
     caption: '绿树成荫的林荫道上，李文和白家月并肩快乐地跑步锻炼。(Dưới vòm cây xanh ngập tràn nắng mai, Lý Văn và Bạch Gia Nguyệt vui vẻ đồng hành chạy bộ bên nhau).',
   },
   'hsk2-l13-t1': {
-    src: '/textbook_art/cartoon_hsk2_l13_t1.jpg',
+    src: '/textbook_art/hsk2_30_l13_t1.png',
     caption: '明亮的教室里，白家月和陈天中开心地商量为老师挑选新年花束。(Trong phòng học sáng rực ánh nắng, Bạch Gia Nguyệt và Trần Thiên Trung vui vẻ bàn nhau chọn hoa tươi tặng cô giáo dịp năm mới).',
   },
   'hsk2-l13-t2': {
-    src: '/textbook_art/cartoon_hsk2_l13_t2.jpg',
+    src: '/textbook_art/hsk2_30_l13_t2.png',
     caption: '讲台前王老师悉心指导，同学们认真练习汉字笔画。(Trước bục giảng, cô giáo Vương Nhất Phi tận tình hướng dẫn, các bạn học sinh chăm chú nắn nót từng nét chữ Hán).',
   },
   'hsk2-l13-t3': {
-    src: '/textbook_art/cartoon_hsk2_l13_t3.jpg',
+    src: '/textbook_art/hsk2_30_l13_t3.png',
     caption: '明亮的教室讲台前，王老师亲切微笑，白家月在课桌前认真听讲。(Tại phòng học ngập nắng, cô giáo Vương Nhất Phi mỉm cười thân thiện bên bục giảng, Bạch Gia Nguyệt chăm chú lắng nghe).',
   },
   'hsk2-l13-t4': {
-    src: '/textbook_art/cartoon_hsk2_l13_t4.jpg',
+    src: '/textbook_art/hsk2_30_l13_t4.png',
     caption: '温馨的书房里，台灯散发柔和暖光，白家月在书桌前静静写下日记。(Trong căn phòng ấm áp, đèn bàn tỏa ánh sáng dịu nhẹ, Bạch Gia Nguyệt tĩnh lặng ghi nhật ký bên bình hoa tươi).',
   },
   'hsk2-l14-t1': {
-    src: '/textbook_art/cartoon_hsk2_l14_t1.jpg',
+    src: '/textbook_art/hsk2_30_l14_t1.png',
     caption: '冬日黄昏的林荫道上，李文微笑着指向前方公寓楼下等待的身影，王老师惊喜地认出了男朋友杨同乐。(Trên đường phố mùa đông lúc hoàng hôn, Lý Văn chỉ tay về phía sảnh tòa nhà phía xa, cô giáo Vương Nhất Phi mỉm cười nhận ra bạn trai Dương Đồng Nhạc).',
   },
   'hsk2-l14-t2': {
-    src: '/textbook_art/cartoon_hsk2_l14_t2.jpg',
+    src: '/textbook_art/hsk2_30_l14_t2.png',
     caption: '公寓楼下现代化的玻璃大堂门前，王老师亲切地把学生李文介绍给捧着公文包等待的男朋友杨同乐。(Trước sảnh kính tòa nhà chung cư, cô giáo Vương Nhất Phi vui vẻ giới thiệu học trò Lý Văn với bạn trai Dương Đồng Nhạc).',
   },
   'hsk2-l14-t3': {
-    src: '/textbook_art/cartoon_hsk2_l14_t3.jpg',
+    src: '/textbook_art/hsk2_30_l14_t3.png',
     caption: '温馨雅致的客厅里，王老师和杨同乐坐在沙发上喝热茶吃橘子，愉快地聊起邻里家庭与新年请客。(Trong phòng khách ấm áp, cô giáo Vương và Dương Đồng Nhạc ngồi uống trà ăn quýt, vui vẻ trò chuyện về gia đình người hàng xóm).',
   },
   'hsk2-l14-t4': {
-    src: '/textbook_art/cartoon_hsk2_l14_t4.jpg',
+    src: '/textbook_art/hsk2_30_l14_t4.png',
     caption: '静谧的书房里，台灯映照着书桌上的热茶与合影，王老师满怀幸福地在日记本里记录甜蜜的心意。(Trong phòng làm việc tĩnh lặng, đèn bàn chiếu sáng tách trà nóng và bức ảnh chụp chung, cô giáo Vương hạnh phúc ghi lại tâm tư ngọt ngào).',
   },
   'hsk2-l15-t1': {
-    src: '/textbook_art/cartoon_hsk2_l15_t1.jpg',
+    src: '/textbook_art/hsk2_30_l15_t1.png',
     caption: '明亮的大学考场里期末考试顺利结束，王老师在讲台前欣慰收卷，白家月与陈天中如释重负，开心讨论假期。(Trong phòng thi sáng rực ánh nắng, cô giáo Vương vui mừng thu bài thi, Bạch Gia Nguyệt và Trần Thiên Trung vui vẻ bàn về kế hoạch kỳ nghỉ).',
   },
   'hsk2-l15-t2': {
-    src: '/textbook_art/cartoon_hsk2_l15_t2.jpg',
+    src: '/textbook_art/hsk2_30_l15_t2.png',
     caption: '阳光洒入温馨的咖啡店，白家月开心地拿出手机向李文展示买好的颐和园门票，期待品尝北京烤鸭与奶茶。(Trong quán cà phê ngập tràn nắng ấm, Bạch Gia Nguyệt khoe Lý Văn vé Di Hòa Viên đã đặt trên mạng, hào hứng nói về vịt quay và trà sữa).',
   },
   'hsk2-l15-t3': {
-    src: '/textbook_art/cartoon_hsk2_l15_t3.jpg',
+    src: '/textbook_art/hsk2_30_l15_t3.png',
     caption: '咖啡馆明亮的落地窗前，白家月和李文围着平板电脑查看周五飞往北京的航班，满心欢喜准备一同回家过年。(Bên khung cửa kính quán cà phê, Bạch Gia Nguyệt và Lý Văn cùng xem lịch bay thứ Sáu về Bắc Kinh, hân hoan chuẩn bị về quê ăn Tết).',
   },
   'hsk2-l15-t4': {
-    src: '/textbook_art/cartoon_hsk2_l15_t4.jpg',
+    src: '/textbook_art/hsk2_30_l15_t4.png',
     caption: '静谧的书房卧室里，李文收拾好回北京过年的行李箱，望向窗外夜空，满怀深情地记下与好友一同飞向北京的喜悦。(Trong phòng ngủ tĩnh lặng, Lý Văn xếp xong vali đồ ấm về quê ăn Tết, hướng mắt nhìn bầu trời đêm đầy xúc động ghi lại niềm vui cùng bay về Bắc Kinh).',
   },
 };
@@ -562,6 +568,376 @@ const getSpeakerCoords = (
     x: sIdx === 0 ? 28 : sIdx === 1 ? 50 : 72,
     y: defaultY,
   };
+};
+
+// Compute dynamic directional tail geometry connecting bubble perimeter to speaker mouth
+function computeTailGeometry(
+  bubbleBox: { left: number; top: number; right: number; bottom: number; width: number; height: number },
+  mouthPx: { x: number; y: number },
+  tailOriginPref?: 'bottom' | 'bottom-left' | 'bottom-right' | 'left' | 'right' | 'top',
+  containerWidth: number = 896
+) {
+  const { left, top, right, bottom, width, height } = bubbleBox;
+  const centerX = (left + right) / 2;
+  const centerY = (top + bottom) / 2;
+  const scale = Math.max(0.45, Math.min(1.15, containerWidth / 896));
+
+  // Determine origin edge if not explicitly provided
+  let origin = tailOriginPref;
+  if (!origin) {
+    if (mouthPx.y > bottom) {
+      if (mouthPx.x < left + width * 0.35) origin = 'bottom-left';
+      else if (mouthPx.x > right - width * 0.35) origin = 'bottom-right';
+      else origin = 'bottom';
+    } else if (mouthPx.y < top) {
+      origin = 'top';
+    } else if (mouthPx.x < left) {
+      origin = 'left';
+    } else {
+      origin = 'right';
+    }
+  } else {
+    // Safety check: if origin is inverted relative to mouthTarget, adapt to avoid backwards tail
+    if ((origin === 'bottom' || origin === 'bottom-left' || origin === 'bottom-right') && mouthPx.y < bottom) {
+      if (mouthPx.y < top) origin = 'top';
+      else if (mouthPx.x < left) origin = 'left';
+      else if (mouthPx.x > right) origin = 'right';
+    } else if (origin === 'top' && mouthPx.y > top) {
+      if (mouthPx.y > bottom) origin = 'bottom';
+      else if (mouthPx.x < left) origin = 'left';
+      else if (mouthPx.x > right) origin = 'right';
+    }
+  }
+
+  const baseWidth = Math.min(15 * scale, width * 0.32);
+  const halfBase = baseWidth / 2;
+  const overlap = 2.2; // Extension into the card to seamlessly mask the 1.5px card border
+  const cornerPadX = Math.max(12 * scale, Math.min(24 * scale, width * 0.22));
+  const cornerPadY = Math.max(10 * scale, Math.min(18 * scale, height * 0.25));
+
+  let baseMidX = centerX;
+  let baseMidY = bottom;
+  let base1 = { x: 0, y: 0 };
+  let base2 = { x: 0, y: 0 };
+  let baseEdge1 = { x: 0, y: 0 };
+  let baseEdge2 = { x: 0, y: 0 };
+
+  switch (origin) {
+    case 'bottom-left': {
+      baseMidX = left + cornerPadX;
+      baseMidY = bottom;
+      base1 = { x: baseMidX - halfBase, y: bottom - overlap };
+      base2 = { x: baseMidX + halfBase, y: bottom - overlap };
+      baseEdge1 = { x: baseMidX - halfBase, y: bottom };
+      baseEdge2 = { x: baseMidX + halfBase, y: bottom };
+      break;
+    }
+    case 'bottom-right': {
+      baseMidX = right - cornerPadX;
+      baseMidY = bottom;
+      base1 = { x: baseMidX - halfBase, y: bottom - overlap };
+      base2 = { x: baseMidX + halfBase, y: bottom - overlap };
+      baseEdge1 = { x: baseMidX - halfBase, y: bottom };
+      baseEdge2 = { x: baseMidX + halfBase, y: bottom };
+      break;
+    }
+    case 'bottom': {
+      baseMidX = Math.max(left + cornerPadX, Math.min(right - cornerPadX, centerX * 0.4 + mouthPx.x * 0.6));
+      baseMidY = bottom;
+      base1 = { x: baseMidX - halfBase, y: bottom - overlap };
+      base2 = { x: baseMidX + halfBase, y: bottom - overlap };
+      baseEdge1 = { x: baseMidX - halfBase, y: bottom };
+      baseEdge2 = { x: baseMidX + halfBase, y: bottom };
+      break;
+    }
+    case 'left': {
+      baseMidX = left;
+      baseMidY = Math.max(top + cornerPadY, Math.min(bottom - cornerPadY, centerY * 0.45 + mouthPx.y * 0.55));
+      base1 = { x: left + overlap, y: baseMidY - halfBase };
+      base2 = { x: left + overlap, y: baseMidY + halfBase };
+      baseEdge1 = { x: left, y: baseMidY - halfBase };
+      baseEdge2 = { x: left, y: baseMidY + halfBase };
+      break;
+    }
+    case 'right': {
+      baseMidX = right;
+      baseMidY = Math.max(top + cornerPadY, Math.min(bottom - cornerPadY, centerY * 0.45 + mouthPx.y * 0.55));
+      base1 = { x: right - overlap, y: baseMidY - halfBase };
+      base2 = { x: right - overlap, y: baseMidY + halfBase };
+      baseEdge1 = { x: right, y: baseMidY - halfBase };
+      baseEdge2 = { x: right, y: baseMidY + halfBase };
+      break;
+    }
+    case 'top': {
+      baseMidX = Math.max(left + cornerPadX, Math.min(right - cornerPadX, centerX * 0.4 + mouthPx.x * 0.6));
+      baseMidY = top;
+      base1 = { x: baseMidX + halfBase, y: top + overlap };
+      base2 = { x: baseMidX - halfBase, y: top + overlap };
+      baseEdge1 = { x: baseMidX + halfBase, y: top };
+      baseEdge2 = { x: baseMidX - halfBase, y: top };
+      break;
+    }
+    default: {
+      baseMidX = centerX;
+      baseMidY = bottom;
+      base1 = { x: baseMidX - halfBase, y: bottom - overlap };
+      base2 = { x: baseMidX + halfBase, y: bottom - overlap };
+      baseEdge1 = { x: baseMidX - halfBase, y: bottom };
+      baseEdge2 = { x: baseMidX + halfBase, y: bottom };
+      break;
+    }
+  }
+
+  // Flexible natural comic tail length: compact pointer, never a long spindly antenna
+  const vx = mouthPx.x - baseMidX;
+  const vy = mouthPx.y - baseMidY;
+  const dist = Math.hypot(vx, vy);
+
+  const maxTailLen = 19 * scale;
+  const minTailLen = 10 * scale;
+  const tailLen = Math.min(maxTailLen, Math.max(minTailLen, dist * 0.22));
+
+  const unitX = dist > 0 ? vx / dist : 0;
+  const unitY = dist > 0 ? vy / dist : 1;
+
+  const tip = {
+    x: baseMidX + unitX * tailLen,
+    y: baseMidY + unitY * tailLen,
+  };
+
+  return {
+    origin,
+    base1,
+    base2,
+    baseEdge1,
+    baseEdge2,
+    tip,
+    dist,
+  };
+}
+
+interface Hsk1SpeechBubbleProps {
+  textItem: LessonText;
+  activeLine: { speaker: string; hanzi: string; vietnamese?: string };
+  activeLineIdx: number;
+  onPlayLine: () => void;
+}
+
+const Hsk1SpeechBubble: React.FC<Hsk1SpeechBubbleProps> = ({
+  textItem,
+  activeLine,
+  activeLineIdx,
+  onPlayLine,
+}) => {
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const [bubbleMetrics, setBubbleMetrics] = useState<{
+    bubbleBox: { left: number; top: number; right: number; bottom: number; width: number; height: number };
+    containerWidth: number;
+    containerHeight: number;
+    scale: number;
+  } | null>(null);
+
+  const config = getHsk1BubbleConfig(textItem.id, activeLine.speaker) || {
+    mouthTarget: { x: 50, y: 35 },
+    placement: 'top' as const,
+  };
+
+  const bubblePos = config.bubblePos || calculateFallbackBubblePos(config.mouthTarget, config.placement);
+
+  useLayoutEffect(() => {
+    const updateMetrics = () => {
+      const bubbleEl = bubbleRef.current;
+      const containerEl = bubbleEl?.parentElement;
+      if (!bubbleEl || !containerEl) return;
+
+      const cRect = containerEl.getBoundingClientRect();
+      if (cRect.width === 0 || cRect.height === 0) return;
+
+      // Canvas-proportional scale factor (reference 896px desktop illustration container)
+      // Guarantees identical percentage footprint on Desktop, PC, Laptop, Tablet, and Smartphone
+      const scale = Math.max(0.42, Math.min(1.15, cRect.width / 896));
+      const baseMaxWidth = config.maxWidth || 230;
+      const responsiveMaxWidth = Math.max(
+        92,
+        Math.min(Math.round(baseMaxWidth * scale), Math.round(cRect.width * 0.46))
+      );
+
+      bubbleEl.style.setProperty('--bscale', String(scale));
+      bubbleEl.style.maxWidth = `${responsiveMaxWidth}px`;
+
+      const bRect = bubbleEl.getBoundingClientRect();
+      const cardW = bRect.width;
+      const cardH = bRect.height;
+
+      const smartBox = resolveSmartBubbleBox({
+        textId: textItem.id,
+        bubblePos,
+        mouthTarget: config.mouthTarget,
+        cardWidth: cardW,
+        cardHeight: cardH,
+        containerWidth: cRect.width,
+        containerHeight: cRect.height,
+      });
+
+      setBubbleMetrics({
+        bubbleBox: smartBox,
+        containerWidth: cRect.width,
+        containerHeight: cRect.height,
+        scale,
+      });
+    };
+
+    updateMetrics();
+
+    const containerEl = bubbleRef.current?.parentElement;
+    if (!containerEl) return;
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => updateMetrics());
+      ro.observe(containerEl);
+      if (bubbleRef.current) ro.observe(bubbleRef.current);
+    }
+
+    window.addEventListener('resize', updateMetrics);
+
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', updateMetrics);
+    };
+  }, [textItem.id, activeLineIdx, activeLine.speaker, bubblePos.x, bubblePos.y, config.maxWidth, config.mouthTarget]);
+
+  let tailGeom: ReturnType<typeof computeTailGeometry> | null = null;
+  if (bubbleMetrics) {
+    const mouthPx = {
+      x: (config.mouthTarget.x / 100) * bubbleMetrics.containerWidth,
+      y: (config.mouthTarget.y / 100) * bubbleMetrics.containerHeight,
+    };
+    tailGeom = computeTailGeometry(
+      bubbleMetrics.bubbleBox,
+      mouthPx,
+      config.tailOrigin,
+      bubbleMetrics.containerWidth
+    );
+  }
+
+  const baseMaxWidth = config.maxWidth || 230;
+  const currentScale = bubbleMetrics ? bubbleMetrics.scale : 1;
+  const currentMaxWidth = bubbleMetrics
+    ? Math.max(
+        92,
+        Math.min(
+          Math.round(baseMaxWidth * currentScale),
+          Math.round(bubbleMetrics.containerWidth * 0.46)
+        )
+      )
+    : baseMaxWidth;
+
+  // Compact excerpt for long monologue paragraphs (e.g. HSK 2 T4 diary/message entries)
+  // Full text remains displayed in the dialogue list below the illustration
+  const bubbleHanzi =
+    activeLine.hanzi.length > 32
+      ? (() => {
+          const firstClause = activeLine.hanzi.split(/[。！？；]/)[0];
+          if (firstClause && firstClause.length >= 6 && firstClause.length <= 28) {
+            const punct = activeLine.hanzi[firstClause.length] || '。';
+            return `${firstClause}${punct}…`;
+          }
+          return `${activeLine.hanzi.slice(0, 26)}…`;
+        })()
+      : activeLine.hanzi;
+
+  const bubbleViet =
+    activeLine.vietnamese && activeLine.vietnamese.length > 78
+      ? (() => {
+          const firstClause = activeLine.vietnamese.split(/[.!?;]/)[0];
+          if (firstClause && firstClause.length >= 15 && firstClause.length <= 68) {
+            return `${firstClause}. …`;
+          }
+          return `${activeLine.vietnamese.slice(0, 64)}…`;
+        })()
+      : activeLine.vietnamese;
+
+  return (
+    <>
+      {/* Speech Bubble Card */}
+      <div
+        ref={bubbleRef}
+        key={`bubble-${textItem.id}-${activeLineIdx}`}
+        className="absolute z-20 pointer-events-auto select-none"
+        style={{
+          top: bubbleMetrics ? `${bubbleMetrics.bubbleBox.top}px` : `${bubblePos.y}%`,
+          left: bubbleMetrics ? `${bubbleMetrics.bubbleBox.left}px` : `${bubblePos.x}%`,
+          transform: bubbleMetrics ? 'none' : 'translate(-50%, -50%)',
+          maxWidth: `${currentMaxWidth}px`,
+          ['--bscale' as any]: currentScale,
+        }}
+      >
+        <div
+          onClick={onPlayLine}
+          style={{
+            padding: 'calc(6px * var(--bscale, 1)) calc(11px * var(--bscale, 1))',
+            borderRadius: 'calc(16px * var(--bscale, 1))',
+            minWidth: 'calc(80px * var(--bscale, 1))',
+          }}
+          className="relative bg-white/95 text-slate-900 shadow-[0_3px_10px_rgba(0,0,0,0.18)] border-[1.5px] border-slate-800/85 whitespace-normal text-center max-w-full cursor-pointer hover:scale-[1.02] transition-transform"
+          title="Bấm để nghe đọc lại câu thoại này"
+        >
+          <div key={activeLineIdx} className="animate-in fade-in duration-200">
+            <div
+              style={{
+                fontSize: 'clamp(9.5px, calc(13.5px * var(--bscale, 1)), 15px)',
+                lineHeight: 1.28,
+              }}
+              className="font-bold font-chinese text-slate-900 tracking-normal"
+            >
+              {bubbleHanzi}
+            </div>
+            {bubbleViet && (
+              <div
+                style={{
+                  fontSize: 'clamp(8px, calc(10.5px * var(--bscale, 1)), 12px)',
+                  lineHeight: 1.22,
+                }}
+                className="text-slate-500 font-medium mt-0.5"
+              >
+                {bubbleViet}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Directional Tail connecting bubble edge to mouthTarget */}
+      {bubbleMetrics && tailGeom && (
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"
+          viewBox={`0 0 ${bubbleMetrics.containerWidth} ${bubbleMetrics.containerHeight}`}
+        >
+          {/* Seamless white wedge with drop shadow */}
+          <polygon
+            points={`${tailGeom.base1.x},${tailGeom.base1.y} ${tailGeom.tip.x},${tailGeom.tip.y} ${tailGeom.base2.x},${tailGeom.base2.y}`}
+            fill="#ffffff"
+            className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.12)]"
+          />
+          {/* Overlap white fill to seamlessly mask card border at base */}
+          <polygon
+            points={`${tailGeom.base1.x},${tailGeom.base1.y} ${tailGeom.tip.x},${tailGeom.tip.y} ${tailGeom.base2.x},${tailGeom.base2.y}`}
+            fill="#ffffff"
+          />
+          {/* Ink border strokes on left and right sides of tail */}
+          <path
+            d={`M ${tailGeom.baseEdge1.x} ${tailGeom.baseEdge1.y} L ${tailGeom.tip.x} ${tailGeom.tip.y} L ${tailGeom.baseEdge2.x} ${tailGeom.baseEdge2.y}`}
+            stroke="rgba(30,41,59,0.85)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+      )}
+    </>
+  );
 };
 
 
@@ -645,7 +1021,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     stopAllCoursebookAudio();
     const manifestItem = COURSEBOOK_AUDIO_MANIFEST[textId];
     if (manifestItem?.fullAudioUrl) {
-      const audio = new Audio(`${manifestItem.fullAudioUrl}?v=20261107_v4`);
+      const audio = new Audio(`${manifestItem.fullAudioUrl}?v=20261107_v11`);
       audio.playbackRate = playbackSpeed;
       coursebookAudioRef.current = audio;
       setActivePlayingTextId(textId);
@@ -694,7 +1070,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     const lineAudio = manifestItem?.lines?.[lineIndex];
 
     if (lineAudio?.audioUrl) {
-      const audio = new Audio(`${lineAudio.audioUrl}?v=20261107_v4`);
+      const audio = new Audio(`${lineAudio.audioUrl}?v=20261107_v11`);
       audio.playbackRate = playbackSpeed;
       coursebookAudioRef.current = audio;
 
@@ -1292,6 +1668,15 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                 const manifest = COURSEBOOK_AUDIO_MANIFEST[textItem.id];
                 const illustration = LESSON_ILLUSTRATIONS[textItem.id];
                 const isFullPlaying = activePlayingTextId === textItem.id;
+                const isHsk1 = textItem.id.startsWith('hsk1-') || textItem.id.startsWith('hsk2-');
+                const isWidescreenHsk1 = [
+                  'hsk1-l14-t2', 'hsk1-l14-t3', 'hsk1-l15-t1', 'hsk1-l15-t2', 'hsk1-l15-t3',
+                  'hsk2-l11-t1', 'hsk2-l11-t2', 'hsk2-l11-t3', 'hsk2-l11-t4',
+                  'hsk2-l12-t2', 'hsk2-l12-t3', 'hsk2-l12-t4',
+                  'hsk2-l13-t1', 'hsk2-l13-t2', 'hsk2-l13-t3',
+                  'hsk2-l14-t1', 'hsk2-l14-t2', 'hsk2-l14-t3', 'hsk2-l14-t4',
+                  'hsk2-l15-t1', 'hsk2-l15-t2', 'hsk2-l15-t3', 'hsk2-l15-t4',
+                ].includes(textItem.id);
 
                 // Active speaking line detection (supports full dialogue audio or single line audio)
                 const playingIdx =
@@ -1337,12 +1722,22 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                     {illustration && (
                       <div className="w-full max-w-4xl mx-auto overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-xs bg-[var(--color-bg-secondary)] relative">
                         {/* Balanced aspect ratio: compact height so lesson content below remains visible without endless scrolling */}
-                        <div className="relative aspect-[4/3] sm:aspect-[16/10] max-h-[340px] sm:max-h-[380px] md:max-h-[420px] w-full overflow-hidden bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center">
+                        <div
+                          className={`relative w-full overflow-hidden bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center ${
+                            isWidescreenHsk1
+                              ? 'aspect-[1024/572]'
+                              : isHsk1
+                              ? 'aspect-[1024/765]'
+                              : 'aspect-[4/3] sm:aspect-[16/10] max-h-[340px] sm:max-h-[380px] md:max-h-[420px]'
+                          }`}
+                        >
                           {/* Frozen stable artwork: no transitions or lazy reload on dialogue progression */}
                           <img
-                            src={`${illustration.src}?v=20261107_v7`}
+                            src={`${illustration.src}?v=20261107_v11`}
                             alt={textItem.title}
-                            className="w-full h-full object-contain sm:object-cover pointer-events-none select-none"
+                            className={`w-full h-full pointer-events-none select-none ${
+                              isHsk1 ? 'object-cover' : 'object-contain sm:object-cover'
+                            }`}
                             loading="eager"
                             decoding="async"
                           />
@@ -1362,64 +1757,73 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
 
                           {/* Authentic Comic Speech Balloon (Integrated organically into the artwork, NOT a generic UI card) */}
                           {activeLine && showSpeechBubbles && (
-                            <div
-                              key={`bubble-${textItem.id}`}
-                              className="absolute z-20 pointer-events-auto transition-[top,left,transform] duration-300 ease-out"
-                              style={{
-                                top: `${headY}%`,
-                                left: `${headX}%`,
-                                transform: `translate(-${cardShiftPercent}%, calc(-100% - 10px))`,
-                              }}
-                            >
-                              {/* Organic rounded comic speech balloon with continuous comic ink border */}
+                            isHsk1 ? (
+                              <Hsk1SpeechBubble
+                                textItem={textItem}
+                                activeLine={activeLine}
+                                activeLineIdx={activeLineIdx}
+                                onPlayLine={() => handlePlayLineAudio(textItem.id, activeLineIdx, activeLine.hanzi)}
+                              />
+                            ) : (
                               <div
-                                onClick={() => handlePlayLineAudio(textItem.id, activeLineIdx, activeLine.hanzi)}
-                                className="relative bg-white/95 text-slate-900 rounded-[18px] sm:rounded-[20px] px-3 py-1.5 sm:px-3.5 sm:py-2 shadow-[0_3px_10px_rgba(0,0,0,0.18)] border-[1.5px] border-slate-800/85 whitespace-normal text-center min-w-[90px] max-w-[190px] sm:max-w-[230px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
-                                title="Bấm để nghe đọc lại câu thoại này"
+                                key={`bubble-${textItem.id}`}
+                                className="absolute z-20 pointer-events-auto transition-[top,left,transform] duration-300 ease-out"
+                                style={{
+                                  top: `${headY}%`,
+                                  left: `${headX}%`,
+                                  transform: `translate(-${cardShiftPercent}%, calc(-100% - 10px))`,
+                                }}
                               >
-                                <div key={activeLineIdx} className="animate-in fade-in duration-200">
-                                  {/* Text tiếng Trung (chữ Hán tự nhiên, nét mực thanh gọn, không che mặt) */}
-                                  <div className="text-xs sm:text-sm font-bold font-chinese text-slate-900 tracking-normal leading-snug">
-                                    {activeLine.hanzi}
+                                {/* Organic rounded comic speech balloon with continuous comic ink border */}
+                                <div
+                                  onClick={() => handlePlayLineAudio(textItem.id, activeLineIdx, activeLine.hanzi)}
+                                  className="relative bg-white/95 text-slate-900 rounded-[18px] sm:rounded-[20px] px-3 py-1.5 sm:px-3.5 sm:py-2 shadow-[0_3px_10px_rgba(0,0,0,0.18)] border-[1.5px] border-slate-800/85 whitespace-normal text-center min-w-[90px] max-w-[190px] sm:max-w-[230px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
+                                  title="Bấm để nghe đọc lại câu thoại này"
+                                >
+                                  <div key={activeLineIdx} className="animate-in fade-in duration-200">
+                                    {/* Text tiếng Trung (chữ Hán tự nhiên, nét mực thanh gọn, không che mặt) */}
+                                    <div className="text-xs sm:text-sm font-bold font-chinese text-slate-900 tracking-normal leading-snug">
+                                      {activeLine.hanzi}
+                                    </div>
+
+                                    {/* Nghĩa tiếng Việt ở dưới (phụ đề mộc mạc, không kẻ vạch ngăn cách thô cứng) */}
+                                    {activeLine.vietnamese && (
+                                      <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
+                                        {activeLine.vietnamese}
+                                      </div>
+                                    )}
                                   </div>
 
-                                  {/* Nghĩa tiếng Việt ở dưới (phụ đề mộc mạc, không kẻ vạch ngăn cách thô cứng) */}
-                                  {activeLine.vietnamese && (
-                                    <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
-                                      {activeLine.vietnamese}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Đuôi thoại nối liền tự nhiên vào bong bóng (Seamless Comic Pointer Tail) */}
-                                <div
-                                  className="absolute -bottom-[9px] pointer-events-none"
-                                  style={{
-                                    left: pointerLeftPercent,
-                                    transform: 'translateX(-50%)',
-                                  }}
-                                >
-                                  <svg
-                                    width="16"
-                                    height="10"
-                                    viewBox="0 0 16 10"
-                                    className="overflow-visible"
+                                  {/* Đuôi thoại nối liền tự nhiên vào bong bóng (Seamless Comic Pointer Tail) */}
+                                  <div
+                                    className="absolute -bottom-[9px] pointer-events-none"
+                                    style={{
+                                      left: pointerLeftPercent,
+                                      transform: 'translateX(-50%)',
+                                    }}
                                   >
-                                    {/* Lớp nền trắng che đường viền đáy của card tạo sự liền mạch */}
-                                    <path d="M1,-1 L15,-1 L8,9.5 Z" fill="#ffffff" />
-                                    {/* Hai nét mực viền đuôi thoại tiếp nối chuẩn xác nét viền bóng thoại */}
-                                    <path
-                                      d="M1,0 L8,9.5 L15,0"
-                                      stroke="rgba(30,41,59,0.85)"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      fill="none"
-                                    />
-                                  </svg>
+                                    <svg
+                                      width="16"
+                                      height="10"
+                                      viewBox="0 0 16 10"
+                                      className="overflow-visible"
+                                    >
+                                      {/* Lớp nền trắng che đường viền đáy của card tạo sự liền mạch */}
+                                      <path d="M1,-1 L15,-1 L8,9.5 Z" fill="#ffffff" />
+                                      {/* Hai nét mực viền đuôi thoại tiếp nối chuẩn xác nét viền bóng thoại */}
+                                      <path
+                                        d="M1,0 L8,9.5 L15,0"
+                                        stroke="rgba(30,41,59,0.85)"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        fill="none"
+                                      />
+                                    </svg>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
+                            )
                           )}
                         </div>
                       </div>
@@ -1495,14 +1899,27 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                             }`}
                           >
                             <div className="space-y-1 flex-1">
-                              {/* Clean Speaker Badge */}
-                              <div className="flex items-center gap-1.5 text-xs">
+                              {/* Clean Speaker Badge with Vocal Persona / Chorus Tag */}
+                              <div className="flex flex-wrap items-center gap-1.5 text-xs">
                                 <span className="text-sm select-none">
                                   {lineManifest?.avatar || (lIdx % 2 === 0 ? '👨' : '👩')}
                                 </span>
                                 <span className="font-bold text-[var(--color-primary)]">
                                   {line.speaker}
                                 </span>
+                                {lineManifest?.voice === 'zh-CN-Chorus-Students' ? (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                                    👥 Đồng thanh cả lớp (4 giọng hòa âm)
+                                  </span>
+                                ) : lineManifest?.voice === 'zh-CN-Chorus-JiayueAnnie' ? (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                                    👥 Đồng thanh 2 nhân vật (Gia Nguyệt & An Ni)
+                                  </span>
+                                ) : lineManifest?.persona ? (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-500/10 text-[var(--color-text-secondary)]">
+                                    🎙️ {lineManifest.persona.includes('(') ? lineManifest.persona.split('(')[1].replace(')', '') : lineManifest.persona}
+                                  </span>
+                                ) : null}
                                 {isSpeaking && (
                                   <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500 ml-1.5">
                                     <Volume2 className="w-3 h-3 animate-pulse" />

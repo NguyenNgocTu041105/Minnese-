@@ -1,0 +1,2659 @@
+{
+  "widescreenIds": [
+    "hsk2-l11-t1",
+    "hsk2-l11-t2",
+    "hsk2-l11-t3",
+    "hsk2-l11-t4",
+    "hsk2-l12-t2",
+    "hsk2-l12-t3",
+    "hsk2-l12-t4",
+    "hsk2-l13-t1",
+    "hsk2-l13-t2",
+    "hsk2-l13-t3",
+    "hsk2-l14-t1",
+    "hsk2-l14-t2",
+    "hsk2-l14-t3",
+    "hsk2-l14-t4",
+    "hsk2-l15-t1",
+    "hsk2-l15-t2",
+    "hsk2-l15-t3",
+    "hsk2-l15-t4"
+  ],
+  "layouts": {
+    "hsk2-l1-t1": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 27.0,
+          "y": 32.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 48,
+          "y": 15
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 52.0,
+          "y": 39.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 58,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "白家月 & 安妮": {
+        "mouthTarget": {
+          "x": 62.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 68,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l1-t2": {
+      "安妮": {
+        "mouthTarget": {
+          "x": 31.0,
+          "y": 48.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 30,
+          "y": 24
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 59.0,
+          "y": 45.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 52,
+          "y": 24
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 75.0,
+          "y": 45.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 74,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l1-t3": {
+      "陈天中": {
+        "mouthTarget": {
+          "x": 15.0,
+          "y": 21.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 36,
+          "y": 6
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 56.0,
+          "y": 43.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 56,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l1-t4": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 32.0,
+          "y": 46.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 32,
+          "y": 24
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l2-t1": {
+      "安妮": {
+        "mouthTarget": {
+          "x": 28.0,
+          "y": 50.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 28,
+          "y": 28
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 49.0,
+          "y": 50.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 48,
+          "y": 28
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "服务员": {
+        "mouthTarget": {
+          "x": 81.0,
+          "y": 42.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 80,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l2-t2": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 44.0,
+          "y": 55.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 44,
+          "y": 30
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "安妮": {
+        "mouthTarget": {
+          "x": 66.0,
+          "y": 55.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 66,
+          "y": 28
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l2-t3": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 34.0,
+          "y": 33.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 34,
+          "y": 48
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      },
+      "安妮": {
+        "mouthTarget": {
+          "x": 62.0,
+          "y": 32.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 62,
+          "y": 48
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l2-t4": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 68.0,
+          "y": 36.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 68,
+          "y": 51
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l3-t1": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 37.0,
+          "y": 29.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 58,
+          "y": 12
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 70.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 70,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l3-t2": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 36.0,
+          "y": 42.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 36,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 72.0,
+          "y": 44.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 72,
+          "y": 20
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l3-t3": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 36.0,
+          "y": 42.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 36,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 72.0,
+          "y": 44.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 72,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l3-t4": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 72.0,
+          "y": 45.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 84,
+          "y": 18
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l4-t1": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 42.0,
+          "y": 34.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 42,
+          "y": 8
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 63.0,
+          "y": 54.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 64,
+          "y": 30
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l4-t2": {
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 41.0,
+          "y": 50.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 24
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 62.0,
+          "y": 32.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 40,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l4-t3": {
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 41.0,
+          "y": 50.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 24
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 62.0,
+          "y": 32.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 40,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l4-t4": {
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 56.0,
+          "y": 55.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 56,
+          "y": 26
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l5-t1": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 17.0,
+          "y": 14.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 36,
+          "y": 6
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "安妮": {
+        "mouthTarget": {
+          "x": 64.0,
+          "y": 33.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 38,
+          "y": 18
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l5-t2": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 23.0,
+          "y": 42.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 22,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "白家月 & 安妮": {
+        "mouthTarget": {
+          "x": 30.0,
+          "y": 42.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 32,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 61.0,
+          "y": 41.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 60,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "刘爷爷": {
+        "mouthTarget": {
+          "x": 72.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 72,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l5-t3": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 20.0,
+          "y": 55.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 20,
+          "y": 30
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 82.0,
+          "y": 53.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 82,
+          "y": 28
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l5-t4": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 39.0,
+          "y": 45.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 22
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l6-t1": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 36.0,
+          "y": 43.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 71.0,
+          "y": 45.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 70,
+          "y": 20
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l6-t2": {
+      "刘小明": {
+        "mouthTarget": {
+          "x": 44.0,
+          "y": 57.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 46,
+          "y": 6
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 58.0,
+          "y": 46.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 64,
+          "y": 63
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      },
+      "刘明": {
+        "mouthTarget": {
+          "x": 25.0,
+          "y": 43.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 16,
+          "y": 54
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 77.0,
+          "y": 49.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 82,
+          "y": 10
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l6-t3": {
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 49.0,
+          "y": 49.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 48,
+          "y": 22
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "刘明": {
+        "mouthTarget": {
+          "x": 26.0,
+          "y": 44.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 26,
+          "y": 12
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 71.0,
+          "y": 44.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 70,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l6-t4": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 73.0,
+          "y": 47.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 72,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l7-t1": {
+      "安妮": {
+        "mouthTarget": {
+          "x": 71.0,
+          "y": 52.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 70,
+          "y": 30
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "陈天中": {
+        "mouthTarget": {
+          "x": 42.0,
+          "y": 45.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 42,
+          "y": 20
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l7-t2": {
+      "安妮": {
+        "mouthTarget": {
+          "x": 59.0,
+          "y": 33.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 62,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "陈天中": {
+        "mouthTarget": {
+          "x": 44.0,
+          "y": 29.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 44,
+          "y": 10
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l7-t3": {
+      "安妮": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 34.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 64,
+          "y": 12
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "陈天中": {
+        "mouthTarget": {
+          "x": 40.0,
+          "y": 29.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 14,
+          "y": 14
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 210
+      }
+    },
+    "hsk2-l7-t4": {
+      "陈天中": {
+        "mouthTarget": {
+          "x": 49.0,
+          "y": 40.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 48,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l8-t1": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 43.0,
+          "y": 27.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 18,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 66,
+          "y": 10
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l8-t2": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 43.0,
+          "y": 27.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 18,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 66,
+          "y": 8
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l8-t3": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 43.0,
+          "y": 27.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 18,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 66,
+          "y": 8
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l8-t4": {
+      "小语": {
+        "mouthTarget": {
+          "x": 22.0,
+          "y": 29.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 44,
+          "y": 14
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l9-t1": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 22.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 42,
+          "y": 8
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 80.0,
+          "y": 29.0
+        },
+        "placement": "left",
+        "bubblePos": {
+          "x": 60,
+          "y": 33
+        },
+        "tailOrigin": "right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l9-t2": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 38.0,
+          "y": 20.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 16,
+          "y": 6
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 52.0,
+          "y": 26.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 76,
+          "y": 12
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l9-t3": {
+      "刘明": {
+        "mouthTarget": {
+          "x": 38.0,
+          "y": 20.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 16,
+          "y": 6
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 52.0,
+          "y": 26.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 56,
+          "y": 8
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l9-t4": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 49.0,
+          "y": 26.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 28,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l10-t1": {
+      "刘小明": {
+        "mouthTarget": {
+          "x": 68.0,
+          "y": 36.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 68,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "刘明": {
+        "mouthTarget": {
+          "x": 45.0,
+          "y": 18.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 24,
+          "y": 6
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l10-t2": {
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 52.0,
+          "y": 38.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 40,
+          "y": 18
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 60.0,
+          "y": 20.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 40,
+          "y": 6
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l10-t3": {
+      "刘小明": {
+        "mouthTarget": {
+          "x": 79.0,
+          "y": 46.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 80,
+          "y": 26
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 31.0,
+          "y": 35.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 30,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一雪": {
+        "mouthTarget": {
+          "x": 55.0,
+          "y": 33.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 54,
+          "y": 10
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l10-t4": {
+      "刘小雪": {
+        "mouthTarget": {
+          "x": 52.0,
+          "y": 38.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 52,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l11-t1": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 40.0,
+          "y": 51.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一飞": {
+        "mouthTarget": {
+          "x": 62.0,
+          "y": 33.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 64,
+          "y": 48
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l11-t2": {
+      "王一飞": {
+        "mouthTarget": {
+          "x": 27.0,
+          "y": 41.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 52,
+          "y": 27
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 73.0,
+          "y": 46.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 52,
+          "y": 38
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "李文": {
+        "mouthTarget": {
+          "x": 69.0,
+          "y": 46.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 52,
+          "y": 16
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l11-t3": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 24.0,
+          "y": 52.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 24,
+          "y": 26
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一飞": {
+        "mouthTarget": {
+          "x": 64.0,
+          "y": 35.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 64,
+          "y": 12
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "李文": {
+        "mouthTarget": {
+          "x": 75.0,
+          "y": 48.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 84,
+          "y": 22
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l11-t4": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 50.0,
+          "y": 43.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 26,
+          "y": 28
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l12-t1": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 30.0,
+          "y": 28.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 30,
+          "y": 8
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 79.0,
+          "y": 31.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 78,
+          "y": 10
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l12-t2": {
+      "王一雪": {
+        "mouthTarget": {
+          "x": 27.0,
+          "y": 35.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 26,
+          "y": 51
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      },
+      "王一飞": {
+        "mouthTarget": {
+          "x": 74.0,
+          "y": 35.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 74,
+          "y": 51
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l12-t3": {
+      "李文": {
+        "mouthTarget": {
+          "x": 25.0,
+          "y": 33.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 46,
+          "y": 18
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 73.0,
+          "y": 34.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 54,
+          "y": 24
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l12-t4": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 50.0,
+          "y": 43.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 26,
+          "y": 28
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l13-t1": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 39.0,
+          "y": 49.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "陈天中": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 49.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 64,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l13-t2": {
+      "王一飞": {
+        "mouthTarget": {
+          "x": 69.0,
+          "y": 27.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 50,
+          "y": 12
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      },
+      "白家月": {
+        "mouthTarget": {
+          "x": 54.0,
+          "y": 70.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 50,
+          "y": 34
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "安妮": {
+        "mouthTarget": {
+          "x": 78.0,
+          "y": 66.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 50,
+          "y": 24
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l13-t3": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 39.0,
+          "y": 49.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 38,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "安妮": {
+        "mouthTarget": {
+          "x": 68.0,
+          "y": 50.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 68,
+          "y": 18
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l13-t4": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 35.0,
+          "y": 36.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 34,
+          "y": 12
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l14-t1": {
+      "李文": {
+        "mouthTarget": {
+          "x": 37.0,
+          "y": 32.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 56,
+          "y": 12
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "王一飞": {
+        "mouthTarget": {
+          "x": 57.0,
+          "y": 44.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 66,
+          "y": 16
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l14-t2": {
+      "李文": {
+        "mouthTarget": {
+          "x": 37.0,
+          "y": 32.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 56,
+          "y": 15
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      },
+      "王一飞": {
+        "mouthTarget": {
+          "x": 54.0,
+          "y": 44.0
+        },
+        "placement": "left",
+        "bubblePos": {
+          "x": 32,
+          "y": 48
+        },
+        "tailOrigin": "right",
+        "maxWidth": 230
+      },
+      "杨同乐": {
+        "mouthTarget": {
+          "x": 76.0,
+          "y": 35.0
+        },
+        "placement": "custom",
+        "bubblePos": {
+          "x": 78,
+          "y": 51
+        },
+        "tailOrigin": "top",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l14-t3": {
+      "王一飞": {
+        "mouthTarget": {
+          "x": 25.0,
+          "y": 50.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 24,
+          "y": 26
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "杨同乐": {
+        "mouthTarget": {
+          "x": 76.0,
+          "y": 48.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 76,
+          "y": 22
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l14-t4": {
+      "王一飞": {
+        "mouthTarget": {
+          "x": 50.0,
+          "y": 43.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 28,
+          "y": 28
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l15-t1": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 36.0,
+          "y": 57.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 36,
+          "y": 32
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "王一飞": {
+        "mouthTarget": {
+          "x": 63.0,
+          "y": 41.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 62,
+          "y": 14
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "陈天中": {
+        "mouthTarget": {
+          "x": 74.0,
+          "y": 44.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 74,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l15-t2": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 37.0,
+          "y": 47.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 36,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "李文": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 42.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 44,
+          "y": 9
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l15-t3": {
+      "白家月": {
+        "mouthTarget": {
+          "x": 37.0,
+          "y": 47.0
+        },
+        "placement": "top",
+        "bubblePos": {
+          "x": 36,
+          "y": 16
+        },
+        "tailOrigin": "bottom",
+        "maxWidth": 230
+      },
+      "李文": {
+        "mouthTarget": {
+          "x": 65.0,
+          "y": 42.0
+        },
+        "placement": "top-left",
+        "bubblePos": {
+          "x": 44,
+          "y": 9
+        },
+        "tailOrigin": "bottom-right",
+        "maxWidth": 230
+      }
+    },
+    "hsk2-l15-t4": {
+      "李文": {
+        "mouthTarget": {
+          "x": 52.0,
+          "y": 44.0
+        },
+        "placement": "top-right",
+        "bubblePos": {
+          "x": 76,
+          "y": 30
+        },
+        "tailOrigin": "bottom-left",
+        "maxWidth": 230
+      }
+    }
+  },
+  "faceGuards": {
+    "hsk2-l1-t1": [
+      [
+        15,
+        16,
+        32,
+        38
+      ],
+      [
+        47,
+        24,
+        65,
+        44
+      ],
+      [
+        68,
+        21,
+        86,
+        43
+      ]
+    ],
+    "hsk2-l1-t2": [
+      [
+        17,
+        30,
+        37,
+        54
+      ],
+      [
+        54,
+        32,
+        68,
+        49
+      ],
+      [
+        68,
+        25,
+        88,
+        52
+      ]
+    ],
+    "hsk2-l1-t3": [
+      [
+        6,
+        5,
+        20,
+        26
+      ],
+      [
+        41,
+        27,
+        61,
+        49
+      ]
+    ],
+    "hsk2-l1-t4": [
+      [
+        21,
+        33,
+        36,
+        51
+      ],
+      [
+        75,
+        36,
+        89,
+        53
+      ]
+    ],
+    "hsk2-l2-t1": [
+      [
+        14,
+        35,
+        32,
+        56
+      ],
+      [
+        35,
+        36,
+        52,
+        55
+      ],
+      [
+        77,
+        26,
+        90,
+        46
+      ]
+    ],
+    "hsk2-l2-t2": [
+      [
+        29,
+        37,
+        49,
+        60
+      ],
+      [
+        58,
+        37,
+        78,
+        60
+      ]
+    ],
+    "hsk2-l2-t3": [
+      [
+        14,
+        8,
+        40,
+        40
+      ],
+      [
+        51,
+        8,
+        77,
+        40
+      ]
+    ],
+    "hsk2-l2-t4": [
+      [
+        52,
+        10,
+        76,
+        41
+      ],
+      [
+        75,
+        3,
+        99,
+        30
+      ]
+    ],
+    "hsk2-l3-t1": [
+      [
+        26,
+        9,
+        42,
+        33
+      ],
+      [
+        67,
+        21,
+        84,
+        44
+      ]
+    ],
+    "hsk2-l3-t2": [
+      [
+        25,
+        23,
+        40,
+        47
+      ],
+      [
+        67,
+        27,
+        84,
+        50
+      ]
+    ],
+    "hsk2-l3-t3": [
+      [
+        25,
+        23,
+        40,
+        47
+      ],
+      [
+        67,
+        27,
+        84,
+        50
+      ]
+    ],
+    "hsk2-l3-t4": [
+      [
+        67,
+        27,
+        84,
+        50
+      ],
+      [
+        45,
+        7,
+        68,
+        28
+      ]
+    ],
+    "hsk2-l4-t1": [
+      [
+        29,
+        15,
+        48,
+        39
+      ],
+      [
+        58,
+        38,
+        74,
+        59
+      ]
+    ],
+    "hsk2-l4-t2": [
+      [
+        30,
+        32,
+        45,
+        54
+      ],
+      [
+        55,
+        13,
+        74,
+        37
+      ]
+    ],
+    "hsk2-l4-t3": [
+      [
+        30,
+        32,
+        45,
+        54
+      ],
+      [
+        55,
+        12,
+        74,
+        37
+      ]
+    ],
+    "hsk2-l4-t4": [
+      [
+        44,
+        34,
+        63,
+        59
+      ],
+      [
+        16,
+        7,
+        40,
+        39
+      ]
+    ],
+    "hsk2-l5-t1": [
+      [
+        9,
+        2,
+        21,
+        18
+      ],
+      [
+        53,
+        9,
+        78,
+        39
+      ]
+    ],
+    "hsk2-l5-t2": [
+      [
+        9,
+        27,
+        26,
+        46
+      ],
+      [
+        26,
+        28,
+        41,
+        46
+      ],
+      [
+        56,
+        27,
+        69,
+        45
+      ],
+      [
+        69,
+        24,
+        80,
+        42
+      ],
+      [
+        82,
+        31,
+        96,
+        49
+      ]
+    ],
+    "hsk2-l5-t3": [
+      [
+        5,
+        38,
+        23,
+        58
+      ],
+      [
+        21,
+        39,
+        34,
+        56
+      ],
+      [
+        39,
+        38,
+        48,
+        52
+      ],
+      [
+        54,
+        41,
+        62,
+        54
+      ],
+      [
+        65,
+        46,
+        74,
+        59
+      ],
+      [
+        73,
+        52,
+        81,
+        64
+      ],
+      [
+        78,
+        37,
+        93,
+        57
+      ]
+    ],
+    "hsk2-l5-t4": [
+      [
+        28,
+        30,
+        44,
+        49
+      ]
+    ],
+    "hsk2-l6-t1": [
+      [
+        10,
+        6,
+        21,
+        22
+      ],
+      [
+        25,
+        22,
+        40,
+        47
+      ],
+      [
+        67,
+        27,
+        83,
+        50
+      ]
+    ],
+    "hsk2-l6-t2": [
+      [
+        12,
+        10,
+        30,
+        47
+      ],
+      [
+        31,
+        30,
+        47,
+        61
+      ],
+      [
+        50,
+        14,
+        66,
+        49
+      ],
+      [
+        72,
+        17,
+        91,
+        53
+      ]
+    ],
+    "hsk2-l6-t3": [
+      [
+        12,
+        20,
+        31,
+        48
+      ],
+      [
+        40,
+        29,
+        58,
+        53
+      ],
+      [
+        65,
+        23,
+        84,
+        48
+      ],
+      [
+        80,
+        43,
+        99,
+        67
+      ]
+    ],
+    "hsk2-l6-t4": [
+      [
+        66,
+        27,
+        84,
+        52
+      ]
+    ],
+    "hsk2-l7-t1": [
+      [
+        32,
+        28,
+        46,
+        49
+      ],
+      [
+        66,
+        38,
+        83,
+        58
+      ]
+    ],
+    "hsk2-l7-t2": [
+      [
+        37,
+        18,
+        46,
+        32
+      ],
+      [
+        55,
+        24,
+        67,
+        38
+      ]
+    ],
+    "hsk2-l7-t3": [
+      [
+        30,
+        12,
+        44,
+        32
+      ],
+      [
+        58,
+        20,
+        76,
+        40
+      ]
+    ],
+    "hsk2-l7-t4": [
+      [
+        45,
+        23,
+        58,
+        43
+      ]
+    ],
+    "hsk2-l8-t1": [
+      [
+        33,
+        3,
+        50,
+        31
+      ],
+      [
+        59,
+        17,
+        79,
+        43
+      ]
+    ],
+    "hsk2-l8-t2": [
+      [
+        33,
+        3,
+        50,
+        31
+      ],
+      [
+        59,
+        17,
+        79,
+        43
+      ]
+    ],
+    "hsk2-l8-t3": [
+      [
+        33,
+        3,
+        50,
+        31
+      ],
+      [
+        59,
+        17,
+        79,
+        43
+      ]
+    ],
+    "hsk2-l8-t4": [
+      [
+        11,
+        13,
+        28,
+        33
+      ],
+      [
+        64,
+        1,
+        76,
+        19
+      ],
+      [
+        80,
+        9,
+        92,
+        24
+      ],
+      [
+        59,
+        34,
+        70,
+        53
+      ],
+      [
+        75,
+        44,
+        88,
+        61
+      ]
+    ],
+    "hsk2-l9-t1": [
+      [
+        57,
+        6,
+        69,
+        25
+      ],
+      [
+        75,
+        15,
+        90,
+        33
+      ],
+      [
+        91,
+        32,
+        99,
+        41
+      ]
+    ],
+    "hsk2-l9-t2": [
+      [
+        32,
+        8,
+        41,
+        23
+      ],
+      [
+        49,
+        16,
+        60,
+        29
+      ]
+    ],
+    "hsk2-l9-t3": [
+      [
+        32,
+        9,
+        41,
+        23
+      ],
+      [
+        49,
+        16,
+        59,
+        29
+      ]
+    ],
+    "hsk2-l9-t4": [
+      [
+        44,
+        11,
+        61,
+        31
+      ]
+    ],
+    "hsk2-l10-t1": [
+      [
+        39,
+        6,
+        49,
+        21
+      ],
+      [
+        66,
+        26,
+        76,
+        39
+      ]
+    ],
+    "hsk2-l10-t2": [
+      [
+        48,
+        27,
+        58,
+        41
+      ],
+      [
+        55,
+        6,
+        71,
+        25
+      ]
+    ],
+    "hsk2-l10-t3": [
+      [
+        22,
+        22,
+        35,
+        38
+      ],
+      [
+        50,
+        19,
+        64,
+        36
+      ],
+      [
+        76,
+        34,
+        89,
+        49
+      ]
+    ],
+    "hsk2-l10-t4": [
+      [
+        48,
+        27,
+        58,
+        41
+      ]
+    ],
+    "hsk2-l11-t1": [
+      [
+        25,
+        25,
+        46,
+        55
+      ],
+      [
+        56,
+        8,
+        72,
+        37
+      ]
+    ],
+    "hsk2-l11-t2": [
+      [
+        19,
+        15,
+        37,
+        48
+      ],
+      [
+        67,
+        20,
+        86,
+        51
+      ]
+    ],
+    "hsk2-l11-t3": [
+      [
+        14,
+        37,
+        28,
+        56
+      ],
+      [
+        60,
+        22,
+        69,
+        38
+      ],
+      [
+        72,
+        32,
+        82,
+        51
+      ]
+    ],
+    "hsk2-l11-t4": [
+      [
+        42,
+        16,
+        62,
+        48
+      ]
+    ],
+    "hsk2-l12-t1": [
+      [
+        25,
+        17,
+        38,
+        33
+      ],
+      [
+        76,
+        19,
+        89,
+        34
+      ]
+    ],
+    "hsk2-l12-t2": [
+      [
+        21,
+        11,
+        38,
+        40
+      ],
+      [
+        68,
+        12,
+        84,
+        40
+      ]
+    ],
+    "hsk2-l12-t3": [
+      [
+        19,
+        13,
+        31,
+        36
+      ],
+      [
+        69,
+        14,
+        84,
+        39
+      ]
+    ],
+    "hsk2-l12-t4": [
+      [
+        42,
+        16,
+        62,
+        48
+      ]
+    ],
+    "hsk2-l13-t1": [
+      [
+        24,
+        28,
+        43,
+        54
+      ],
+      [
+        62,
+        26,
+        76,
+        54
+      ],
+      [
+        9,
+        34,
+        15,
+        46
+      ]
+    ],
+    "hsk2-l13-t2": [
+      [
+        65,
+        10,
+        77,
+        31
+      ],
+      [
+        0,
+        40,
+        17,
+        73
+      ],
+      [
+        19,
+        41,
+        35,
+        70
+      ],
+      [
+        39,
+        44,
+        58,
+        76
+      ],
+      [
+        69,
+        51,
+        87,
+        85
+      ],
+      [
+        85,
+        44,
+        100,
+        76
+      ]
+    ],
+    "hsk2-l13-t3": [
+      [
+        24,
+        28,
+        43,
+        54
+      ],
+      [
+        63,
+        28,
+        79,
+        55
+      ],
+      [
+        9,
+        34,
+        15,
+        46
+      ]
+    ],
+    "hsk2-l13-t4": [
+      [
+        30,
+        21,
+        44,
+        38
+      ]
+    ],
+    "hsk2-l14-t1": [
+      [
+        25,
+        9,
+        41,
+        37
+      ],
+      [
+        48,
+        24,
+        61,
+        49
+      ],
+      [
+        76,
+        39,
+        79,
+        46
+      ]
+    ],
+    "hsk2-l14-t2": [
+      [
+        25,
+        9,
+        41,
+        37
+      ],
+      [
+        48,
+        25,
+        61,
+        49
+      ],
+      [
+        72,
+        14,
+        84,
+        39
+      ]
+    ],
+    "hsk2-l14-t3": [
+      [
+        18,
+        36,
+        28,
+        54
+      ],
+      [
+        73,
+        33,
+        82,
+        51
+      ]
+    ],
+    "hsk2-l14-t4": [
+      [
+        43,
+        17,
+        61,
+        49
+      ]
+    ],
+    "hsk2-l15-t1": [
+      [
+        23,
+        42,
+        37,
+        61
+      ],
+      [
+        59,
+        26,
+        69,
+        44
+      ],
+      [
+        72,
+        25,
+        83,
+        48
+      ]
+    ],
+    "hsk2-l15-t2": [
+      [
+        22,
+        26,
+        40,
+        52
+      ],
+      [
+        59,
+        17,
+        74,
+        46
+      ]
+    ],
+    "hsk2-l15-t3": [
+      [
+        22,
+        26,
+        41,
+        52
+      ],
+      [
+        59,
+        17,
+        74,
+        46
+      ]
+    ],
+    "hsk2-l15-t4": [
+      [
+        44,
+        16,
+        60,
+        48
+      ]
+    ]
+  }
+}

@@ -464,7 +464,7 @@
       {
         "speaker": "杨同乐",
         "hanzi": "我会做面条儿、饺子，也会做一些菜。星期天我也做饭。",
-        "pinyin": "Wǒ huì zuò miàntiáor, jiǎozi, yě huì zuò yīxiē cài. Xīngqītiān wǒ yě zuòfàn.",
+        "pinyin": "Wǒ huì zuò miàntiáor, jiǎozi, yě huì zuò yìxiē cài. Xīngqītiān wǒ yě zuòfàn.",
         "vietnamese": "Tôi biết làm mì, sủi cảo và cũng biết làm một số món. Chủ nhật tôi cũng nấu ăn."
       }
     ]
@@ -746,7 +746,7 @@
       {
         "speaker": "白家月",
         "hanzi": "房间外有一只小猫。",
-        "pinyin": "Fángjiān wài yǒu yī zhī xiǎo māo.",
+        "pinyin": "Fángjiān wài yǒu yì zhī xiǎo māo.",
         "vietnamese": "Ngoài phòng có một con mèo nhỏ."
       },
       {
@@ -890,7 +890,7 @@
       {
         "speaker": "陈天中",
         "hanzi": "椅子上有一本中文书，那是谁的书？",
-        "pinyin": "Yǐzi shang yǒu yī běn Zhōngwén shū, nà shì shéi de shū?",
+        "pinyin": "Yǐzi shang yǒu yì běn Zhōngwén shū, nà shì shéi de shū?",
         "vietnamese": "Trên ghế có một quyển sách tiếng Trung, đó là sách của ai?"
       },
       {
@@ -902,7 +902,7 @@
       {
         "speaker": "陈天中",
         "hanzi": "不客气。你明天上午在哪儿？",
-        "pinyin": "Bù kèqi. Nǐ míngtiān shàngwǔ zài nǎr?",
+        "pinyin": "Bú kèqi. Nǐ míngtiān shàngwǔ zài nǎr?",
         "vietnamese": "Không có gì. Sáng mai bạn ở đâu?"
       },
       {
@@ -953,7 +953,7 @@
       {
         "speaker": "杨同乐",
         "hanzi": "我也有一只小狗。",
-        "pinyin": "Wǒ yě yǒu yī zhī xiǎo gǒu.",
+        "pinyin": "Wǒ yě yǒu yì zhī xiǎo gǒu.",
         "vietnamese": "Tôi cũng có một con cún nhỏ."
       }
     ]
@@ -980,13 +980,13 @@
       {
         "speaker": "王一雪",
         "hanzi": "多少钱一个？",
-        "pinyin": "Duōshao qián yī gè?",
+        "pinyin": "Duōshao qián yí gè?",
         "vietnamese": "Mỗi cái bao nhiêu tiền?"
       },
       {
         "speaker": "店员",
         "hanzi": "这些五块钱一个，那些十块钱一个。",
-        "pinyin": "Zhèxiē wǔ kuài qián yī gè, nàxiē shí kuài qián yī gè.",
+        "pinyin": "Zhèxiē wǔ kuài qián yí gè, nàxiē shí kuài qián yí gè.",
         "vietnamese": "Những cái này năm tệ một cái, những cái kia mười tệ một cái."
       },
       {
@@ -1052,7 +1052,7 @@
       {
         "speaker": "刘明",
         "hanzi": "好看，也不贵。",
-        "pinyin": "Hǎokàn, yě bù guì.",
+        "pinyin": "Hǎokàn, yě bú guì.",
         "vietnamese": "Đẹp, cũng không đắt."
       },
       {
@@ -1187,7 +1187,7 @@
       {
         "speaker": "刘小雪",
         "hanzi": "我昨天晚问他，他对我说，他不去，他今天要和小朋友玩。",
-        "pinyin": "Wǒ zuótiān wǎn wèn tā, tā duì wǒ shuō, tā bù qù, tā jīntiān yào hé xiǎopéngyou wán.",
+        "pinyin": "Wǒ zuótiān wǎn wèn tā, tā duì wǒ shuō, tā bú qù, tā jīntiān yào hé xiǎopéngyou wán.",
         "vietnamese": "Tối qua tôi có hỏi nó, nó nói với tôi rằng nó không đi, hôm nay nó muốn chơi với bạn nhỏ."
       }
     ]
@@ -1208,7 +1208,7 @@
       {
         "speaker": "王一飞",
         "hanzi": "这里的天不太好，下雨了。",
-        "pinyin": "Zhèlǐ de tiān bù tài hǎo, xià yǔ le.",
+        "pinyin": "Zhèlǐ de tiān bú tài hǎo, xià yǔ le.",
         "vietnamese": "Thời tiết ở đây không tốt lắm, trời mưa rồi."
       },
       {
@@ -1313,7 +1313,7 @@
       {
         "speaker": "白家月",
         "hanzi": "王老师，我可以再问您一个问题吗？",
-        "pinyin": "Wáng lǎoshī, wǒ kěyǐ zài wèn nín yī gè wèntí ma?",
+        "pinyin": "Wáng lǎoshī, wǒ kěyǐ zài wèn nín yí gè wèntí ma?",
         "vietnamese": "Thầy Vương ơi, em có thể hỏi thầy thêm một câu không?"
       },
       {
@@ -1331,7 +1331,7 @@
       {
         "speaker": "王一飞",
         "hanzi": "我不知道。你可以打电话问一下。",
-        "pinyin": "Wǒ bù zhīdào. Nǐ kěyǐ dǎ diànhuà wèn yīxià.",
+        "pinyin": "Wǒ bù zhīdào. Nǐ kěyǐ dǎ diànhuà wèn yíxià.",
         "vietnamese": "Thầy không biết. Em có thể gọi điện hỏi xem."
       }
     ]
@@ -1352,7 +1352,7 @@
       {
         "speaker": "王一雪",
         "hanzi": "我看一下。请给我一杯牛奶。",
-        "pinyin": "Wǒ kàn yīxià. Qǐng gěi wǒ yī bēi niúnǎi.",
+        "pinyin": "Wǒ kàn yíxià. Qǐng gěi wǒ yì bēi niúnǎi.",
         "vietnamese": "Để tôi xem đã. Làm ơn cho tôi một ly sữa."
       },
       {
@@ -1409,7 +1409,7 @@
       {
         "speaker": "刘明",
         "hanzi": "请给我一杯茶吧。",
-        "pinyin": "Qǐng gěi wǒ yī bēi chá ba.",
+        "pinyin": "Qǐng gěi wǒ yì bēi chá ba.",
         "vietnamese": "Làm ơn cho tôi một chén trà nhé."
       }
     ]
@@ -1442,7 +1442,7 @@
       {
         "speaker": "陈天中",
         "hanzi": "我看了一个电影。",
-        "pinyin": "Wǒ kànle yī gè diànyǐng.",
+        "pinyin": "Wǒ kànle yí gè diànyǐng.",
         "vietnamese": "Tôi đã xem một bộ phim."
       }
     ]
@@ -1508,13 +1508,13 @@
       {
         "speaker": "刘明",
         "hanzi": "我们家有了一个中学生。",
-        "pinyin": "Wǒmen jiā yǒule yī gè zhōngxuéshēng.",
+        "pinyin": "Wǒmen jiā yǒule yí gè zhōngxuéshēng.",
         "vietnamese": "Nhà mình có một học sinh trung học rồi."
       },
       {
         "speaker": "王一雪",
         "hanzi": "还有了一个小学生。",
-        "pinyin": "Hái yǒule yī gè xiǎoxuéshēng.",
+        "pinyin": "Hái yǒule yí gè xiǎoxuéshēng.",
         "vietnamese": "Còn thêm một học sinh tiểu học nữa."
       },
       {

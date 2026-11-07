@@ -23,7 +23,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         lines: [
           { speaker: "白家月", hanzi: "请问，您是王一飞老师的姐姐吗？", pinyin: "Qǐngwèn, nín shì Wáng Yīfēi lǎoshī de jiějie ma?", vietnamese: "Xin hỏi, chị có phải là chị gái của cô giáo Vương Nhất Phi không ạ?" },
           { speaker: "王一雪", hanzi: "是的，你们就是她的学生吧？", pinyin: "Shì de, nǐmen jiù shì tā de xuésheng ba?", vietnamese: "Đúng vậy, các em chắc hẳn là học sinh của cô ấy đúng không?" },
-          { speaker: "白家月", hanzi: "对。我是白家月，她是安妮。", pinyin: "Duì. Wǒ shì Bái Jiāyuè, tā shì Ānnī.", vietnamese: "Vâng ạ. Em là Bạch Gia Nguyệt, đây là Annie." },
+          { speaker: "白家月", hanzi: "对。我是白家月，她是安妮。", pinyin: "Duì. Wǒ shì Bái Jiāyuè, tā shì Ānnī.", vietnamese: "Dạ vâng, để em rót nước cho anh. Em là Bạch Gia Nguyệt, đây là Annie." },
           { speaker: "王一雪", hanzi: "你们好，我叫王一雪。一飞给我打电话了，让我来接你们。", pinyin: "Nǐmen hǎo, wǒ jiào Wáng Yīxuě. Yīfēi gěi wǒ dǎ diànhuà le, ràng wǒ lái jiē nǐmen.", vietnamese: "Chào các em, chị là Vương Nhất Tuyết. Nhất Phi đã gọi điện cho chị, bảo chị đến đón các em." },
           { speaker: "白家月 & 安妮", hanzi: "谢谢您。", pinyin: "Xièxie nín.", vietnamese: "Cảm ơn chị ạ." },
           { speaker: "王一雪", hanzi: "不客气。", pinyin: "Bú kèqi.", vietnamese: "Không có gì đâu." }
@@ -301,15 +301,58 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk2-l2-ex1",
         type: "fill_blank",
-        question: "Chọn từ thích hợp biểu thị phương án tốt hơn: '车站有点儿远，我们 ______ 打车去吧。'",
-        hanziPrompt: "车站有点儿远，我们 ______ 打车去吧。",
-        pinyinPrompt: "Chēzhàn yǒudiǎnr yuǎn, wǒmen ______ dǎchē qù ba.",
-        vietnamesePrompt: "Trạm xe hơi xa, chúng mình hay là đi taxi đi.",
-        options: ["A. 还是", "B. 还有", "C. 可以", "D. 也要"],
+        question: "Chọn liên từ thích hợp điền vào cấu trúc câu lựa chọn: '你想喝茶 ______ 喝咖啡？'",
+        hanziPrompt: "你想喝茶 ______ 喝咖啡？",
+        pinyinPrompt: "Nǐ xiǎng hē chá ______ hē kāfēi?",
+        vietnamesePrompt: "Bạn muốn uống trà hay là uống cà phê?",
+        options: ["A. 还是", "B. 或者", "C. 和", "D. 跟"],
         correctAnswer: "A. 还是",
-        explanation: "Cấu trúc cố định '还是……吧' dùng để đưa ra sự lựa chọn hợp lý hơn.",
-        grammarFocus: "Cấu trúc 还是……吧",
-        audioText: "我们还是打车去吧。"
+        explanation: "Trong câu hỏi lựa chọn, ta dùng liên từ '还是' (hay là, hoặc là).",
+        grammarFocus: "Liên từ câu hỏi 还是",
+        audioText: "你想喝茶还是喝咖啡？"
+      },
+      {
+        id: "hsk2-l2-ex2",
+        type: "multiple_choice",
+        question: "Chọn câu so sánh hơn đúng ngữ pháp với '比':",
+        options: [
+          "A. 这儿的烤鸭比学校旁边的更好吃。",
+          "B. 这儿的烤鸭比学校旁边的很更差。",
+          "C. 这儿的烤鸭很比学校旁边好吃。",
+          "D. 这儿的烤鸭比学校旁边非常好吃。"
+        ],
+        correctAnswer: "A. 这儿的烤鸭比学校旁边的更好吃。",
+        explanation: "Trong câu so sánh '比', trước tính từ có thể dùng '更' hoặc '还' để tăng mức độ so sánh, tuyệt đối không dùng phó từ mức độ như '很', '非常', '太'.",
+        grammarFocus: "Câu chữ 比 kết hợp 更"
+      },
+      {
+        id: "hsk2-l2-ex3",
+        type: "fill_blank",
+        question: "Chọn từ chỉ số lượng / thứ tự thích hợp: '这是我 ______ 来这家饭馆。' (lần đầu tiên)",
+        hanziPrompt: "这是我 ______ 来这家饭馆。",
+        pinyinPrompt: "Zhè shì wǒ ______ lái zhè jiā fànguǎn.",
+        vietnamesePrompt: "Đây là lần đầu tiên tôi đến nhà hàng này.",
+        options: ["A. 第一次", "B. 一次", "C. 第一", "D. 哪个"],
+        correctAnswer: "A. 第一次",
+        explanation: "Cụm '第 + Số từ + Lượng từ' biểu thị số thứ tự: 第一次 (lần thứ nhất, lần đầu tiên).",
+        grammarFocus: "Số thứ tự 第..."
+      },
+      {
+        id: "hsk2-l2-ex4",
+        type: "dialogue_match",
+        question: "Chọn câu gọi món phù hợp trong nhà hàng:",
+        hanziPrompt: "服务员: 两位想吃点儿什么？ — 顾客: ______",
+        pinyinPrompt: "Fúwùyuán: Liǎng wèi xiǎng chī diǎnr shénme? — Gùkè: ______",
+        vietnamesePrompt: "Phục vụ: Hai vị muốn dùng món gì ạ? — Khách hàng: Xin cho chúng tôi một con vịt quay Bắc Kinh.",
+        options: [
+          "请给我们来一只北京烤鸭。",
+          "我们明天上午就去买。",
+          "我不上去了，就在下面等。",
+          "他跑步跑得非常快。"
+        ],
+        correctAnswer: "请给我们来一只北京烤鸭。",
+        explanation: "'来……' trong khẩu ngữ gọi món nghĩa là 'cho chúng tôi món...'.",
+        grammarFocus: "Giao tiếp gọi món trong nhà hàng"
       }
     ]
   },
@@ -333,11 +376,11 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1: 在家门口 (Bài khóa 1: Ở cửa nhà)",
         context: "在家门口，刘明开门进到家里。(Ở cửa nhà, Lưu Minh mở cửa bước vào nhà).",
         lines: [
-          { speaker: "王一雪", hanzi: "今天回来这么晚啊！", pinyin: "Jīntiān huílái zhème wǎn a!", vietnamese: "Hôm nay anh về muộn thế này à!" },
-          { speaker: "刘明", hanzi: "工作太多了，下班的时候没做完。", pinyin: "Gōngzuò tài duō le, xiàbān de shíhou méi zuòwán.", vietnamese: "Công việc nhiều quá, lúc tan làm chưa làm xong." },
-          { speaker: "王一雪", hanzi: "菜都做好了，过来吃饭吧。", pinyin: "Cài dōu zuòhǎo le, guòlái chī fàn ba.", vietnamese: "Cơm canh nấu xong hết cả rồi, anh qua ăn cơm đi." },
-          { speaker: "刘明", hanzi: "我想休息一下，喝杯水。", pinyin: "Wǒ xiǎng xiūxi yíxià, hē bēi shuǐ.", vietnamese: "Anh muốn nghỉ ngơi một lát, uống cốc nước đã." },
-          { speaker: "王一雪", hanzi: "好的。", pinyin: "Hǎo de.", vietnamese: "Vâng ạ." }
+          { speaker: "王一雪", hanzi: "今天回来这么晚啊！", pinyin: "Jīntiān huílái zhème wǎn a!", vietnamese: "Hôm nay sao anh về muộn thế anh!" },
+          { speaker: "刘明", hanzi: "工作太多了，下班的时候没做完。", pinyin: "Gōngzuò tài duō le, xiàbān de shíhou méi zuòwán.", vietnamese: "Công việc nhiều quá em ạ, lúc tan làm anh vẫn chưa giải quyết xong." },
+          { speaker: "王一雪", hanzi: "菜都做好了，过来吃饭吧。", pinyin: "Cài dōu zuòhǎo le, guòlái chī fàn ba.", vietnamese: "Cơm canh em nấu xong xuôi cả rồi, anh vào rửa tay rồi ăn cơm nhé." },
+          { speaker: "刘明", hanzi: "我想休息一下，喝杯水。", pinyin: "Wǒ xiǎng xiūxi yíxià, hē bēi shuǐ.", vietnamese: "Anh mệt quá, cho anh nghỉ một lát uống cốc nước đã em." },
+          { speaker: "王一雪", hanzi: "好的。", pinyin: "Hǎo de.", vietnamese: "Dạ vâng, để em rót nước cho anh." }
         ]
       },
       {
@@ -345,11 +388,11 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 2: 在客厅 (Bài khóa 2: Ở phòng khách)",
         context: "在客厅，刘明和王一雪在聊天儿。(Ở phòng khách, Lưu Minh và Vương Nhất Tuyết trò chuyện).",
         lines: [
-          { speaker: "刘明", hanzi: "我们找个时间去旅游，怎么样？", pinyin: "Wǒmen zhǎo gè shíjiān qù lǚyóu, zěnmeyàng?", vietnamese: "Chúng mình tìm thời gian đi du lịch đi, thấy thế nào?" },
-          { speaker: "王一雪", hanzi: "好啊，我也很想一起出去玩。", pinyin: "Hǎo a, wǒ yě hěn xiǎng yìqǐ chūqù wán.", vietnamese: "Hay quá, em cũng rất muốn cùng nhau ra ngoài đi chơi." },
-          { speaker: "刘明", hanzi: "你想去哪儿？", pinyin: "Nǐ xiǎng qù nǎr?", vietnamese: "Em muốn đi đâu?" },
-          { speaker: "王一雪", hanzi: "我还没想好呢。", pinyin: "Wǒ hái méi xiǎnghǎo ne.", vietnamese: "Em vẫn chưa nghĩ xong nữa." },
-          { speaker: "刘明", hanzi: "那你再想一想，你想好了，我来买票。", pinyin: "Nà nǐ zài xiǎng yi xiǎng, nǐ xiǎnghǎo le, wǒ lái mǎi piào.", vietnamese: "Thế em nghĩ thêm xem sao, em nghĩ xong rồi thì để anh mua vé." }
+          { speaker: "刘明", hanzi: "我们找个时间去旅游，怎么样？", pinyin: "Wǒmen zhǎo gè shíjiān qù lǚyóu, zěnmeyàng?", vietnamese: "Vợ chồng mình thu xếp lúc nào rảnh đi du lịch một chuyến nhé, em thấy sao?" },
+          { speaker: "王一雪", hanzi: "好啊，我也很想一起出去玩。", pinyin: "Hǎo a, wǒ yě hěn xiǎng yìqǐ chūqù wán.", vietnamese: "Thích quá, em cũng đang muốn cả nhà mình cùng đi chơi đây anh!" },
+          { speaker: "刘明", hanzi: "你想去哪儿？", pinyin: "Nǐ xiǎng qù nǎr?", vietnamese: "Thế em muốn đi đâu nào?" },
+          { speaker: "王一雪", hanzi: "我还没想好呢。", pinyin: "Wǒ hái méi xiǎnghǎo ne.", vietnamese: "Em vẫn chưa nghĩ ra nên đi đâu anh ạ." },
+          { speaker: "刘明", hanzi: "那你再想一想，你想好了，我来买票。", pinyin: "Nà nǐ zài xiǎng yi xiǎng, nǐ xiǎnghǎo le, wǒ lái mǎi piào.", vietnamese: "Thế em cứ cân nhắc xem, chốt điểm đến rồi thì để anh lo tiền vé nhé." }
         ]
       },
       {
@@ -357,12 +400,12 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 3: 在客厅 (Bài khóa 3: Ở phòng khách)",
         context: "在客厅，刘明和王一雪在聊天儿。(Ở phòng khách, Lưu Minh và Vương Nhất Tuyết trò chuyện).",
         lines: [
-          { speaker: "刘明", hanzi: "吃个苹果吧，我都洗好了。", pinyin: "Chī gè píngguǒ ba, wǒ dōu xǐhǎo le.", vietnamese: "Ăn quả táo đi, anh rửa sạch cả rồi." },
+          { speaker: "刘明", hanzi: "吃个苹果吧，我都洗好了。", pinyin: "Chī gè píngguǒ ba, wǒ dōu xǐhǎo le.", vietnamese: "Em ăn quả táo này đi, anh rửa sạch sẽ cả rồi đấy." },
           { speaker: "王一雪", hanzi: "好的。", pinyin: "Hǎo de.", vietnamese: "Vâng." },
-          { speaker: "刘明", hanzi: "就在桌子上，你自己拿。", pinyin: "Jiù zài zhuōzi shang, nǐ zìjǐ ná.", vietnamese: "Ở ngay trên bàn đấy, em tự lấy nhé." },
-          { speaker: "王一雪", hanzi: "我去洗洗手。对了，我们去西安旅游，怎么样？", pinyin: "Wǒ qù xǐxishǒu. Duìle, wǒmen qù Xī'ān lǚyóu, zěnmeyàng?", vietnamese: "Em đi rửa tay đã. Đúng rồi, chúng mình đi Tây An du lịch nhé, thấy sao anh?" },
-          { speaker: "刘明", hanzi: "为什么想去西安？", pinyin: "Wèi shénme xiǎng qù Xī'ān?", vietnamese: "Sao lại muốn đi Tây An?" },
-          { speaker: "王一雪", hanzi: "我看了看网上的介绍，这个时候去西安很不错！", pinyin: "Wǒ kànle kàn wǎngshang de jièshào, zhège shíhou qù Xī'ān hěn búcuò!", vietnamese: "Em vừa xem qua lời giới thiệu trên mạng, tầm này đi Tây An tuyệt lắm!" }
+          { speaker: "刘明", hanzi: "就在桌子上，你自己拿。", pinyin: "Jiù zài zhuōzi shang, nǐ zìjǐ ná.", vietnamese: "Táo anh để trên bàn đấy, em tự lấy ăn nhé." },
+          { speaker: "王一雪", hanzi: "我去洗洗手。对了，我们去西安旅游，怎么样？", pinyin: "Wǒ qù xǐxishǒu. Duìle, wǒmen qù Xī'ān lǚyóu, zěnmeyàng?", vietnamese: "Em đi rửa tay đã. À đúng rồi anh ơi, nhà mình đi Tây An du lịch nhé, anh thấy thế nào?" },
+          { speaker: "刘明", hanzi: "为什么想去西安？", pinyin: "Wèi shénme xiǎng qù Xī'ān?", vietnamese: "Sao tự nhiên em lại muốn đi Tây An thế?" },
+          { speaker: "王一雪", hanzi: "我看了看网上的介绍，这个时候去西安很不错！", pinyin: "Wǒ kànle kàn wǎngshang de jièshào, zhège shíhou qù Xī'ān hěn búcuò!", vietnamese: "Em vừa xem bài viết trên mạng xong, mùa này đi Tây An đẹp mê ly luôn anh ạ!" }
         ]
       },
       {
@@ -380,7 +423,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "1. 结果补语 (Bổ ngữ kết quả: 完 / 好)",
         explanation: "Động từ hoặc tính từ đứng ngay sau động từ để biểu thị kết quả của động tác. Ví dụ: 做完 (làm xong), 做好 (làm xong chu đáo/sẵn sàng), 想好 (nghĩ kĩ/quyết định xong), 洗好 (rửa sạch sẽ). Dạng phủ định là thêm '没' trước động từ và bỏ '了'.",
         examples: [
-          { hanzi: "工作太多了，下班的时候没做完。", pinyin: "Gōngzuò tài duō le, xiàbān de shíhou méi zuòwán.", vietnamese: "Công việc nhiều quá, lúc tan làm chưa làm xong." },
+          { hanzi: "工作太多了，下班的时候没做完。", pinyin: "Gōngzuò tài duō le, xiàbān de shíhou méi zuòwán.", vietnamese: "Công việc nhiều quá em ạ, lúc tan làm anh vẫn chưa giải quyết xong." },
           { hanzi: "菜都做好了，过来吃饭吧。", pinyin: "Cài dōu zuòhǎo le, guòlái chī fàn ba.", vietnamese: "Cơm canh đã nấu xong cả rồi, qua ăn cơm đi." },
           { hanzi: "吃个苹果吧，我都洗好了。", pinyin: "Chī gè píngguǒ ba, wǒ dōu xǐhǎo le.", vietnamese: "Ăn táo đi, anh rửa sạch cả rồi." }
         ]
@@ -390,7 +433,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "2. 动词重叠（1）（2）(Trùng điệp động từ)",
         explanation: "Động từ trùng điệp dùng để biểu thị động tác diễn ra trong thời gian ngắn, số lượng ít, mang tính thử nghiệm, giúp ngữ khí nhẹ nhàng, tự nhiên: 单音节 A(一)A (想一想, 看一看), 双音节 ABAB (休息休息, 介绍介绍), 离合词 AAB (洗洗手). Đã xảy ra: A了A (看了看, 想了想).",
         examples: [
-          { hanzi: "那你再想一想，你想好了，我来买票。", pinyin: "Nà nǐ zài xiǎng yi xiǎng, nǐ xiǎnghǎo le, wǒ lái mǎi piào.", vietnamese: "Thế em nghĩ thêm xem sao, em nghĩ xong rồi thì để anh mua vé." },
+          { hanzi: "那你再想一想，你想好了，我来买票。", pinyin: "Nà nǐ zài xiǎng yi xiǎng, nǐ xiǎnghǎo le, wǒ lái mǎi piào.", vietnamese: "Thế em cứ cân nhắc xem, chốt điểm đến rồi thì để anh lo tiền vé nhé." },
           { hanzi: "我去洗洗手。", pinyin: "Wǒ qù xǐxishǒu.", vietnamese: "Em đi rửa tay đã." },
           { hanzi: "真想让他休息休息。", pinyin: "Zhēn xiǎng ràng tā xiūxi xiūxi.", vietnamese: "Thật sự muốn anh ấy được nghỉ ngơi một chút." },
           { hanzi: "我看了看网上的介绍。", pinyin: "Wǒ kànle kàn wǎngshang de jièshào.", vietnamese: "Em vừa xem qua lời giới thiệu trên mạng." }
@@ -407,7 +450,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       { id: "hsk2-l3-w7", hanzi: "自己", pinyin: "zìjǐ", hanViet: "tự kỷ", vietnamese: "tự mình, bản thân", hskLevel: 2, radical: "自", strokeCount: 6, example: "你自己拿", exampleTranslation: "bạn tự lấy nhé", tags: ["Bài 3", "Đại từ"] },
       { id: "hsk2-l3-w8", hanzi: "拿", pinyin: "ná", hanViet: "nã", vietnamese: "cầm, lấy", hskLevel: 2, radical: "手", strokeCount: 10, example: "自己拿", exampleTranslation: "tự cầm lấy", tags: ["Bài 3", "Động từ"] },
       { id: "hsk2-l3-w9", hanzi: "手", pinyin: "shǒu", hanViet: "thủ", vietnamese: "tay, bàn tay", hskLevel: 2, radical: "手", strokeCount: 4, example: "洗洗手", exampleTranslation: "rửa tay", tags: ["Bài 3", "Danh từ"] },
-      { id: "hsk2-l3-w10", hanzi: "为什么", pinyin: "wèi shénme", hanViet: "vi thập ma", vietnamese: "tại sao, vì sao", hskLevel: 2, radical: "丶", strokeCount: 4, example: "为什么想去西安？", exampleTranslation: "Sao lại muốn đi Tây An?", tags: ["Bài 3", "Đại từ"] },
+      { id: "hsk2-l3-w10", hanzi: "为什么", pinyin: "wèi shénme", hanViet: "vi thập ma", vietnamese: "tại sao, vì sao", hskLevel: 2, radical: "丶", strokeCount: 4, example: "为什么想去西安？", exampleTranslation: "Sao tự nhiên em lại muốn đi Tây An thế?", tags: ["Bài 3", "Đại từ"] },
       { id: "hsk2-l3-w11", hanzi: "不错", pinyin: "búcuò", hanViet: "bất thác", vietnamese: "rất tốt, khá tốt", hskLevel: 2, radical: "钅", strokeCount: 16, example: "很不错", exampleTranslation: "rất tuyệt", tags: ["Bài 3", "Tính từ"] },
       { id: "hsk2-l3-w12", hanzi: "送", pinyin: "sòng", hanViet: "tống", vietnamese: "tiễn, đưa, tặng", hskLevel: 2, radical: "辶", strokeCount: 9, example: "开车送孩子去学校", exampleTranslation: "lái xe đưa con đến trường", tags: ["Bài 3", "Động từ"] },
       { id: "hsk2-l3-w13", hanzi: "回去", pinyin: "huíqù", hanViet: "hồi khứ", vietnamese: "quay về, trở về", hskLevel: 2, radical: "囗", strokeCount: 6, example: "回去上班", exampleTranslation: "quay lại làm việc", tags: ["Bài 3", "Động từ"] },
@@ -419,15 +462,55 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       {
         id: "hsk2-l3-ex1",
         type: "fill_blank",
-        question: "Điền bổ ngữ kết quả thích hợp: '工作太忙了，下班的时候没做 ______。'",
-        hanziPrompt: "工作太忙了，下班的时候没做 ______。",
-        pinyinPrompt: "Gōngzuò tài máng le, xiàbān de shíhou méi zuò ______.",
-        vietnamesePrompt: "Công việc bận quá, lúc tan làm chưa làm xong.",
-        options: ["A. 完", "B. 懂", "C. 对", "D. 见"],
-        correctAnswer: "A. 完",
-        explanation: "Bổ ngữ kết quả '完' biểu thị hành động đã hoàn tất: 做完 (làm xong).",
-        grammarFocus: "Bổ ngữ kết quả 完",
-        audioText: "工作太忙了，下班的时候没做完。"
+        question: "Chọn giới từ chỉ khoảng cách thích hợp: '我家 ______ 学校不太远。'",
+        hanziPrompt: "我家 ______ 学校不太远。",
+        pinyinPrompt: "Wǒ jiā ______ xuéxiào bú tài yuǎn.",
+        vietnamesePrompt: "Nhà tôi cách trường học không xa lắm.",
+        options: ["A. 离", "B. 从", "C. 到", "D. 往"],
+        correctAnswer: "A. 离",
+        explanation: "Cấu trúc biểu thị khoảng cách: 'A 离 B + Khoảng cách / 远 / 近'.",
+        grammarFocus: "Giới từ chỉ cự ly 离",
+        audioText: "我家离学校不太远。"
+      },
+      {
+        id: "hsk2-l3-ex2",
+        type: "multiple_choice",
+        question: "Chọn câu tồn hiện biểu thị trạng thái đúng ngữ pháp:",
+        options: [
+          "A. 桌子上放着一台电脑。",
+          "B. 桌子上放在一台电脑。",
+          "C. 桌子上电脑放着了。",
+          "D. 放着桌子上一台电脑。"
+        ],
+        correctAnswer: "A. 桌子上放着一台电脑。",
+        explanation: "Cấu trúc câu tồn hiện biểu thị trạng thái: Nơi chốn + Động từ + 着 + Danh từ (tân ngữ vô định).",
+        grammarFocus: "Câu tồn hiện với trợ từ 着"
+      },
+      {
+        id: "hsk2-l3-ex3",
+        type: "fill_blank",
+        question: "Điền lượng từ phù hợp cho căn hộ / phòng: '这 ______ 房子挺好的，我很喜欢。'",
+        hanziPrompt: "这 ______ 房子挺好的，我很喜欢。",
+        pinyinPrompt: "Zhè ______ fángzi tǐng hǎo de, wǒ hěn xǐhuan.",
+        vietnamesePrompt: "Căn nhà này khá là tốt, tôi rất thích.",
+        options: ["A. 套", "B. 只", "C. 条", "D. 张"],
+        correctAnswer: "A. 套",
+        explanation: "Lượng từ cho căn hộ, nhà ở, bộ đồ là '套' (căn, bộ, căn hộ).",
+        grammarFocus: "Lượng từ 套"
+      },
+      {
+        id: "hsk2-l3-ex4",
+        type: "multiple_choice",
+        question: "Chọn câu hỏi dùng phó từ '挺……的':",
+        options: [
+          "A. 这个小区挺安静的，环境也很好。",
+          "B. 这个小区挺的不安静。",
+          "C. 挺很喜欢这个地方。",
+          "D. 这个地方环境挺。"
+        ],
+        correctAnswer: "A. 这个小区挺安静的，环境也很好。",
+        explanation: "Cấu trúc phó từ mức độ: '挺 + Tính từ / Cụm động từ tâm lý + 的' (khá là, rất).",
+        grammarFocus: "Phó từ mức độ 挺……的"
       }
     ]
   },
@@ -450,12 +533,12 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1: 在商场门口 (Bài khóa 1: Ở cửa trung tâm thương mại)",
         context: "在商场门口，王一雪和刘小雪在聊天儿。(Ở cửa trung tâm thương mại, Vương Nhất Tuyết và Lưu Tiểu Tuyết trò chuyện).",
         lines: [
-          { speaker: "刘小雪", hanzi: "妈妈，我们来过这家商场吗？", pinyin: "Māma, wǒmen láiguo zhè jiā shāngchǎng ma?", vietnamese: "Mẹ ơi, chúng ta đã từng đến trung tâm thương mại này chưa?" },
-          { speaker: "王一雪", hanzi: "没来过，这是新开的。", pinyin: "Méi láiguo, zhè shì xīn kāi de.", vietnamese: "Chưa từng đến, đây là chỗ mới mở." },
-          { speaker: "刘小雪", hanzi: "我们进去看看吧。", pinyin: "Wǒmen jìnqù kànkan ba.", vietnamese: "Chúng mình vào trong xem thử đi mẹ." },
-          { speaker: "王一雪", hanzi: "好啊！你想买点儿什么？", pinyin: "Hǎo a! Nǐ xiǎng mǎi diǎnr shénme?", vietnamese: "Được chứ! Con muốn mua gì nào?" },
-          { speaker: "刘小雪", hanzi: "我想买条裤子。", pinyin: "Wǒ xiǎng mǎi tiáo kùzi.", vietnamese: "Con muốn mua một chiếc quần dài." },
-          { speaker: "王一雪", hanzi: "没问题。", pinyin: "Méi wèntí.", vietnamese: "Không vấn đề gì." }
+          { speaker: "刘小雪", hanzi: "妈妈，我们来过这家商场吗？", pinyin: "Māma, wǒmen láiguo zhè jiā shāngchǎng ma?", vietnamese: "Mẹ ơi, mẹ con mình đã từng đến trung tâm thương mại này chưa ạ?" },
+          { speaker: "王一雪", hanzi: "没来过，这是新开的。", pinyin: "Méi láiguo, zhè shì xīn kāi de.", vietnamese: "Chưa con ạ, chỗ này mới khai trương đấy." },
+          { speaker: "刘小雪", hanzi: "我们进去看看吧。", pinyin: "Wǒmen jìnqù kànkan ba.", vietnamese: "Mẹ con mình vào trong xem thử đi mẹ ơi!" },
+          { speaker: "王一雪", hanzi: "好啊！你想买点儿什么？", pinyin: "Hǎo a! Nǐ xiǎng mǎi diǎnr shénme?", vietnamese: "Ừ được chứ! Con gái muốn mua gì nào?" },
+          { speaker: "刘小雪", hanzi: "我想买条裤子。", pinyin: "Wǒ xiǎng mǎi tiáo kùzi.", vietnamese: "Dạ con muốn mua một chiếc quần dài ạ." },
+          { speaker: "王一雪", hanzi: "没问题。", pinyin: "Méi wèntí.", vietnamese: "Ừ, nhất trí với con gái!" }
         ]
       },
       {
@@ -466,9 +549,9 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
           { speaker: "刘小雪", hanzi: "妈妈，我想买这条白色的裤子。", pinyin: "Māma, wǒ xiǎng mǎi zhè tiáo báisè de kùzi.", vietnamese: "Mẹ ơi, con muốn mua chiếc quần màu trắng này." },
           { speaker: "王一雪", hanzi: "你有很多白色的衣服，为什么还买白色的？", pinyin: "Nǐ yǒu hěn duō báisè de yīfu, wèi shénme hái mǎi báisè de?", vietnamese: "Con có rất nhiều quần áo màu trắng rồi, sao lại mua màu trắng nữa?" },
           { speaker: "刘小雪", hanzi: "因为我喜欢白色啊！", pinyin: "Yīnwèi wǒ xǐhuan báisè a!", vietnamese: "Bởi vì con thích màu trắng mà mẹ!" },
-          { speaker: "王一雪", hanzi: "我觉得这条白色的不太好看，你试试那条红色的吧。", pinyin: "Wǒ juéde zhè tiáo báisè de bú tài hǎokàn, nǐ shìshi nà tiáo hóngsè de ba.", vietnamese: "Mẹ thấy chiếc màu trắng này không được đẹp lắm, con thử chiếc màu đỏ kia xem sao." },
-          { speaker: "刘小雪", hanzi: "我没穿过红色的，红色的好看吗？", pinyin: "Wǒ méi chuānguo hóngsè de, hóngsè de hǎokàn ma?", vietnamese: "Con chưa từng mặc màu đỏ, màu đỏ có đẹp không mẹ?" },
-          { speaker: "王一雪", hanzi: "就是因为没穿过，所以要试试啊！", pinyin: "Jiù shì yīnwèi méi chuānguo, suǒyǐ yào shìshi a!", vietnamese: "Chính vì chưa từng mặc nên mới cần thử chứ!" }
+          { speaker: "王一雪", hanzi: "我觉得这条白色的不太好看，你试试那条红色的吧。", pinyin: "Wǒ juéde zhè tiáo báisè de bú tài hǎokàn, nǐ shìshi nà tiáo hóngsè de ba.", vietnamese: "Mẹ thấy chiếc màu trắng này không hợp lắm, con thử mặc chiếc màu đỏ kia xem sao." },
+          { speaker: "刘小雪", hanzi: "我没穿过红色的，红色的好看吗？", pinyin: "Wǒ méi chuānguo hóngsè de, hóngsè de hǎokàn ma?", vietnamese: "Trước giờ con chưa từng mặc màu đỏ, màu đỏ có hợp với con không mẹ?" },
+          { speaker: "王一雪", hanzi: "就是因为没穿过，所以要试试啊！", pinyin: "Jiù shì yīnwèi méi chuānguo, suǒyǐ yào shìshi a!", vietnamese: "Chính vì con chưa từng mặc nên mẹ con mình mới phải thử xem sao chứ!" }
         ]
       },
       {
@@ -478,10 +561,10 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         lines: [
           { speaker: "刘小雪", hanzi: "妈妈，我想买个新书包。", pinyin: "Māma, wǒ xiǎng mǎi gè xīn shūbāo.", vietnamese: "Mẹ ơi, con muốn mua một chiếc ba lô mới." },
           { speaker: "王一雪", hanzi: "好，那边卖书包，我们过去看看吧。", pinyin: "Hǎo, nàbian mài shūbāo, wǒmen guòqù kànkan ba.", vietnamese: "Được, đằng kia bán ba lô, chúng mình qua xem thử nhé." },
-          { speaker: "刘小雪", hanzi: "这么多漂亮的书包！", pinyin: "Zhème duō piàoliang de shūbāo!", vietnamese: "Nhiều ba lô đẹp quá chừng!" },
+          { speaker: "刘小雪", hanzi: "这么多漂亮的书包！", pinyin: "Zhème duō piàoliang de shūbāo!", vietnamese: "Ôi nhiều ba lô xinh xắn quá mẹ ơi!" },
           { speaker: "王一雪", hanzi: "红色的、绿色的、黑色的，你想买哪个？", pinyin: "Hóngsè de, lǜsè de, hēisè de, nǐ xiǎng mǎi nǎge?", vietnamese: "Cái màu đỏ, cái màu xanh lá, cái màu đen, con muốn mua cái nào?" },
           { speaker: "刘小雪", hanzi: "绿色的吧。", pinyin: "Lǜsè de ba.", vietnamese: "Cái màu xanh lá đi mẹ." },
-          { speaker: "王一雪", hanzi: "不错，我也觉得绿色的更好看。", pinyin: "Búcuò, wǒ yě juéde lǜsè de gèng hǎokàn.", vietnamese: "Tốt đấy, mẹ cũng thấy cái màu xanh lá đẹp hơn." }
+          { speaker: "王一雪", hanzi: "不错，我也觉得绿色的更好看。", pinyin: "Búcuò, wǒ yě juéde lǜsè de gèng hǎokàn.", vietnamese: "Mắt thẩm mỹ của con tốt đấy, mẹ cũng thấy cái màu xanh lá này nổi bật và đẹp hơn." }
         ]
       },
       {
@@ -489,7 +572,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng)",
         context: "在房间，刘小雪在写日记。(Trong phòng, Lưu Tiểu Tuyết viết nhật ký).",
         lines: [
-          { speaker: "刘小雪", hanzi: "我和妈妈去了一家商场。因为是新开的，所以这几天东西很便宜。商场里的衣服颜色很多。我没穿过红色的裤子，妈妈让我试了试，我觉得我穿红色的也很好看。", pinyin: "Wǒ hé māma qùle yì jiā shāngchǎng. Yīnwèi shì xīn kāi de, suǒyǐ zhè jǐ tiān dōngxi hěn piányi. Shāngchǎng li de yīfu yánsè hěn duō. Wǒ méi chuānguo hóngsè de kùzi, māma ràng wǒ shìleshì, wǒ juéde wǒ chuān hóngsè de yě hěn hǎokàn.", vietnamese: "Tôi cùng mẹ đến một trung tâm thương mại. Vì mới khai trương nên mấy hôm nay đồ đạc rất rẻ. Quần áo trong đó màu sắc rất đa dạng. Tôi chưa từng mặc quần màu đỏ bao giờ, mẹ bảo tôi thử một chút, tôi thấy mình mặc màu đỏ cũng rất đẹp." }
+          { speaker: "刘小雪", hanzi: "我和妈妈去了一家商场。因为是新开的，所以这几天东西很便宜。商场里的衣服颜色很多。我没穿过红色的裤子，妈妈让我试了试，我觉得我穿红色的也很好看。", pinyin: "Wǒ hé māma qùle yì jiā shāngchǎng. Yīnwèi shì xīn kāi de, suǒyǐ zhè jǐ tiān dōngxi hěn piányi. Shāngchǎng li de yīfu yánsè hěn duō. Wǒ méi chuānguo hóngsè de kùzi, māma ràng wǒ shìleshì, wǒ juéde wǒ chuān hóngsè de yě hěn hǎokàn.", vietnamese: "Hôm nay mình cùng mẹ đến một trung tâm thương mại. Vì mới khai trương nên mấy hôm nay đồ đạc rẻ lắm. Quần áo trong đó đủ loại màu sắc phong phú. Mình chưa từng mặc quần màu đỏ bao giờ, mẹ bảo mình thử xem sao, mình thấy mình mặc màu đỏ cũng xinh xắn và hợp lắm chứ bộ!" }
         ]
       }
     ],
@@ -499,7 +582,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "1. 动态助词“过” (Trợ từ động thái '过' biểu thị từng trải qua)",
         explanation: "Đứng sau động từ để biểu thị một hành động hoặc trải nghiệm đã từng xảy ra trong quá khứ nhưng không kéo dài đến hiện tại. Khẳng định: Động từ + 过. Phủ định: 没(有) + Động từ + 过.",
         examples: [
-          { hanzi: "妈妈，我们来过这家商场吗？", pinyin: "Māma, wǒmen láiguo zhè jiā shāngchǎng ma?", vietnamese: "Mẹ ơi, chúng ta đã từng đến trung tâm thương mại này chưa?" },
+          { hanzi: "妈妈，我们来过这家商场吗？", pinyin: "Māma, wǒmen láiguo zhè jiā shāngchǎng ma?", vietnamese: "Mẹ ơi, mẹ con mình đã từng đến trung tâm thương mại này chưa ạ?" },
           { hanzi: "我没穿过红色的裤子。", pinyin: "Wǒ méi chuānguo hóngsè de kùzi.", vietnamese: "Con chưa từng mặc quần màu đỏ." },
           { hanzi: "我吃过饺子，很好吃。", pinyin: "Wǒ chīguo jiǎozi, hěn hǎochī.", vietnamese: "Tôi đã từng ăn sủi cảo, rất ngon." }
         ]
@@ -509,7 +592,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "2. 因果复句“因为……，所以……” (Câu phức 'Bởi vì... cho nên...')",
         explanation: "Biểu thị quan hệ nhân quả. '因为' dẫn ra nguyên nhân, '所以' dẫn ra kết quả. Có thể dùng đồng thời hoặc dùng riêng lẻ.",
         examples: [
-          { hanzi: "就是因为没穿过，所以要试试啊！", pinyin: "Jiù shì yīnwèi méi chuānguo, suǒyǐ yào shìshi a!", vietnamese: "Chính vì chưa từng mặc nên mới cần thử chứ!" },
+          { hanzi: "就是因为没穿过，所以要试试啊！", pinyin: "Jiù shì yīnwèi méi chuānguo, suǒyǐ yào shìshi a!", vietnamese: "Chính vì con chưa từng mặc nên mẹ con mình mới phải thử xem sao chứ!" },
           { hanzi: "因为是新开的，所以这几天东西很便宜。", pinyin: "Yīnwèi shì xīn kāi de, suǒyǐ zhè jǐ tiān dōngxi hěn piányi.", vietnamese: "Bởi vì mới mở nên mấy ngày này đồ đạc rất rẻ." }
         ]
       },
@@ -548,12 +631,55 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         question: "Điền trợ từ động thái biểu thị kinh nghiệm quá khứ: '妈妈，我们来 ______ 这家商场吗？'",
         hanziPrompt: "妈妈，我们来 ______ 这家商场吗？",
         pinyinPrompt: "Māma, wǒmen lái ______ zhè jiā shāngchǎng ma?",
-        vietnamesePrompt: "Mẹ ơi, chúng ta đã từng đến trung tâm thương mại này chưa?",
+        vietnamesePrompt: "Mẹ ơi, mẹ con mình đã từng đến trung tâm thương mại này chưa ạ?",
         options: ["A. 过", "B. 了", "C. 着", "D. 去"],
         correctAnswer: "A. 过",
         explanation: "Trợ từ động thái '过' đứng sau động từ biểu thị hành động từng xảy ra trong quá khứ.",
         grammarFocus: "Trợ từ động thái 过",
         audioText: "妈妈，我们来过这家商场吗？"
+      },
+      {
+        id: "hsk2-l4-ex2",
+        type: "multiple_choice",
+        question: "Chọn liên từ biểu thị quan hệ nhân quả phù hợp: '______ 我喜欢白色，______ 想买这条裤子。'",
+        options: [
+          "A. 因为……所以……",
+          "B. 虽然……但是……",
+          "C. 不但……而且……",
+          "D. 如果……就……"
+        ],
+        correctAnswer: "A. 因为……所以……",
+        explanation: "Cặp liên từ '因为……所以……' dùng để nối vế câu nguyên nhân và kết quả.",
+        grammarFocus: "Liên từ nhân quả 因为……所以……"
+      },
+      {
+        id: "hsk2-l4-ex3",
+        type: "fill_blank",
+        question: "Điền phó từ biểu thị mức độ cao hơn: '这条红色的裙子好看，那条绿色的 ______ 好看。'",
+        hanziPrompt: "这条红色的裙子好看，那条绿色的 ______ 好看。",
+        pinyinPrompt: "Zhè tiáo hóngsè de qúnzi hǎokàn, nà tiáo lǜsè de ______ hǎokàn.",
+        vietnamesePrompt: "Chiếc váy đỏ này đẹp, chiếc màu xanh kia càng đẹp hơn.",
+        options: ["A. 更", "B. 太", "C. 很", "D. 最"],
+        correctAnswer: "A. 更",
+        explanation: "Phó từ '更' đứng trước tính từ biểu thị mức độ tăng thêm trong so sánh ngầm.",
+        grammarFocus: "Phó từ so sánh 更"
+      },
+      {
+        id: "hsk2-l4-ex4",
+        type: "dialogue_match",
+        question: "Chọn câu trả lời phù hợp khi đi mua sắm quần áo:",
+        hanziPrompt: "服务员: 您好，请问您想看点儿什么？ — 顾客: ______",
+        pinyinPrompt: "Fúwùyuán: Nín hǎo, qǐngwèn nín xiǎng kàn diǎnr shénme? — Gùkè: ______",
+        vietnamesePrompt: "Nhân viên: Xin chào quý khách, quý khách muốn xem gì ạ? — Khách hàng: Tôi muốn thử chiếc cặp sách màu xanh kia một chút.",
+        options: [
+          "我想试一下那个绿色的书包。",
+          "我昨天下午就回国了。",
+          "今天天气是阴天。",
+          "这台电脑放着很多东西。"
+        ],
+        correctAnswer: "我想试一下那个绿色的书包。",
+        explanation: "Câu đàm thoại mua hàng tự nhiên: '我想试一下……' (Tôi muốn thử một chút...).",
+        grammarFocus: "Giao tiếp mua sắm và động từ 试"
       }
     ]
   },
@@ -575,12 +701,12 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1: 在宾馆楼下 (Bài khóa 1: Ở dưới tầng khách sạn)",
         context: "在宾馆楼下，安妮给白家月打电话。(Ở dưới tầng khách sạn, Annie gọi điện thoại cho Bạch Gia Nguyệt).",
         lines: [
-          { speaker: "安妮", hanzi: "家月，快下来吧，第一次去中国朋友家，别晚了。", pinyin: "Jiāyuè, kuài xiàlái ba, dì-yī cì qù Zhōngguó péngyou jiā, bié wǎn le.", vietnamese: "Gia Nguyệt, mau xuống đi thôi, lần đầu tiên đến nhà bạn Trung Quốc chơi, đừng để muộn nhé." },
-          { speaker: "白家月", hanzi: "还有时间，你上来吧。", pinyin: "Hái yǒu shíjiān, nǐ shànglái ba.", vietnamese: "Vẫn còn thời gian mà, bạn lên đây đi." },
-          { speaker: "安妮", hanzi: "我不上去了，就在下面等你。", pinyin: "Wǒ bú shàngqù le, jiù zài xiàmiàn děng nǐ.", vietnamese: "Mình không lên đâu, mình đứng dưới này đợi bạn." },
-          { speaker: "白家月", hanzi: "那我一会儿就下去。", pinyin: "Nà wǒ yíhuìr jiù xiàqù.", vietnamese: "Thế lát nữa mình xuống ngay." },
-          { speaker: "安妮", hanzi: "你快点儿吧。", pinyin: "Nǐ kuài diǎnr ba.", vietnamese: "Bạn nhanh lên một chút nhé." },
-          { speaker: "白家月", hanzi: "没事，一雪姐说11点前到就可以。", pinyin: "Méishì, Yīxué jiě shuō shíyī diǎn qián dào jiù kěyǐ.", vietnamese: "Không sao đâu, chị Nhất Tuyết bảo trước 11 giờ đến là được rồi." }
+          { speaker: "安妮", hanzi: "家月，快下来吧，第一次去中国朋友家，别晚了。", pinyin: "Jiāyuè, kuài xiàlái ba, dì-yī cì qù Zhōngguó péngyou jiā, bié wǎn le.", vietnamese: "Gia Nguyệt ơi, mau xuống đi thôi, lần đầu tiên đến nhà người quen Trung Quốc làm khách, đừng để muộn giờ nhé cậu." },
+          { speaker: "白家月", hanzi: "还有时间，你上来吧。", pinyin: "Hái yǒu shíjiān, nǐ shànglái ba.", vietnamese: "Vẫn còn sớm mà, cậu lên phòng tớ chơi đi." },
+          { speaker: "安妮", hanzi: "我不上去了，就在下面等你。", pinyin: "Wǒ bú shàngqù le, jiù zài xiàmiàn děng nǐ.", vietnamese: "Thôi tớ không lên đâu, tớ đứng dưới sảnh đợi cậu nhé." },
+          { speaker: "白家月", hanzi: "那我一会儿就下去。", pinyin: "Nà wǒ yíhuìr jiù xiàqù.", vietnamese: "Thế đợi tớ tẹo tớ xuống ngay đây." },
+          { speaker: "安妮", hanzi: "你快点儿吧。", pinyin: "Nǐ kuài diǎnr ba.", vietnamese: "Cậu nhanh nhanh tay lên một chút nhé." },
+          { speaker: "白家月", hanzi: "没事，一雪姐说11点前到就可以。", pinyin: "Méishì, Yīxué jiě shuō shíyī diǎn qián dào jiù kěyǐ.", vietnamese: "Yên tâm không sao đâu, chị Nhất Tuyết bảo trước 11 giờ tới là được mà." }
         ]
       },
       {
@@ -623,7 +749,8 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
     ],
     grammarPoints: [
       {
-        title: "简单趋向补语 (1) Bổ ngữ xu hướng đơn (1)",
+        id: "hsk2-l5-g1",
+        title: "1. 简单趋向补语 (1) Bổ ngữ xu hướng đơn (1)",
         explanation: "Cấu trúc cơ bản: Động từ + 来 / 去. Dùng '来' khi động tác hướng về phía người nói, dùng '去' khi động tác rời xa phía người nói. Thường dùng với các động từ: 上, 下, 进, 出, 回, 过, 起.",
         examples: [
           { hanzi: "我不上去了，就在下面等你。", pinyin: "Wǒ bú shàngqù le, jiù zài xiàmiàn děng nǐ.", vietnamese: "Mình không lên đâu, mình ở dưới này đợi bạn (người nói ở dưới)." },
@@ -632,59 +759,100 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         ]
       },
       {
-        title: "简单趋向补语 (2) Vị trí tân ngữ trong bổ ngữ xu hướng",
+        id: "hsk2-l5-g2",
+        title: "2. 简单趋向补语 (2) Vị trí tân ngữ trong bổ ngữ xu hướng",
         explanation: "Khi động từ vừa có bổ ngữ xu hướng vừa có tân ngữ: Nếu tân ngữ là nơi chốn thì bắt buộc đặt TRƯỚC '来/去' (Động từ + Nơi chốn + 来/去); nếu tân ngữ là sự vật/đồ vật thì có thể đặt trước hoặc sau '来/去'.",
         examples: [
           { hanzi: "上课了，你们快进教室来吧。", pinyin: "Shàngkè le, nǐmen kuài jìn jiàoshì lái ba.", vietnamese: "Vào học rồi, các bạn mau vào lớp đi (nơi chốn: 教室 đặt trước 来)." },
           { hanzi: "你们太客气了，还拿这么多礼物来！", pinyin: "Nǐmen tài kèqi le, hái ná zhème duō lǐwù lái!", vietnamese: "Các bạn khách sáo quá, lại còn mang nhiều quà đến thế!" },
-          { hanzi: "爸爸今天买回了很多水果。", pinyin: "Bàba jīntiān mǎihuíle hěn duō shuǐguǒ.", vietnamese: "Hôm nay bố mua về rất nhiều hoa quả." }
+          { hanzi: "爸爸今天买回来很多好吃的。", pinyin: "Bàba jīntiān mǎihuí lai hěn duō hǎochī de.", vietnamese: "Hôm nay bố mua về bao nhiêu đồ ăn ngon." }
         ]
       },
       {
-        title: "固定格式“都……了” (Cấu trúc cố định 'Đã... rồi')",
-        explanation: "Biểu thị sự việc đã diễn ra hoặc đạt đến một mức độ/thời gian nào đó, thường mang ngữ khí nhấn mạnh hoặc giục giã, nhắc nhở.",
+        id: "hsk2-l5-g3",
+        title: "3. 固定格式“都……了” (Cấu trúc cố định '都……了')",
+        explanation: "Cấu trúc '都 + Cụm từ thời gian / Số lượng + 了' dùng để nhấn mạnh thời gian đã muộn hoặc số lượng đã nhiều, mang ngữ khí phàn nàn, nhắc nhở hoặc ngạc nhiên.",
         examples: [
-          { hanzi: "都12点了，我们吃饭吧。", pinyin: "Dōu shí'èr diǎn le, wǒmen chī fàn ba.", vietnamese: "Đã 12 giờ rồi, chúng ta ăn cơm thôi nào." },
-          { hanzi: "都8点半了，你还不起床吗？", pinyin: "Dōu bā diǎn bàn le, nǐ hái bù qǐchuáng ma?", vietnamese: "Đã 8 rưỡi rồi, con còn chưa dậy à?" },
-          { hanzi: "我都去过北京了，不想再去了。", pinyin: "Wǒ dōu qùguo Běijīng le, bù xiǎng zài qù le.", vietnamese: "Tôi đã đi Bắc Kinh rồi, không muốn đi nữa đâu." }
+          { hanzi: "都十点了，你怎么还不起床？", pinyin: "Dōu shí diǎn le, nǐ zěnme hái bù qǐchuáng?", vietnamese: "Đã 10 giờ rồi, sao con còn chưa dậy thế?" },
+          { hanzi: "我们都等了一个小时了。", pinyin: "Wǒmen dōu děng le yí gè xiǎoshí le.", vietnamese: "Chúng mình đã đợi cả tiếng đồng hồ rồi đấy." }
         ]
       }
     ],
-    vocabulary: [
-      { hanzi: "快", pinyin: "kuài", vietnamese: "nhanh, mau chóng", type: "adv./adj." },
-      { hanzi: "下来", pinyin: "xiàlái", vietnamese: "xuống đây", type: "v." },
-      { hanzi: "上来", pinyin: "shànglái", vietnamese: "lên đây", type: "v." },
-      { hanzi: "上去", pinyin: "shàngqù", vietnamese: "lên đó", type: "v." },
-      { hanzi: "下面", pinyin: "xiàmiàn", vietnamese: "phía dưới, tầng dưới", type: "n." },
-      { hanzi: "面", pinyin: "miàn", vietnamese: "mặt, phía, hướng", type: "suf." },
-      { hanzi: "等", pinyin: "děng", vietnamese: "chờ, đợi", type: "v." },
-      { hanzi: "一会儿", pinyin: "yíhuìr", vietnamese: "một lát, chốc lát", type: "num.-m." },
-      { hanzi: "下去", pinyin: "xiàqù", vietnamese: "xuống dưới đó", type: "v." },
-      { hanzi: "进来", pinyin: "jìnlái", vietnamese: "vào đây", type: "v." },
-      { hanzi: "爷爷", pinyin: "yéye", vietnamese: "ông nội", type: "n." },
-      { hanzi: "奶奶", pinyin: "nǎinai", vietnamese: "bà nội", type: "n." },
-      { hanzi: "礼物", pinyin: "lǐwù", vietnamese: "quà tặng, món quà", type: "n." },
-      { hanzi: "准备", pinyin: "zhǔnbèi", vietnamese: "chuẩn bị", type: "v." },
-      { hanzi: "奶茶", pinyin: "nǎichá", vietnamese: "trà sữa", type: "n." },
-      { hanzi: "跟", pinyin: "gēn", vietnamese: "cùng, với", type: "prep./conj." },
-      { hanzi: "走", pinyin: "zǒu", vietnamese: "đi bộ, đi", type: "v." },
-      { hanzi: "酒店", pinyin: "jiǔdiàn", vietnamese: "khách sạn", type: "n." }
+vocabulary: [
+      { id: "hsk2-l5-w1", hanzi: "快", pinyin: "kuài", hanViet: "Khoái", vietnamese: "nhanh, mau chóng, sắp", hskLevel: 2, radical: "忄", strokeCount: 7, example: "快下来吧", exampleTranslation: "mau xuống đây đi", tags: ["Bài 5", "Phó từ"] },
+      { id: "hsk2-l5-w2", hanzi: "下来", pinyin: "xiàlái", hanViet: "Hạ Lai", vietnamese: "xuống đây (hướng về phía người nói)", hskLevel: 2, radical: "一", strokeCount: 11, example: "快下来吧", exampleTranslation: "mau xuống đây đi", tags: ["Bài 5", "Bổ ngữ xu hướng"] },
+      { id: "hsk2-l5-w3", hanzi: "上来", pinyin: "shànglái", hanViet: "Thượng Lai", vietnamese: "lên đây (hướng về phía người nói)", hskLevel: 2, radical: "一", strokeCount: 10, example: "你上来吧", exampleTranslation: "bạn lên đây đi", tags: ["Bài 5", "Bổ ngữ xu hướng"] },
+      { id: "hsk2-l5-w4", hanzi: "上去", pinyin: "shàngqù", hanViet: "Thượng Khứ", vietnamese: "lên đó (rời xa người nói)", hskLevel: 2, radical: "一", strokeCount: 8, example: "我不上去了", exampleTranslation: "mình không lên đó đâu", tags: ["Bài 5", "Bổ ngữ xu hướng"] },
+      { id: "hsk2-l5-w5", hanzi: "下面", pinyin: "xiàmiàn", hanViet: "Hạ Diện", vietnamese: "phía dưới, bên dưới", hskLevel: 2, radical: "一", strokeCount: 12, example: "在下面等你", exampleTranslation: "đợi bạn ở phía dưới", tags: ["Bài 5", "Phương vị từ"] },
+      { id: "hsk2-l5-w6", hanzi: "面", pinyin: "miàn", hanViet: "Diện", vietnamese: "mặt, phía, hướng", hskLevel: 2, radical: "面", strokeCount: 9, example: "上面 / 下面", exampleTranslation: "phía trên / phía dưới", tags: ["Bài 5", "Hậu tố phương vị"] },
+      { id: "hsk2-l5-w7", hanzi: "等", pinyin: "děng", hanViet: "Đẳng", vietnamese: "chờ, đợi", hskLevel: 2, radical: "竹", strokeCount: 12, example: "在下面等你", exampleTranslation: "đợi bạn ở dưới này", tags: ["Bài 5", "Động từ"] },
+      { id: "hsk2-l5-w8", hanzi: "一会儿", pinyin: "yíhuìr", hanViet: "Nhất Hội Nhi", vietnamese: "một lát, chốc lát", hskLevel: 2, radical: "一", strokeCount: 8, example: "我一会儿就下去", exampleTranslation: "lát nữa mình xuống ngay", tags: ["Bài 5", "Số lượng từ"] },
+      { id: "hsk2-l5-w9", hanzi: "下去", pinyin: "xiàqù", hanViet: "Hạ Khứ", vietnamese: "xuống đó (rời xa người nói)", hskLevel: 2, radical: "一", strokeCount: 8, example: "我一会儿就下去", exampleTranslation: "lát nữa mình xuống dưới đó", tags: ["Bài 5", "Bổ ngữ xu hướng"] },
+      { id: "hsk2-l5-w10", hanzi: "进来", pinyin: "jìnlái", hanViet: "Tiến Lai", vietnamese: "vào đây (hướng vào phía người nói)", hskLevel: 2, radical: "辶", strokeCount: 14, example: "快进来！", exampleTranslation: "mau vào đây đi!", tags: ["Bài 5", "Bổ ngữ xu hướng"] },
+      { id: "hsk2-l5-w11", hanzi: "爷爷", pinyin: "yéye", hanViet: "Gia Gia", vietnamese: "ông nội", hskLevel: 2, radical: "父", strokeCount: 13, example: "这是孩子的爷爷", exampleTranslation: "đây là ông nội của bọn trẻ", tags: ["Bài 5", "Danh từ"] },
+      { id: "hsk2-l5-w12", hanzi: "奶奶", pinyin: "nǎinai", hanViet: "Nãi Nãi", vietnamese: "bà nội", hskLevel: 2, radical: "女", strokeCount: 11, example: "这是孩子的奶奶", exampleTranslation: "đây là bà nội của bọn trẻ", tags: ["Bài 5", "Danh từ"] },
+      { id: "hsk2-l5-w13", hanzi: "礼物", pinyin: "lǐwù", hanViet: "Lễ Vật", vietnamese: "quà tặng, món quà", hskLevel: 2, radical: "礻", strokeCount: 13, example: "买礼物 / 送礼物", exampleTranslation: "mua quà / tặng quà", tags: ["Bài 5", "Danh từ"] },
+      { id: "hsk2-l5-w14", hanzi: "准备", pinyin: "zhǔnbèi", hanViet: "Chuẩn Bị", vietnamese: "chuẩn bị, dự định", hskLevel: 2, radical: "冫", strokeCount: 16, example: "准备奶茶", exampleTranslation: "chuẩn bị trà sữa", tags: ["Bài 5", "Động từ"] },
+      { id: "hsk2-l5-w15", hanzi: "奶茶", pinyin: "nǎichá", hanViet: "Nãi Trà", vietnamese: "trà sữa", hskLevel: 2, radical: "女", strokeCount: 14, example: "好喝的奶茶", exampleTranslation: "trà sữa ngon tuyệt", tags: ["Bài 5", "Đồ uống"] },
+      { id: "hsk2-l5-w16", hanzi: "跟", pinyin: "gēn", hanViet: "Cân", vietnamese: "cùng, với", hskLevel: 2, radical: "足", strokeCount: 13, example: "跟中国朋友聊天儿", exampleTranslation: "trò chuyện cùng bạn bè Trung Quốc", tags: ["Bài 5", "Giới từ"] },
+      { id: "hsk2-l5-w17", hanzi: "走", pinyin: "zǒu", hanViet: "Tẩu", vietnamese: "đi bộ, rời đi", hskLevel: 2, radical: "走", strokeCount: 7, example: "走回酒店", exampleTranslation: "đi bộ về khách sạn", tags: ["Bài 5", "Động từ"] },
+      { id: "hsk2-l5-w18", hanzi: "酒店", pinyin: "jiǔdiàn", hanViet: "Tửu Điếm", vietnamese: "khách sạn", hskLevel: 2, radical: "氵", strokeCount: 17, example: "住在酒店", exampleTranslation: "sống ở khách sạn", tags: ["Bài 5", "Địa điểm"] }
     ],
-    exercises: [
+exercises: [
       {
-        question: "用“下来 / 上去 / 进来 / 走”选词填空 (Chọn từ điền vào chỗ trống):",
-        options: ["快下来吧", "我不上去了", "快进来", "走回酒店"],
-        answer: "快下来吧"
+        id: "hsk2-l5-ex1",
+        type: "fill_blank",
+        question: "Chọn bổ ngữ xu hướng thích hợp khi người nói đang ở dưới tầng gọi bạn xuống: '家月，快 ______ 吧！'",
+        hanziPrompt: "家月，快 ______ 吧！",
+        pinyinPrompt: "Jiāyuè, kuài ______ ba!",
+        vietnamesePrompt: "Gia Nguyệt, mau xuống đây đi!",
+        options: ["A. 下来", "B. 上去", "C. 下去", "D. 出来"],
+        correctAnswer: "A. 下来",
+        explanation: "Khi người nói ở phía dưới gọi người ở trên tầng đi xuống phía mình, dùng bổ ngữ xu hướng '下来'.",
+        grammarFocus: "Bổ ngữ xu hướng đơn 下来"
       },
       {
-        question: "根据课文，白家月和安妮回国前一天去谁家做客了？",
-        options: ["王一雪家", "王一飞家", "李文家", "刘医生医院"],
-        answer: "王一雪家"
+        id: "hsk2-l5-ex2",
+        type: "multiple_choice",
+        question: "Chọn câu có vị trí tân ngữ nơi chốn đúng với bổ ngữ xu hướng:",
+        options: [
+          "A. 上课了，快进教室来吧。",
+          "B. 上课了，快进来教室吧。",
+          "C. 上课了，快教室进吧。",
+          "D. 上课了，快来进教室吧。"
+        ],
+        correctAnswer: "A. 上课了，快进教室来吧。",
+        explanation: "Khi tân ngữ là từ chỉ nơi chốn (教室), tân ngữ bắt buộc phải đặt trước '来/去': Động từ (进) + Nơi chốn (教室) + 来.",
+        grammarFocus: "Vị trí tân ngữ nơi chốn trong bổ ngữ xu hướng"
       },
       {
-        question: "在王一雪家，是谁给客人们准备了美味的奶茶？",
-        options: ["刘爷爷", "王一雪", "刘奶奶", "白家月"],
-        answer: "刘爷爷"
+        id: "hsk2-l5-ex3",
+        type: "fill_blank",
+        question: "Điền phó từ biểu thị nhấn mạnh thời gian muộn trong cấu trúc '都……了': '______ 十点了，你怎么还不起床？'",
+        hanziPrompt: "______ 十点了，你怎么还不起床？",
+        pinyinPrompt: "______ shí diǎn le, nǐ zěnme hái bù qǐchuáng?",
+        vietnamesePrompt: "Đã mười giờ rồi, sao con còn chưa thức dậy?",
+        options: ["A. 都", "B. 也", "C. 还", "D. 就"],
+        correctAnswer: "A. 都",
+        explanation: "Cấu trúc cố định '都……了' dùng để nhấn mạnh thời gian đã muộn hoặc số lượng đã nhiều.",
+        grammarFocus: "Cấu trúc cố định 都……了"
+      },
+      {
+        id: "hsk2-l5-ex4",
+        type: "dialogue_match",
+        question: "Chọn câu đáp lại lời mời vào nhà lịch sự:",
+        hanziPrompt: "主人: 快请进，外面冷，快坐！ — 客人: ______",
+        pinyinPrompt: "Zhǔrén: Kuài qǐng jìn, wàimiàn lěng, kuài zuò! — Kèrén: ______",
+        vietnamesePrompt: "Chủ nhà: Mau mời vào, ngoài trời lạnh, mau ngồi đi! — Khách: Cháu chào hai bác ạ, đây là chút quà chúng cháu biếu hai bác.",
+        options: [
+          "叔叔阿姨好，这是给您带的一点儿礼物。",
+          "我明天上午就去买画笔。",
+          "他在操场上踢足球呢。",
+          "我们一共买了三个书包。"
+        ],
+        correctAnswer: "叔叔阿姨好，这是给您带的一点儿礼物。",
+        explanation: "Lời đáp lịch sự khi đến nhà người lớn làm khách.",
+        grammarFocus: "Giao tiếp văn hóa làm khách Trung Quốc"
       }
     ]
   },
@@ -732,9 +900,9 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
           { speaker: "王一雪", hanzi: "明天就是女儿的生日了。", pinyin: "Míngtiān jiù shì nǚ'ér de shēngrì le.", vietnamese: "Ngày mai là sinh nhật con gái rồi đấy." },
           { speaker: "刘明", hanzi: "你不说，我还真忘了。我们给她准备个什么礼物呢？", pinyin: "Nǐ bù shuō, wǒ hái zhēn wàng le. Wǒmen gěi tā zhǔnbèi gè shénme lǐwù ne?", vietnamese: "Em không nhắc thì anh suýt quên mất. Chúng mình chuẩn bị món quà gì cho con bé nhỉ?" },
           { speaker: "王一雪", hanzi: "她喜欢画画，你觉得画笔怎么样？", pinyin: "Tā xǐhuan huà huà, nǐ juéde huàbǐ zěnmeyàng?", vietnamese: "Con thích vẽ tranh, anh thấy tặng bút vẽ được không?" },
-          { speaker: "刘明", hanzi: "就送画笔吧！", pinyin: "Jiù sòng huàbǐ ba!", vietnamese: "Tặng bút vẽ đi em!" },
+          { speaker: "刘明", hanzi: "就送画笔吧！", pinyin: "Jiù sòng huàbǐ ba!", vietnamese: "Ừ, tặng bộ bút vẽ cho con bé đi em!" },
           { speaker: "王一雪", hanzi: "那我明天上午就去买。", pinyin: "Nà wǒ míngtiān shàngwǔ jiù qù mǎi.", vietnamese: "Thế sáng mai em sẽ đi mua." },
-          { speaker: "刘明", hanzi: "好的！我再给她买个大大的生日蛋糕。", pinyin: "Hǎo de! Wǒ zài gěi tā mǎi gè dàdà de shēngrì dàngāo.", vietnamese: "Được rồi! Anh sẽ mua thêm cho con một chiếc bánh sinh nhật thật to." }
+          { speaker: "刘明", hanzi: "好的！我再给她买个大大的生日蛋糕。", pinyin: "Hǎo de! Wǒ zài gěi tā mǎi gè dàdà de shēngrì dàngāo.", vietnamese: "Nhất trí em! Để anh đặt thêm một chiếc bánh kem sinh nhật thật to và ngon cho con nhé." }
         ]
       },
       {
@@ -745,7 +913,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
           { speaker: "刘明", hanzi: "小雪，生日快乐！", pinyin: "Xiǎoxuě, shēngrì kuàilè!", vietnamese: "Tiểu Tuyết, sinh nhật vui vẻ con nhé!" },
           { speaker: "刘小明", hanzi: "姐姐，生日快乐！", pinyin: "Jiějie, shēngrì kuàilè!", vietnamese: "Chị ơi, chúc mừng sinh nhật chị!" },
           { speaker: "王一雪", hanzi: "小雪，这是爸爸、妈妈送你的礼物。", pinyin: "Xiǎoxuě, zhè shì bàba, māma sòng nǐ de lǐwù.", vietnamese: "Tiểu Tuyết, đây là quà bố mẹ tặng con." },
-          { speaker: "刘明", hanzi: "你打开看看喜欢不喜欢。", pinyin: "Nǐ dǎkāi kànkan xǐhuan bù xǐhuan.", vietnamese: "Con mở ra xem có thích không nào." },
+          { speaker: "刘明", hanzi: "你打开看看喜欢不喜欢。", pinyin: "Nǐ dǎkāi kànkan xǐhuan bu xǐhuan.", vietnamese: "Con mở ra xem có thích không nào." },
           { speaker: "刘小雪", hanzi: "画笔！我很喜欢！", pinyin: "Huàbǐ! Wǒ hěn xǐhuan!", vietnamese: "Bút vẽ màu! Con thích lắm ạ!" },
           { speaker: "王一雪", hanzi: "那你想画点儿什么？", pinyin: "Nà nǐ xiǎng huà diǎnr shénme?", vietnamese: "Thế con muốn vẽ gì nào?" },
           { speaker: "刘小雪", hanzi: "画我们的家！有爸爸、妈妈、弟弟，还有黑色的狗、白色的猫什么的。", pinyin: "Huà wǒmen de jiā! Yǒu bàba, māma, dìdi, hái yǒu hēisè de gǒu, báisè de māo shénmede.", vietnamese: "Vẽ ngôi nhà của chúng mình ạ! Có bố, mẹ, em trai, và cả chú chó đen, chú mèo trắng nữa." },
@@ -777,63 +945,104 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
     ],
     grammarPoints: [
       {
-        title: "形容词重叠 (Hình thức trùng điệp của tính từ)",
-        explanation: "Tính từ đơn âm tiết lặp lại dạng 'AA' (大大的, 小小的, 长长的), tính từ hai âm tiết lặp lại dạng 'AABB' (高高兴兴, 漂漂亮亮, 舒舒服服). Dùng để nhấn mạnh mức độ sâu hơn hoặc biểu thị tình cảm yêu thích, trìu mến.",
+        id: "hsk2-l6-g1",
+        title: "1. 形容词重叠 (Hình thức trùng điệp của tính từ)",
+        explanation: "Tính từ đơn âm tiết trùng điệp theo dạng AA (như 长长、大大、红红). Khi làm định ngữ bổ nghĩa cho danh từ thường mang '的' (ví dụ: 长长的面条儿, 红红的苹果). Thường dùng để miêu tả đặc điểm, tăng thêm sắc thái sinh động, đáng yêu.",
         examples: [
-          { hanzi: "我再给她买个大大的生日蛋糕。", pinyin: "Wǒ zài gěi tā mǎi gè dàdà de shēngrì dàngāo.", vietnamese: "Anh sẽ mua thêm cho con một chiếc bánh sinh nhật thật to." },
-          { hanzi: "这只猫小小的，真让人喜欢。", pinyin: "Zhè zhī māo xiǎoxiǎo de, zhēn ràng rén xǐhuan.", vietnamese: "Chú mèo này bé xíu xiu, thật khiến người ta yêu thích." },
-          { hanzi: "一雪的女儿每天都漂漂亮亮的。", pinyin: "Yīxué de nǚ'ér měitiān dōu piàopiaoliàngliàng de.", vietnamese: "Con gái của Nhất Tuyết ngày nào cũng xinh xắn rạng ngời." }
+          { hanzi: "我们要吃长长的面条儿。", pinyin: "Wǒmen yào chī chángcháng de miàntiáor.", vietnamese: "Chúng ta sẽ ăn những sợi mì dài thật dài." },
+          { hanzi: "那只小狗有大大的一双眼睛。", pinyin: "Nà zhī xiǎogǒu yǒu dàdà de yì shuāng yǎnjing.", vietnamese: "Chú cún nhỏ đó có đôi mắt to tròn long lanh." }
         ]
       },
       {
-        title: "固定短语“什么的” (Đoản ngữ cố định 'Gì gì đó / Vân vân')",
-        explanation: "Đặt sau các danh từ hoặc cụm từ được liệt kê để biểu thị các sự vật cùng loại chưa được kể hết (tương đương 'vân vân', 'những thứ như thế').",
+        id: "hsk2-l6-g2",
+        title: "2. 固定短语“什么的” (Đoản ngữ cố định '什么的')",
+        explanation: "Dùng ở cuối câu hoặc sau việc liệt kê để biểu thị liệt kê chưa hết (tương đương 'vân vân', 'những thứ như thế...').",
         examples: [
-          { hanzi: "画我们的家！有爸爸、妈妈、弟弟，还有黑色的狗、白色的猫什么的。", pinyin: "Huà wǒmen de jiā! Yǒu bàba, māma, dìdi, hái yǒu hēisè de gǒu, báisè de māo shénmede.", vietnamese: "Vẽ ngôi nhà chúng mình! Có bố, mẹ, em trai, và cả chó đen, mèo trắng này nọ." },
-          { hanzi: "桌子上有电脑、杯子、书和画笔什么的。", pinyin: "Zhuōzi shang yǒu diànnǎo, bēizi, shū hé huàbǐ shénmede.", vietnamese: "Trên bàn có máy tính, cốc nước, sách và bút vẽ vân vân." }
+          { hanzi: "桌子上有苹果、香蕉、蛋糕什么的。", pinyin: "Zhuōzi shang yǒu píngguǒ, xiāngjiāo, dàngāo shénmede.", vietnamese: "Trên bàn có táo, chuối, bánh ngọt vân vân." },
+          { hanzi: "周末我喜欢在家看书、听音乐什么的。", pinyin: "Zhōumò wǒ xǐhuan zài jiā kànshū, tīng yīnyuè shénmede.", vietnamese: "Cuối tuần tôi thích ở nhà đọc sách, nghe nhạc này nọ." }
         ]
       },
       {
-        title: "结构助词“地” (Trợ từ kết cấu '地')",
-        explanation: "Đứng giữa tính từ (hoặc ngữ tính từ) và động từ: [Tính từ / Cụm tính từ + 地 + Động từ] để miêu tả phương thức, trạng thái tiến hành của hành động.",
+        id: "hsk2-l6-g3",
+        title: "3. 结构助词“地” (Trợ từ kết cấu '地')",
+        explanation: "Dùng sau tính từ hoặc cụm tính từ làm trạng ngữ để bổ nghĩa cho động từ: 'Trạng ngữ + 地 + Động từ'. Biểu thị trạng thái hoặc cách thức hành động diễn ra.",
         examples: [
-          { hanzi: "过生日就要吃好吃的，还要高高兴兴地玩。", pinyin: "Guò shēngrì jiù yào chī hǎochī de, hái yào gāogāoxìngxìng de wán.", vietnamese: "Sinh nhật là phải ăn ngon, và còn phải vui chơi thật là vui vẻ." },
-          { hanzi: "回家后，孩子们早早地就上床了。", pinyin: "Huí jiā hòu, háizimen zǎozǎo de jiù shàng chuáng le.", vietnamese: "Về đến nhà, các con đã lên giường ngủ từ rất sớm." },
-          { hanzi: "他们说要舒舒服服地睡一觉。", pinyin: "Tāmen shuō yào shūshūfúfú de shuì yí jiào.", vietnamese: "Chúng nói muốn ngủ một giấc thật là thoải mái." }
+          { hanzi: "小雪高兴地笑了。", pinyin: "Xiǎoxuě gāoxìng de xiào le.", vietnamese: "Tiểu Tuyết cười một cách vui vẻ." },
+          { hanzi: "他早早地上床睡觉了。", pinyin: "Tā zǎozǎo de shàngchuáng shuìjiào le.", vietnamese: "Cậu ấy đã lên giường đi ngủ từ rất sớm." }
         ]
       }
     ],
-    vocabulary: [
-      { hanzi: "生日", pinyin: "shēngrì", vietnamese: "sinh nhật", type: "n." },
-      { hanzi: "忘", pinyin: "wàng", vietnamese: "quên", type: "v." },
-      { hanzi: "画", pinyin: "huà", vietnamese: "vẽ, bức tranh", type: "v./n." },
-      { hanzi: "画笔", pinyin: "huàbǐ", vietnamese: "bút vẽ, cọ vẽ màu", type: "n." },
-      { hanzi: "蛋糕", pinyin: "dàngāo", vietnamese: "bánh kem, bánh gato", type: "n." },
-      { hanzi: "快乐", pinyin: "kuàilè", vietnamese: "vui vẻ, hạnh phúc", type: "adj." },
-      { hanzi: "打开", pinyin: "dǎkāi", vietnamese: "mở ra", type: "v." },
-      { hanzi: "长", pinyin: "cháng", vietnamese: "dài", type: "adj." },
-      { hanzi: "鱼", pinyin: "yú", vietnamese: "cá", type: "n." },
-      { hanzi: "肉", pinyin: "ròu", vietnamese: "thịt", type: "n." },
-      { hanzi: "过", pinyin: "guò", vietnamese: "đón (sinh nhật, tết), trải qua", type: "v." },
-      { hanzi: "地", pinyin: "de", vietnamese: "trợ từ kết cấu (dùng trước động từ)", type: "part." },
-      { hanzi: "床", pinyin: "chuáng", vietnamese: "giường", type: "n." },
-      { hanzi: "舒服", pinyin: "shūfu", vietnamese: "thoải mái, dễ chịu", type: "adj." }
+vocabulary: [
+      { id: "hsk2-l6-w1", hanzi: "生日", pinyin: "shēngrì", hanViet: "Sinh Nhật", vietnamese: "sinh nhật", hskLevel: 2, radical: "日", strokeCount: 9, example: "祝你生日快乐！", exampleTranslation: "chúc bạn sinh nhật vui vẻ!", tags: ["Bài 6", "Danh từ"] },
+      { id: "hsk2-l6-w2", hanzi: "忘", pinyin: "wàng", hanViet: "Vong", vietnamese: "quên", hskLevel: 2, radical: "心", strokeCount: 7, example: "别忘了带手机", exampleTranslation: "đừng quên mang theo điện thoại", tags: ["Bài 6", "Động từ"] },
+      { id: "hsk2-l6-w3", hanzi: "画", pinyin: "huà", hanViet: "Họa", vietnamese: "vẽ, bức tranh", hskLevel: 2, radical: "田", strokeCount: 8, example: "她喜欢画画", exampleTranslation: "cô ấy thích vẽ tranh", tags: ["Bài 6", "Động từ"] },
+      { id: "hsk2-l6-w4", hanzi: "画笔", pinyin: "huàbǐ", hanViet: "Họa Bút", vietnamese: "bút vẽ, cọ vẽ màu", hskLevel: 2, radical: "竹", strokeCount: 18, example: "送一套画笔", exampleTranslation: "tặng một bộ bút vẽ", tags: ["Bài 6", "Danh từ"] },
+      { id: "hsk2-l6-w5", hanzi: "蛋糕", pinyin: "dàngāo", hanViet: "Đản Cao", vietnamese: "bánh kem, bánh gato", hskLevel: 2, radical: "虫", strokeCount: 21, example: "吃生日蛋糕", exampleTranslation: "ăn bánh sinh nhật", tags: ["Bài 6", "Món ăn"] },
+      { id: "hsk2-l6-w6", hanzi: "快乐", pinyin: "kuàilè", hanViet: "Khoái Lạc", vietnamese: "vui vẻ, hạnh phúc", hskLevel: 2, radical: "忄", strokeCount: 12, example: "生日快乐！", exampleTranslation: "sinh nhật vui vẻ!", tags: ["Bài 6", "Tính từ"] },
+      { id: "hsk2-l6-w7", hanzi: "打开", pinyin: "dǎkāi", hanViet: "Đả Khai", vietnamese: "mở ra, bật lên", hskLevel: 2, radical: "扌", strokeCount: 8, example: "打开礼物看看", exampleTranslation: "mở quà ra xem nào", tags: ["Bài 6", "Động từ"] },
+      { id: "hsk2-l6-w8", hanzi: "长", pinyin: "cháng", hanViet: "Trường", vietnamese: "dài", hskLevel: 2, radical: "长", strokeCount: 4, example: "长长的头发", exampleTranslation: "mái tóc dài thướt tha", tags: ["Bài 6", "Tính từ"] },
+      { id: "hsk2-l6-w9", hanzi: "鱼", pinyin: "yú", hanViet: "Ngư", vietnamese: "con cá", hskLevel: 2, radical: "鱼", strokeCount: 8, example: "一条红色的鱼", exampleTranslation: "một con cá màu đỏ", tags: ["Bài 6", "Danh từ"] },
+      { id: "hsk2-l6-w10", hanzi: "肉", pinyin: "ròu", hanViet: "Nhục", vietnamese: "thịt", hskLevel: 2, radical: "肉", strokeCount: 6, example: "吃鱼和肉", exampleTranslation: "ăn cá và thịt", tags: ["Bài 6", "Danh từ"] },
+      { id: "hsk2-l6-w11", hanzi: "过", pinyin: "guò", hanViet: "Quá", vietnamese: "đón (sinh nhật, tết), trải qua", hskLevel: 2, radical: "辶", strokeCount: 6, example: "过生日", exampleTranslation: "đón sinh nhật", tags: ["Bài 6", "Động từ"] },
+      { id: "hsk2-l6-w12", hanzi: "地", pinyin: "de", hanViet: "Địa", vietnamese: "trợ từ kết cấu (dùng trước động từ)", hskLevel: 2, radical: "土", strokeCount: 6, example: "高兴地笑了", exampleTranslation: "cười một cách vui vẻ", tags: ["Bài 6", "Trợ từ"] },
+      { id: "hsk2-l6-w13", hanzi: "床", pinyin: "chuáng", hanViet: "Sàng", vietnamese: "cái giường", hskLevel: 2, radical: "广", strokeCount: 7, example: "上床睡觉", exampleTranslation: "lên giường đi ngủ", tags: ["Bài 6", "Đồ dùng"] },
+      { id: "hsk2-l6-w14", hanzi: "舒服", pinyin: "shūfu", hanViet: "Thư Phục", vietnamese: "thoải mái, dễ chịu", hskLevel: 2, radical: "舌", strokeCount: 14, example: "睡得很舒服", exampleTranslation: "ngủ rất thoải mái", tags: ["Bài 6", "Tính từ"] }
     ],
-    exercises: [
+exercises: [
       {
-        question: "用“忘 / 快乐 / 打开 / 画 / 床”选词填空 (Chọn từ điền vào chỗ trống):",
-        options: ["祝你生日快乐", "别忘了买画笔", "打开礼物看看", "早早地上床睡觉"],
-        answer: "祝你生日快乐"
+        id: "hsk2-l6-ex1",
+        type: "fill_blank",
+        question: "Chọn hình thức trùng điệp tính từ thích hợp: '中国人过生日喜欢吃 ______ 的面条儿。'",
+        hanziPrompt: "中国人过生日喜欢吃 ______ 的面条儿。",
+        pinyinPrompt: "Zhōngguórén guò shēngrì xǐhuan chī ______ de miàntiáor.",
+        vietnamesePrompt: "Người Trung Quốc đón sinh nhật thích ăn những sợi mì dài thật dài.",
+        options: ["A. 长长", "B. 慢慢", "C. 高高", "D. 大大"],
+        correctAnswer: "A. 长长",
+        explanation: "Tính từ trùng điệp '长长' (dài thướt tha, dài miên man) dùng bổ nghĩa cho '面条儿' ngụ ý sống lâu trăm tuổi.",
+        grammarFocus: "Trùng điệp tính từ AA"
       },
       {
-        question: "爸爸妈妈送给刘小雪什么生日礼物？",
-        options: ["画笔", "衣服", "书包", "手机"],
-        answer: "画笔"
+        id: "hsk2-l6-ex2",
+        type: "fill_blank",
+        question: "Chọn trợ từ kết cấu thích hợp đứng trước động từ trong câu: '小雪高兴 ______ 笑了。'",
+        hanziPrompt: "小雪高兴 ______ 笑了。",
+        pinyinPrompt: "Xiǎoxuě gāoxìng ______ xiào le.",
+        vietnamesePrompt: "Tiểu Tuyết cười một cách vui vẻ.",
+        options: ["A. 地", "B. 的", "C. 得", "D. 着"],
+        correctAnswer: "A. 地",
+        explanation: "Cấu trúc: 'Trạng ngữ (高兴) + 地 + Động từ (笑)'. Dùng trợ từ kết cấu '地'.",
+        grammarFocus: "Trợ từ kết cấu 地"
       },
       {
-        question: "中国人过生日的时候一般吃什么寓意长寿？",
-        options: ["长长的面条儿", "蛋糕", "鱼", "苹果"],
-        answer: "长长的面条儿"
+        id: "hsk2-l6-ex3",
+        type: "multiple_choice",
+        question: "Chọn câu dùng đoản ngữ liệt kê '什么的' đúng ngữ pháp:",
+        options: [
+          "A. 桌子上有苹果、西瓜、蛋糕什么的。",
+          "B. 桌子上有苹果什么的西瓜。",
+          "C. 什么的桌子上有蛋糕苹果。",
+          "D. 苹果西瓜什么的在有桌子上。"
+        ],
+        correctAnswer: "A. 桌子上有苹果、西瓜、蛋糕什么的。",
+        explanation: "'什么的' đặt ở cuối chuỗi liệt kê mang nghĩa 'vân vân, những thứ như thế'.",
+        grammarFocus: "Cụm từ liệt kê 什么的"
+      },
+      {
+        id: "hsk2-l6-ex4",
+        type: "dialogue_match",
+        question: "Chọn lời chúc mừng sinh nhật phù hợp:",
+        hanziPrompt: "朋友: 祝你生日快乐，这是送给你的礼物！ — 寿星: ______",
+        pinyinPrompt: "Péngyou: Zhù nǐ shēngrì kuàilè, zhè shì sòng gěi nǐ de lǐwù! — Shòuxīng: ______",
+        vietnamesePrompt: "Bạn bè: Chúc bạn sinh nhật vui vẻ, đây là món quà tặng bạn nè! — Nhân vật chính: Cảm ơn bạn nhiều nhé, tôi có thể mở ra xem ngay được không?",
+        options: [
+          "太谢谢你了，我可以打开看看吗？",
+          "我们明天下午去机场接人。",
+          "我不上去了，在楼下等你。",
+          "昨天下午从北京回来的。"
+        ],
+        correctAnswer: "太谢谢你了，我可以打开看看吗？",
+        explanation: "Lời đáp lịch sự và hào hứng khi đón nhận quà sinh nhật từ bạn bè.",
+        grammarFocus: "Văn hóa ứng xử nhận quà"
       }
     ]
   },
@@ -914,71 +1123,103 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng ký túc xá)",
         context: "在房间，陈天中在写日记。(Trong phòng, Trần Thiên Trung viết nhật ký).",
         lines: [
-          { speaker: "陈天中", hanzi: "我的爱好是运动。从上小学开始，我每天都跟爸爸去运动。现在我篮球打得很好，足球踢得不错，游泳游得也很快。我一有时间就去运动。", pinyin: "Wǒ de àihào shì yùndòng. Cóng shàng xiǎoxué kāishǐ, wǒ měi tiān dōu gēn bàba qù yùndòng. Xiànzài wǒ lánqiú dǎ de hěn hǎo, zúqiú tī de búcuò, yóuyǒng yóu de yě hěn kuài. Wǒ yí yǒu shíjiān jiù qù yùndòng.", vietnamese: "Sở thích của tôi là thể thao. Từ khi bắt đầu học tiểu học, ngày nào tôi cũng cùng bố đi rèn luyện thân thể. Hiện giờ tôi chơi bóng rổ rất cừ, đá bóng khá cừ, bơi cũng rất nhanh. Hễ có thời gian rảnh là tôi lại đi chơi thể thao." }
+          { speaker: "陈天中", hanzi: "我的爱好是运动。从上小学开始，我每天都跟爸爸去运动。现在我篮球打得很好，足球踢得不错，游泳游得也很快。我一有时间就去运动。", pinyin: "Wǒ de àihào shì yùndòng. Cóng shàng xiǎoxué kāishǐ, wǒ měi tiān dōu gēn bàba qù yùndòng. Xiànzài wǒ lánqiú dǎ de hěn hǎo, zúqiú tī de búcuò, yóuyǒng yóu de yě hěn kuài. Wǒ yí yǒu shíjiān jiù qù yùndòng.", vietnamese: "Sở thích của mình là thể thao. Từ hồi học tiểu học, ngày nào mình cũng cùng bố đi rèn luyện thân thể. Hiện giờ mình chơi bóng rổ rất cừ, đá bóng cũng khá, bơi lội lại nhanh nữa. Cứ hễ có thời gian rảnh là mình lại đi chơi thể thao thỏa thích." }
         ]
       }
     ],
     grammarPoints: [
       {
-        title: "紧缩复句“一……就……” (Câu phức rút gọn 'Hễ... là... / Vừa... đã...')",
-        explanation: "Biểu thị hành động thứ hai diễn ra ngay tiếp sau hành động thứ nhất; cũng có thể biểu thị hành động thứ nhất là điều kiện, nguyên nhân, hành động thứ hai là kết quả. Cấu trúc: [Chủ ngữ + 一 + Động từ 1 + 就 + Động từ 2].",
+        id: "hsk2-l7-g1",
+        title: "1. 状态补语 (Bổ ngữ trạng thái với '得')",
+        explanation: "Dùng để đánh giá hoặc miêu tả kết quả, trạng thái diễn ra của hành động. Cấu trúc: 'Động từ + 得 + Tính từ / Cụm miêu tả'. Nếu động từ mang tân ngữ thì cần lặp lại động từ: 'Chủ ngữ + (Động từ + Tân ngữ) + Động từ + 得 + Bổ ngữ' hoặc đưa tân ngữ lên trước: 'Chủ ngữ + Tân ngữ + Động từ + 得 + Bổ ngữ'.",
+        examples: [
+          { hanzi: "他篮球打得很好。", pinyin: "Tā lánqiú dǎ de hěn hǎo.", vietnamese: "Cậu ấy chơi bóng rổ rất cừ." },
+          { hanzi: "他跑步跑得非常快。", pinyin: "Tā pǎobù pǎo de fēicháng kuài.", vietnamese: "Cậu ấy chạy rất nhanh." },
+          { hanzi: "安妮中文说得怎么样？", pinyin: "Ānnī Zhōngwén shuō de zěnmeyàng?", vietnamese: "Tiếng Trung của Annie nói thế nào?" }
+        ]
+      },
+      {
+        id: "hsk2-l7-g2",
+        title: "2. 紧缩复句“一……就……” (Câu phức rút gọn '一……就……')",
+        explanation: "Biểu thị hai hành động xảy ra kế tiếp nhau theo trình tự thời gian (hễ/vừa... là... ngay). Cấu trúc: 'Chủ ngữ + 一 + Động tác 1 + 就 + Động tác 2'.",
         examples: [
           { hanzi: "你怎么一下课就往外跑？", pinyin: "Nǐ zěnme yí xiàkè jiù wǎng wài pǎo?", vietnamese: "Sao cậu vừa tan học là chạy tót ra ngoài thế?" },
-          { hanzi: "我一到家，妈妈就打来电话了。", pinyin: "Wǒ yí dào jiā, māma jiù dǎlai diànhuà le.", vietnamese: "Tôi vừa về đến nhà là mẹ đã gọi điện tới rồi." },
-          { hanzi: "一到星期六，陈天中就跟同学去打篮球。", pinyin: "Yí dào Xīngqīliù, Chén Tiānzhōng jiù gēn tóngxué qù dǎ lánqiú.", vietnamese: "Cứ đến thứ bảy là Trần Thiên Trung lại đi chơi bóng rổ với bạn học." }
-        ]
-      },
-      {
-        title: "状态补语 (1) Bổ ngữ trạng thái (1)",
-        explanation: "Bổ ngữ trạng thái đứng sau động từ để miêu tả, đánh giá kết quả hoặc mức độ của hành động. Cấu trúc cơ bản: [Động từ + 得 + Cụm tính từ]. Phủ định: [Động từ + 得 + 不 + Tính từ]. Nghi vấn: [Động từ + 得 + Tính từ + 不 + Tính từ] hoặc [Động từ + 得 + 怎么样].",
-        examples: [
-          { hanzi: "我踢得还可以。", pinyin: "Wǒ tī de hái kěyǐ.", vietnamese: "Tớ đá bóng cũng tạm được." },
-          { hanzi: "白家月跑得不快。", pinyin: "Bái Jiāyuè pǎo de bú kuài.", vietnamese: "Bạch Gia Nguyệt chạy không nhanh." },
-          { hanzi: "你跑得快不快？", pinyin: "Nǐ pǎo de kuài bu kuài?", vietnamese: "Cậu chạy có nhanh không?" }
-        ]
-      },
-      {
-        title: "状态补语 (2) Bổ ngữ trạng thái khi động từ mang tân ngữ hoặc là từ ly hợp",
-        explanation: "Khi động từ là từ ly hợp hoặc mang tân ngữ: Bắt buộc lặp lại động từ [Động từ + Tân ngữ + Động từ + 得 + Bổ ngữ], hoặc đưa tân ngữ lên trước động từ [Tân ngữ + Động từ + 得 + Bổ ngữ].",
-        examples: [
-          { hanzi: "我游泳游得不快。", pinyin: "Wǒ yóuyǒng yóu de bú kuài.", vietnamese: "Tôi bơi lội bơi không được nhanh (lặp lại động từ 游)." },
-          { hanzi: "你篮球打得怎么样？", pinyin: "Nǐ lánqiú dǎ de zěnmeyàng?", vietnamese: "Cậu chơi bóng rổ thế nào (đưa tân ngữ 篮球 lên trước 打)?" },
-          { hanzi: "白家月写汉字写得很好看。", pinyin: "Bái Jiāyuè xiě hànzì xiě de hěn hǎokàn.", vietnamese: "Bạch Gia Nguyệt viết chữ Hán viết rất đẹp mắt." }
+          { hanzi: "我一到星期天就去踢足球。", pinyin: "Wǒ yí dào xīngqītiān jiù qù tī zúqiú.", vietnamese: "Tôi hễ cứ đến chủ nhật là đi đá bóng." }
         ]
       }
     ],
-    vocabulary: [
-      { hanzi: "从", pinyin: "cóng", vietnamese: "từ (địa điểm, thời gian)", type: "prep." },
-      { hanzi: "往", pinyin: "wǎng", vietnamese: "hướng về, đi về phía", type: "prep./v." },
-      { hanzi: "跑", pinyin: "pǎo", vietnamese: "chạy", type: "v." },
-      { hanzi: "打", pinyin: "dǎ", vietnamese: "chơi (bóng rổ, bóng bàn), đánh", type: "v." },
-      { hanzi: "篮球", pinyin: "lánqiú", vietnamese: "bóng rổ", type: "n." },
-      { hanzi: "运动", pinyin: "yùndòng", vietnamese: "thể thao, vận động", type: "n./v." },
-      { hanzi: "踢", pinyin: "tī", vietnamese: "đá", type: "v." },
-      { hanzi: "足球", pinyin: "zúqiú", vietnamese: "bóng đá", type: "n." },
-      { hanzi: "球", pinyin: "qiú", vietnamese: "quả bóng", type: "n." },
-      { hanzi: "得", pinyin: "de", vietnamese: "trợ từ kết cấu (dùng sau động từ dẫn ra bổ ngữ trạng thái)", type: "part." },
-      { hanzi: "跑步", pinyin: "pǎobù", vietnamese: "chạy bộ", type: "v." },
-      { hanzi: "游泳", pinyin: "yóuyǒng", vietnamese: "bơi lội", type: "v." },
-      { hanzi: "游", pinyin: "yóu", vietnamese: "bơi", type: "v." },
-      { hanzi: "爱好", pinyin: "àihào", vietnamese: "sở thích", type: "n./v." },
-      { hanzi: "开始", pinyin: "kāishǐ", vietnamese: "bắt đầu", type: "v./n." }
+vocabulary: [
+      { id: "hsk2-l7-w1", hanzi: "从", pinyin: "cóng", hanViet: "Tùng", vietnamese: "từ (địa điểm, thời gian)", hskLevel: 2, radical: "人", strokeCount: 4, example: "从北京回来", exampleTranslation: "từ Bắc Kinh trở về", tags: ["Bài 7", "Giới từ"] },
+      { id: "hsk2-l7-w2", hanzi: "往", pinyin: "wǎng", hanViet: "Vãng", vietnamese: "hướng về, đi về phía", hskLevel: 2, radical: "彳", strokeCount: 8, example: "往外跑", exampleTranslation: "chạy ra ngoài", tags: ["Bài 7", "Giới từ"] },
+      { id: "hsk2-l7-w3", hanzi: "跑", pinyin: "pǎo", hanViet: "Bào", vietnamese: "chạy", hskLevel: 2, radical: "足", strokeCount: 12, example: "跑得快", exampleTranslation: "chạy nhanh", tags: ["Bài 7", "Động từ"] },
+      { id: "hsk2-l7-w4", hanzi: "打", pinyin: "dǎ", hanViet: "Đả", vietnamese: "chơi (bóng rổ, bóng bàn), đánh", hskLevel: 2, radical: "扌", strokeCount: 5, example: "打篮球", exampleTranslation: "chơi bóng rổ", tags: ["Bài 7", "Động từ"] },
+      { id: "hsk2-l7-w5", hanzi: "篮球", pinyin: "lánqiú", hanViet: "Lam Cầu", vietnamese: "bóng rổ", hskLevel: 2, radical: "竹", strokeCount: 18, example: "打篮球", exampleTranslation: "chơi bóng rổ", tags: ["Bài 7", "Thể thao"] },
+      { id: "hsk2-l7-w6", hanzi: "运动", pinyin: "yùndòng", hanViet: "Vận Động", vietnamese: "vận động, thể thao", hskLevel: 2, radical: "辶", strokeCount: 16, example: "每天运动", exampleTranslation: "vận động mỗi ngày", tags: ["Bài 7", "Danh từ"] },
+      { id: "hsk2-l7-w7", hanzi: "踢", pinyin: "tī", hanViet: "Thích", vietnamese: "đá", hskLevel: 2, radical: "足", strokeCount: 15, example: "踢足球", exampleTranslation: "đá bóng", tags: ["Bài 7", "Động từ"] },
+      { id: "hsk2-l7-w8", hanzi: "足球", pinyin: "zúqiú", hanViet: "Túc Cầu", vietnamese: "bóng đá", hskLevel: 2, radical: "足", strokeCount: 18, example: "去踢足球", exampleTranslation: "đi đá bóng", tags: ["Bài 7", "Thể thao"] },
+      { id: "hsk2-l7-w9", hanzi: "球", pinyin: "qiú", hanViet: "Cầu", vietnamese: "quả bóng", hskLevel: 2, radical: "王", strokeCount: 11, example: "买球 / 玩球", exampleTranslation: "mua bóng / chơi bóng", tags: ["Bài 7", "Danh từ"] },
+      { id: "hsk2-l7-w10", hanzi: "得", pinyin: "de", hanViet: "Đắc", vietnamese: "trợ từ kết cấu (dẫn ra bổ ngữ trạng thái)", hskLevel: 2, radical: "彳", strokeCount: 11, example: "跑得快", exampleTranslation: "chạy nhanh", tags: ["Bài 7", "Trợ từ"] },
+      { id: "hsk2-l7-w11", hanzi: "跑步", pinyin: "pǎobù", hanViet: "Bào Bộ", vietnamese: "chạy bộ", hskLevel: 2, radical: "足", strokeCount: 19, example: "每天跑步", exampleTranslation: "chạy bộ mỗi ngày", tags: ["Bài 7", "Thể thao"] },
+      { id: "hsk2-l7-w12", hanzi: "游泳", pinyin: "yóuyǒng", hanViet: "Du Vịnh", vietnamese: "bơi lội", hskLevel: 2, radical: "氵", strokeCount: 20, example: "去游泳", exampleTranslation: "đi bơi", tags: ["Bài 7", "Thể thao"] },
+      { id: "hsk2-l7-w13", hanzi: "游", pinyin: "yóu", hanViet: "Du", vietnamese: "bơi", hskLevel: 2, radical: "氵", strokeCount: 12, example: "游得很快", exampleTranslation: "bơi rất nhanh", tags: ["Bài 7", "Động từ"] },
+      { id: "hsk2-l7-w14", hanzi: "爱好", pinyin: "àihào", hanViet: "Ái Hảo", vietnamese: "sở thích", hskLevel: 2, radical: "爫", strokeCount: 16, example: "有什么爱好", exampleTranslation: "có sở thích gì", tags: ["Bài 7", "Danh từ"] },
+      { id: "hsk2-l7-w15", hanzi: "开始", pinyin: "kāishǐ", hanViet: "Khai Thủy", vietnamese: "bắt đầu", hskLevel: 2, radical: "开", strokeCount: 12, example: "从八岁开始", exampleTranslation: "bắt đầu từ năm tám tuổi", tags: ["Bài 7", "Động từ"] }
     ],
-    exercises: [
+exercises: [
       {
-        question: "用“从 / 运动 / 跑步 / 开始 / 游泳”选词填空 (Chọn từ điền vào chỗ trống):",
-        options: ["一有时间就去运动", "你跑得快不快", "从8岁开始学中文", "游泳游得很快"],
-        answer: "一有时间就去运动"
+        id: "hsk2-l7-ex1",
+        type: "fill_blank",
+        question: "Chọn trợ từ kết cấu thích hợp trong bổ ngữ trạng thái: '他篮球打 ______ 很好。'",
+        hanziPrompt: "他篮球打 ______ 很好。",
+        pinyinPrompt: "Tā lánqiú dǎ ______ hěn hǎo.",
+        vietnamesePrompt: "Cậu ấy chơi bóng rổ rất cừ.",
+        options: ["A. 得", "B. 的", "C. 地", "D. 了"],
+        correctAnswer: "A. 得",
+        explanation: "Cấu trúc bổ ngữ trạng thái: 'Động từ + 得 + Tính từ'.",
+        grammarFocus: "Bổ ngữ trạng thái với trợ từ 得"
       },
       {
-        question: "陈天中一到星期天就去跟朋友们做什么？",
-        options: ["踢足球", "看电影", "游泳", "买东西"],
-        answer: "踢足球"
+        id: "hsk2-l7-ex2",
+        type: "multiple_choice",
+        question: "Chọn câu dùng cấu trúc '一……就……' đúng ngữ pháp:",
+        options: [
+          "A. 他一下课就往外跑去打篮球。",
+          "B. 他下课一下就跑去打篮球。",
+          "C. 他就一往下课跑去打篮球。",
+          "D. 他下课就一往外跑打篮球。"
+        ],
+        correctAnswer: "A. 他一下课就往外跑去打篮球。",
+        explanation: "Cấu trúc câu phức rút gọn: 'Chủ ngữ + 一 + Động tác 1 + 就 + Động tác 2'.",
+        grammarFocus: "Câu phức rút gọn 一……就……"
       },
       {
-        question: "陈天中从什么时候开始每天跟爸爸去运动？",
-        options: ["上小学开始", "上中学开始", "上大学开始", "工作以后"],
-        answer: "上小学开始"
+        id: "hsk2-l7-ex3",
+        type: "fill_blank",
+        question: "Chọn giới từ chỉ phương hướng thích hợp: '下课了，大家不要 ______ 外跑。'",
+        hanziPrompt: "下课了，大家不要 ______ 外跑。",
+        pinyinPrompt: "Xiàkè le, dàjiā bú yào ______ wài pǎo.",
+        vietnamesePrompt: "Tan học rồi, mọi người đừng chạy ra bên ngoài nhé.",
+        options: ["A. 往", "B. 从", "C. 离", "D. 比"],
+        correctAnswer: "A. 往",
+        explanation: "Giới từ '往' kết hợp từ chỉ phương vị/nơi chốn biểu thị phương hướng của động tác: 往外跑 (chạy ra ngoài).",
+        grammarFocus: "Giới từ phương hướng 往"
+      },
+      {
+        id: "hsk2-l7-ex4",
+        type: "dialogue_match",
+        question: "Chọn câu hỏi sở thích thể thao phù hợp:",
+        hanziPrompt: "A: 你平时有什么爱好？ — B: ______",
+        pinyinPrompt: "A: Nǐ píngshí yǒu shénme àihào? — B: ______",
+        vietnamesePrompt: "A: Bình thường bạn có sở thích gì không? — B: Mình rất thích thể thao, hễ cuối tuần là đi bơi cùng bạn bè.",
+        options: [
+          "我特别喜欢运动，一到周末就跟朋友去游泳。",
+          "我们十点前就能到王老师家了。",
+          "这件衣服颜色太红了，不太适合我。",
+          "请给我们来两杯热奶茶。"
+        ],
+        correctAnswer: "我特别喜欢运动，一到周末就跟朋友去游泳。",
+        explanation: "Câu trả lời đúng chủ đề sở thích và vận dụng chuẩn ngữ pháp '一……就……'.",
+        grammarFocus: "Đàm thoại về sở thích thể thao"
       }
     ]
   },
@@ -1002,12 +1243,12 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1: 在商场 (Bài khóa 1: Ở trung tâm thương mại)",
         context: "在商场，王一雪和刘明在购物。(Ở trung tâm thương mại, Vương Nhất Tuyết và Lưu Minh đang mua sắm).",
         lines: [
-          { speaker: "王一雪", hanzi: "你看，这两块手表怎么样？", pinyin: "Nǐ kàn, zhè liǎng kuài shǒubiǎo zěnmeyàng?", vietnamese: "Anh nhìn xem, hai chiếc đồng hồ này thế nào?" },
-          { speaker: "刘明", hanzi: "都不错！", pinyin: "Dōu búcuò!", vietnamese: "Đều đẹp cả!" },
-          { speaker: "王一雪", hanzi: "我喜欢左边这个。", pinyin: "Wǒ xǐhuan zuǒbian zhège.", vietnamese: "Em thích cái bên trái này." },
-          { speaker: "刘明", hanzi: "我也觉得左边的比右边的好看。", pinyin: "Wǒ yě juéde zuǒbian de bǐ yòubian de hǎokàn.", vietnamese: "Anh cũng thấy cái bên trái đẹp hơn cái bên phải." },
-          { speaker: "王一雪", hanzi: "你看看要多少钱！", pinyin: "Nǐ kànkan yào duōshao qián!", vietnamese: "Anh xem thử giá bao nhiêu tiền kìa!" },
-          { speaker: "刘明", hanzi: "真不便宜！八千八！", pinyin: "Zhēn bù piányi! Bā qiān bā!", vietnamese: "Thật chẳng rẻ chút nào! Tận tám nghìn tám trăm tệ!" }
+          { speaker: "王一雪", hanzi: "你看，这两块手表怎么样？", pinyin: "Nǐ kàn, zhè liǎng kuài shǒubiǎo zěnmeyàng?", vietnamese: "Anh nhìn xem, hai chiếc đồng hồ này trông thế nào anh?" },
+          { speaker: "刘明", hanzi: "都不错！", pinyin: "Dōu búcuò!", vietnamese: "Anh thấy cả hai chiếc đều đẹp đấy em!" },
+          { speaker: "王一雪", hanzi: "我喜欢左边这个。", pinyin: "Wǒ xǐhuan zuǒbian zhège.", vietnamese: "Em thì thích chiếc bên trái này hơn." },
+          { speaker: "刘明", hanzi: "我也觉得左边的比右边的好看。", pinyin: "Wǒ yě juéde zuǒbian de bǐ yòubian de hǎokàn.", vietnamese: "Ừ, anh cũng thấy chiếc bên trái nhìn sang hơn chiếc bên phải." },
+          { speaker: "王一雪", hanzi: "你看看要多少钱！", pinyin: "Nǐ kànkan yào duōshao qián!", vietnamese: "Anh xem thử giá bao nhiêu tiền kìa anh!" },
+          { speaker: "刘明", hanzi: "真不便宜！八千八！", pinyin: "Zhēn bù piányi! Bā qiān bā!", vietnamese: "Ôi chẳng rẻ chút nào đâu em! Tận tám nghìn tám trăm tệ cơ đấy!" }
         ]
       },
       {
@@ -1015,12 +1256,12 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 2: 在电影院外 (Bài khóa 2: Ngoài rạp chiếu phim)",
         context: "在电影院外，刘明和王一雪在商量看电影。(Trước rạp chiếu phim, Lưu Minh và Vương Nhất Tuyết bàn nhau xem phim gì).",
         lines: [
-          { speaker: "刘明", hanzi: "今天有不少电影，我们看个电影吧。", pinyin: "Jīntiān yǒu bù shǎo diànyǐng, wǒmen kàn gè diànyǐng ba.", vietnamese: "Hôm nay có khá nhiều phim, chúng ta xem một bộ phim đi." },
-          { speaker: "王一雪", hanzi: "好啊！我们看哪个？", pinyin: "Hǎo a! Wǒmen kàn nǎge?", vietnamese: "Được thôi! Mình xem phim nào đây anh?" },
-          { speaker: "刘明", hanzi: "我记得你喜欢看爱情片，我们看那个爱情片，怎么样？", pinyin: "Wǒ jìde nǐ xǐhuan kàn àiqíngpiān, wǒmen kàn nàge àiqíngpiān, zěnmeyàng?", vietnamese: "Anh nhớ em thích xem phim tình cảm, chúng ta xem bộ phim tình cảm kia thế nào?" },
-          { speaker: "王一雪", hanzi: "还是看这个吧，我看网上说这个电影比那个爱情片更有意思。", pinyin: "Háishi kàn zhège ba, wǒ kàn wǎngshang shuō zhège diànyǐng bǐ nàge àiqíngpiān gèng yǒu yìsi.", vietnamese: "Hay là xem phim này đi, em thấy trên mạng bảo phim này hay hơn phim tình cảm kia đấy." },
-          { speaker: "刘明", hanzi: "好。我去买票。", pinyin: "Hǎo. Wǒ qù mǎi piào.", vietnamese: "Được, để anh đi mua vé." },
-          { speaker: "王一雪", hanzi: "到网上买吧，网上买比在这里买便宜。", pinyin: "Dào wǎngshang mǎi ba, wǎngshang mǎi bǐ zài zhèlǐ mǎi piányi.", vietnamese: "Lên mạng mua đi anh, mua trên mạng rẻ hơn mua ở đây đấy." }
+          { speaker: "刘明", hanzi: "今天有不少电影，我们看个电影吧。", pinyin: "Jīntiān yǒu bù shǎo diànyǐng, wǒmen kàn gè diànyǐng ba.", vietnamese: "Hôm nay có nhiều phim mới chiếu lắm, vợ chồng mình xem một bộ phim nhé em." },
+          { speaker: "王一雪", hanzi: "好啊！我们看哪个？", pinyin: "Hǎo a! Wǒmen kàn nǎge?", vietnamese: "Dạ được thôi anh! Thế mình xem phim nào đây anh?" },
+          { speaker: "刘明", hanzi: "我记得你喜欢看爱情片，我们看那个爱情片，怎么样？", pinyin: "Wǒ jìde nǐ xǐhuan kàn àiqíngpiān, wǒmen kàn nàge àiqíngpiān, zěnmeyàng?", vietnamese: "Anh nhớ em thích xem phim tình cảm lãng mạn, mình xem bộ phim tình cảm kia nhé, em thấy sao?" },
+          { speaker: "王一雪", hanzi: "还是看这个吧，我看网上说这个电影比那个爱情片更有意思。", pinyin: "Háishi kàn zhège ba, wǒ kàn wǎngshang shuō zhège diànyǐng bǐ nàge àiqíngpiān gèng yǒu yìsi.", vietnamese: "Hay là xem phim này đi anh, em thấy trên mạng mọi người khen phim này hay hơn phim tình cảm kia đấy." },
+          { speaker: "刘明", hanzi: "好。我去买票。", pinyin: "Hǎo. Wǒ qù mǎi piào.", vietnamese: "Ừ được rồi, để anh qua quầy mua vé." },
+          { speaker: "王一雪", hanzi: "到网上买吧，网上买比在这里买便宜。", pinyin: "Dào wǎngshang mǎi ba, wǎngshang mǎi bǐ zài zhèlǐ mǎi piányi.", vietnamese: "Mình đặt trên mạng đi anh, đặt online rẻ hơn mua trực tiếp ở rạp đấy." }
         ]
       },
       {
@@ -1028,13 +1269,13 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 3: 在饭馆 (Bài khóa 3: Ở nhà hàng)",
         context: "在饭馆，刘明给王一雪庆祝生日。(Ở nhà hàng ấm cúng, Lưu Minh bất ngờ tặng đồng hồ chúc mừng sinh nhật Vương Nhất Tuyết).",
         lines: [
-          { speaker: "刘明", hanzi: "您好！就要这几个菜吧，谢谢！", pinyin: "Nínhǎo! Jiù yào zhè jǐ gè cài ba, xièxie!", vietnamese: "Chào anh/chị! Chúng tôi lấy mấy món này nhé, cảm ơn!" },
-          { speaker: "王一雪", hanzi: "怎么点这么多菜？", pinyin: "Zěnme diǎn zhème duō cài?", vietnamese: "Sao anh lại gọi nhiều món thế này?" },
-          { speaker: "刘明", hanzi: "你想想，今天是几月几号？", pinyin: "Nǐ xiǎngxiang, jīntiān shì jǐ yuè jǐ hào?", vietnamese: "Em nghĩ xem, hôm nay là ngày mấy tháng mấy nào?" },
-          { speaker: "王一雪", hanzi: "8月27号。啊！我的生日！", pinyin: "Bā yuè èrshíqī hào. À! Wǒ de shēngrì!", vietnamese: "Ngày 27 tháng 8. A! Sinh nhật của em!" },
-          { speaker: "刘明", hanzi: "生日快乐！虽然你忘了，但是我记得。看看这是什么？", pinyin: "Shēngrì kuàilè! Suīrán nǐ wàng le, dànshì wǒ jìde. Kànkan zhè shì shénme?", vietnamese: "Sinh nhật vui vẻ em nhé! Tuy em quên rồi, nhưng anh vẫn luôn nhớ. Em xem đây là cái gì này?" },
-          { speaker: "王一雪", hanzi: "手表！吃饭、看电影、买手表，今天花了不少钱吧？", pinyin: "Shǒubiǎo! Chī fàn, kàn diànyǐng, mǎi shǒubiǎo, jīntiān huāle bù shǎo qián ba?", vietnamese: "Đồng hồ đeo tay! Ăn cơm, xem phim, lại còn mua đồng hồ, hôm nay tiêu tốn không ít tiền rồi nhỉ anh?" },
-          { speaker: "刘明", hanzi: "虽然花了一些钱，但是我们过了一个快乐的生日。", pinyin: "Suīrán huāle yìxiē qián, dànshì wǒmen guòle yí gè kuàilè de shēngrì.", vietnamese: "Tuy tốn một chút tiền, nhưng chúng ta đã đón một ngày sinh nhật thật hạnh phúc." }
+          { speaker: "刘明", hanzi: "您好！就要这几个菜吧，谢谢！", pinyin: "Nínhǎo! Jiù yào zhè jǐ gè cài ba, xièxie!", vietnamese: "Chào em! Cho anh gọi mấy món này nhé, cảm ơn em!" },
+          { speaker: "王一雪", hanzi: "怎么点这么多菜？", pinyin: "Zěnme diǎn zhème duō cài?", vietnamese: "Ủa sao hôm nay anh lại gọi nhiều món thế này?" },
+          { speaker: "刘明", hanzi: "你想想，今天是几月几号？", pinyin: "Nǐ xiǎngxiang, jīntiān shì jǐ yuè jǐ hào?", vietnamese: "Em thử nghĩ xem, hôm nay là ngày mấy tháng mấy nào?" },
+          { speaker: "王一雪", hanzi: "8月27号。啊！我的生日！", pinyin: "Bā yuè èrshíqī hào. À! Wǒ de shēngrì!", vietnamese: "Hôm nay 27 tháng 8... Ôi! Hôm nay là sinh nhật em!" },
+          { speaker: "刘明", hanzi: "生日快乐！虽然你忘了，但是我记得。看看这是什么？", pinyin: "Shēngrì kuàilè! Suīrán nǐ wàng le, dànshì wǒ jìde. Kànkan zhè shì shénme?", vietnamese: "Chúc mừng sinh nhật vợ yêu nhé! Tuy em bận rộn nên quên mất, nhưng anh thì lúc nào cũng nhớ. Em xem đây là món quà gì này!" },
+          { speaker: "王一雪", hanzi: "手表！吃饭、看电影、买手表，今天花了不少钱吧？", pinyin: "Shǒubiǎo! Chī fàn, kàn diànyǐng, mǎi shǒubiǎo, jīntiān huāle bù shǎo qián ba?", vietnamese: "Ôi đồng hồ đeo tay đẹp quá! Hôm nay vừa ăn nhà hàng, xem phim, lại còn mua đồng hồ xịn thế này, anh tốn kém nhiều tiền lắm rồi phải không?" },
+          { speaker: "刘明", hanzi: "虽然花了一些钱，但是我们过了一个快乐的生日。", pinyin: "Suīrán huāle yìxiē qián, dànshì wǒmen guòle yí gè kuàilè de shēngrì.", vietnamese: "Tuy tốn chút tiền nhưng vợ chồng mình đã có một ngày sinh nhật thật vui vẻ và hạnh phúc bên nhau em à." }
         ]
       },
       {
@@ -1139,13 +1380,13 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1: 在商店 (Bài khóa 1: Ở cửa hàng quần áo)",
         context: "在商店，王一雪和刘明在看裤子。(Trong cửa hàng, Vương Nhất Tuyết và Lưu Minh đang xem quần cho con trai).",
         lines: [
-          { speaker: "王一雪", hanzi: "儿子的裤子坏了，我们给他买条新的吧。", pinyin: "Érzi de kùzi huài le, wǒmen gěi tā mǎi tiáo xīn de ba.", vietnamese: "Quần của con trai bị rách rồi, chúng ta mua cho con một chiếc mới nhé." },
-          { speaker: "刘明", hanzi: "好啊。", pinyin: "Hǎo a.", vietnamese: "Được thôi." },
-          { speaker: "王一雪", hanzi: "你看这条黑色的怎么样？", pinyin: "Nǐ kàn zhè tiáo hēisè de zěnmeyàng?", vietnamese: "Anh nhìn chiếc màu đen này thế nào?" },
-          { speaker: "刘明", hanzi: "没有你上次买的那条好看。", pinyin: "Méiyǒu nǐ shàngcì mǎi de nà tiáo hǎokàn.", vietnamese: "Không đẹp bằng chiếc lần trước em mua đâu." },
-          { speaker: "王一雪", hanzi: "旁边那个男孩儿就穿了这样的裤子，我觉得很好看啊！", pinyin: "Pángbiān nàge nánháir jiù chuānle zhèyàng de kùzi, wǒ juéde hěn hǎokàn a!", vietnamese: "Cậu bé bên cạnh đang mặc chiếc quần như thế này này, em thấy rất đẹp mà!" },
-          { speaker: "刘明", hanzi: "儿子的个子没有他那么高，穿上就不会太好看。", pinyin: "Érzi de gèzi méiyǒu tā nàme gāo, chuānshang jiù bú huì tài hǎokàn.", vietnamese: "Vóc dáng con trai mình không cao bằng cậu ấy, mặc vào sẽ không được đẹp lắm." },
-          { speaker: "王一雪", hanzi: "好吧，我们再去那边看看。", pinyin: "Hǎo ba, wǒmen zài qù nàbiān kànkan.", vietnamese: "Thôi được, chúng mình sang bên kia xem thử tiếp nhé." }
+          { speaker: "王一雪", hanzi: "儿子的裤子坏了，我们给他买条新的吧。", pinyin: "Érzi de kùzi huài le, wǒmen gěi tā mǎi tiáo xīn de ba.", vietnamese: "Quần của con trai bị rách mất rồi, vợ chồng mình mua cho con chiếc mới anh nhé." },
+          { speaker: "刘明", hanzi: "好啊。", pinyin: "Hǎo a.", vietnamese: "Ừ, mua đi em." },
+          { speaker: "王一雪", hanzi: "你看这条黑色的怎么样？", pinyin: "Nǐ kàn zhè tiáo hēisè de zěnmeyàng?", vietnamese: "Anh nhìn chiếc màu đen này trông thế nào anh?" },
+          { speaker: "刘明", hanzi: "没有你上次买的那条好看。", pinyin: "Méiyǒu nǐ shàngcì mǎi de nà tiáo hǎokàn.", vietnamese: "Anh thấy không đẹp bằng chiếc lần trước em chọn cho con đâu." },
+          { speaker: "王一雪", hanzi: "旁边那个男孩儿就穿了这样的裤子，我觉得很好看啊！", pinyin: "Pángbiān nàge nánháir jiù chuānle zhèyàng de kùzi, wǒ juéde hěn hǎokàn a!", vietnamese: "Cậu bé bên cạnh cũng mặc chiếc y hệt thế này này, em thấy con nít mặc lên nhìn khỏe khoắn mà!" },
+          { speaker: "刘明", hanzi: "儿子的个子没有他那么高，穿上就不会太好看。", pinyin: "Érzi de gèzi méiyǒu tā nàme gāo, chuānshang jiù bú huì tài hǎokàn.", vietnamese: "Vóc dáng con trai mình chưa cao ráo bằng cậu bé ấy, mặc vào sợ không tôn dáng đâu em." },
+          { speaker: "王一雪", hanzi: "好吧，我们再去那边看看。", pinyin: "Hǎo ba, wǒmen zài qù nàbiān kànkan.", vietnamese: "Thôi được rồi, thế hai vợ chồng mình sang quầy bên kia xem tiếp nhé." }
         ]
       },
       {
@@ -1153,13 +1394,13 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 2: 在商店门口 (Bài khóa 2: Trước cửa tiệm)",
         context: "在商店门口，王一雪和刘明往外走。(Trước cửa tiệm, Vương Nhất Tuyết và Lưu Minh vừa bước ra ngoài vừa trò chuyện).",
         lines: [
-          { speaker: "王一雪", hanzi: "门口有家奶茶店。你想喝杯奶茶吗？", pinyin: "Ménkǒu yǒu jiā nǎichádiàn. Nǐ xiǎng hē bēi nǎichá ma?", vietnamese: "Trước cổng có một quán trà sữa. Anh có muốn uống một ly trà sữa không?" },
-          { speaker: "刘明", hanzi: "我想喝咖啡，还是去咖啡店吧。", pinyin: "Wǒ xiǎng hē kāfēi, háishi qù kāfēidiàn ba.", vietnamese: "Anh muốn uống cà phê hơn, hay là đến quán cà phê đi." },
-          { speaker: "王一雪", hanzi: "咖啡店离这儿有点儿远。", pinyin: "Kāfēidiàn lí zhèr yǒudiǎnr yuǎn.", vietnamese: "Quán cà phê cách đây hơi xa đấy." },
-          { speaker: "刘明", hanzi: "没关系，那家店的咖啡很好喝。", pinyin: "Méi guānxi, nà jiā diàn de kāfēi hěn hǎohē.", vietnamese: "Không sao, cà phê ở quán đó ngon lắm." },
-          { speaker: "王一雪", hanzi: "那你等一下，我去买杯奶茶。", pinyin: "Nà nǐ děng yíxià, wǒ qù mǎi bēi nǎichá.", vietnamese: "Vậy anh đợi em một chút, em đi mua ly trà sữa nhé." },
-          { speaker: "刘明", hanzi: "你不想喝咖啡吗？", pinyin: "Nǐ bù xiǎng hē kāfēi ma?", vietnamese: "Em không muốn uống cà phê à?" },
-          { speaker: "王一雪", hanzi: "喝了咖啡，晚上就别想睡觉了。", pinyin: "Hēle kāfēi, wǎnshang jiù bié xiǎng shuìjiào le.", vietnamese: "Uống cà phê vào thì tối nay khỏi nghĩ đến chuyện ngủ luôn." }
+          { speaker: "王一雪", hanzi: "门口有家奶茶店。你想喝杯奶茶吗？", pinyin: "Ménkǒu yǒu jiā nǎichádiàn. Nǐ xiǎng hē bēi nǎichá ma?", vietnamese: "Trước cổng có quán trà sữa kìa. Anh có muốn uống một ly không anh?" },
+          { speaker: "刘明", hanzi: "我想喝咖啡，还是去咖啡店吧。", pinyin: "Wǒ xiǎng hē kāfēi, háishi qù kāfēidiàn ba.", vietnamese: "Anh thèm cà phê hơn, hay vợ chồng mình ghé quán cà phê đi em." },
+          { speaker: "王一雪", hanzi: "咖啡店离这儿有点儿远。", pinyin: "Kāfēidiàn lí zhèr yǒudiǎnr yuǎn.", vietnamese: "Quán cà phê cách đây hơi xa đấy anh." },
+          { speaker: "刘明", hanzi: "没关系，那家店的咖啡很好喝。", pinyin: "Méi guānxi, nà jiā diàn de kāfēi hěn hǎohē.", vietnamese: "Không sao đâu, cà phê quán đó pha đậm đà ngon lắm." },
+          { speaker: "王一雪", hanzi: "那你等一下，我去买杯奶茶。", pinyin: "Nà nǐ děng yíxià, wǒ qù mǎi bēi nǎichá.", vietnamese: "Thế anh đứng đây đợi em chút nhé, em tạt qua mua ly trà sữa mang theo đã." },
+          { speaker: "刘明", hanzi: "你不想喝咖啡吗？", pinyin: "Nǐ bù xiǎng hē kāfēi ma?", vietnamese: "Em không vào uống cà phê với anh à?" },
+          { speaker: "王一雪", hanzi: "喝了咖啡，晚上就别想睡觉了。", pinyin: "Hēle kāfēi, wǎnshang jiù bié xiǎng shuìjiào le.", vietnamese: "Em mà uống cà phê vào thì tối nay khỏi chợp mắt luôn anh ơi." }
         ]
       },
       {
@@ -1167,11 +1408,11 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 3: 在路上 (Bài khóa 3: Trên đường về nhà)",
         context: "在路上，刘明和王一雪在散步。(Trên con đường rợp bóng cây, Lưu Minh và Vương Nhất Tuyết vừa đi dạo vừa trò chuyện về việc đi bộ về nhà).",
         lines: [
-          { speaker: "刘明", hanzi: "我们打车回去吧。", pinyin: "Wǒmen dǎchē huíqù ba.", vietnamese: "Chúng ta bắt taxi về nhé." },
-          { speaker: "王一雪", hanzi: "这里离家很近，还是走路吧。", pinyin: "Zhèlǐ lí jiā hěn jìn, háishi zǒulù ba.", vietnamese: "Chỗ này cách nhà rất gần, hay là mình đi bộ đi." },
-          { speaker: "刘明", hanzi: "要走多长时间？", pinyin: "Yào zǒu duō cháng shíjiān?", vietnamese: "Đi bộ mất bao lâu em?" },
-          { speaker: "王一雪", hanzi: "走半个多小时就到了。", pinyin: "Zǒu bàn gè duō xiǎoshí jiù dào le.", vietnamese: "Đi bộ hơn nửa tiếng là tới nơi rồi." },
-          { speaker: "刘明", hanzi: "好的。每天上下班都坐车，今天运动运动吧。", pinyin: "Hǎo de. Měi tiān shàng xià bān dōu zuò chē, jīntiān yùndòng yùndòng ba.", vietnamese: "Được thôi. Ngày nào đi làm cũng đi xe, hôm nay tranh thủ vận động rèn luyện một chút." }
+          { speaker: "刘明", hanzi: "我们打车回去吧。", pinyin: "Wǒmen dǎchē huíqù ba.", vietnamese: "Hay hai vợ chồng mình bắt taxi về nhé em." },
+          { speaker: "王一雪", hanzi: "这里离家很近，还是走路吧。", pinyin: "Zhèlǐ lí jiā hěn jìn, háishi zǒulù ba.", vietnamese: "Chỗ này cách nhà mình gần xịt mà, hay là hai vợ chồng đi bộ về đi anh." },
+          { speaker: "刘明", hanzi: "要走多长时间？", pinyin: "Yào zǒu duō cháng shíjiān?", vietnamese: "Thế đi bộ thì mất bao lâu hả em?" },
+          { speaker: "王一雪", hanzi: "走半个多小时就到了。", pinyin: "Zǒu bàn gè duō xiǎoshí jiù dào le.", vietnamese: "Mình vừa đi vừa ngắm phố phường hơn nửa tiếng là về tới nhà rồi." },
+          { speaker: "刘明", hanzi: "好的。每天上下班都坐车，今天运动运动吧。", pinyin: "Hǎo de. Měi tiān shàng xià bān dōu zuò chē, jīntiān yùndòng yùndòng ba.", vietnamese: "Ừ được đấy em. Ngày nào đi làm cũng ngồi xe, hôm nay đi bộ vận động cho khỏe người." }
         ]
       },
       {
@@ -1179,7 +1420,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng ngủ)",
         context: "在房间，王一雪在写日记。(Trong phòng ngủ bên bàn viết, Vương Nhất Tuyết nắn nót ghi nhật ký).",
         lines: [
-          { speaker: "王一雪", hanzi: "这周刘明休息，我下班后跟他去了一家商店。商店里边的衣服没有大商场里好看。我们没有买到喜欢的衣服，从商店出来就到咖啡店坐了坐。因为想运动运动，所以喝完东西，我们就走回家了。", pinyin: "Zhè zhōu Liú Míng xiūxi, wǒ xiàbān hòu gēn tā qùle yì jiā shāngdiàn. Shāngdiàn lǐbian de yīfu méiyǒu dà shāngchǎng lǐ hǎokàn. Wǒmen méiyǒu mǎidào xǐhuan de yīfu, cóng shāngdiàn chūlái jiù dào kāfēidiàn zuòle zuò. Yīnwèi xiǎng yùndòng yùndòng, suǒyǐ hēwán dōngxi, wǒmen jiù zǒu huí jiā le.", vietnamese: "Tuần này Lưu Minh được nghỉ ngơi, sau khi tan làm tôi cùng anh ấy đến một cửa hàng. Quần áo trong tiệm không đẹp bằng trong trung tâm thương mại lớn. Chúng tôi không mua được bộ nào ưng ý, vừa ra khỏi tiệm liền ghé quán cà phê ngồi một lúc. Vì muốn vận động một chút nên sau khi uống đồ xong, hai vợ chồng liền cùng nhau đi bộ về nhà." }
+          { speaker: "王一雪", hanzi: "这周刘明休息，我下班后跟他去了一家商店。商店里边的衣服没有大商场里好看。我们没有买到喜欢的衣服，从商店出来就到咖啡店坐了坐。因为想运动运动，所以喝完东西，我们就走回家了。", pinyin: "Zhè zhōu Liú Míng xiūxi, wǒ xiàbān hòu gēn tā qùle yì jiā shāngdiàn. Shāngdiàn lǐbian de yīfu méiyǒu dà shāngchǎng lǐ hǎokàn. Wǒmen méiyǒu mǎidào xǐhuan de yīfu, cóng shāngdiàn chūlái jiù dào kāfēidiàn zuòle zuò. Yīnwèi xiǎng yùndòng yùndòng, suǒyǐ hēwán dōngxi, wǒmen jiù zǒu huí jiā le.", vietnamese: "Tuần này anh Lưu Minh được nghỉ, sau khi tan làm mình cùng anh ấy đến một cửa hàng mua sắm. Quần áo trong tiệm không đẹp bằng trong trung tâm thương mại lớn. Hai vợ chồng không chọn được bộ nào ưng ý cả, vừa ra khỏi tiệm liền ghé quán cà phê ngồi nghỉ một lúc. Vì muốn đi dạo vận động một chút nên sau khi uống nước xong, hai vợ chồng liền cùng nhau thong thả đi bộ về nhà." }
         ]
       }
     ],
@@ -1282,13 +1523,13 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         context: "在房间，刘明在帮刘小明准备东西。(Trong phòng ngủ, Lưu Minh đang giúp con trai Lưu Tiểu Minh chuẩn bị đồ dùng đi học).",
         lines: [
           { speaker: "刘明", hanzi: "小明，你们明天开学，你准备好了吗？", pinyin: "Xiǎomíng, nǐmen míngtiān kāixué, nǐ zhǔnbèi hǎo le ma?", vietnamese: "Tiểu Minh, ngày mai các con khai giảng rồi, con đã chuẩn bị xong chưa?" },
-          { speaker: "刘小明", hanzi: "明天就开学啊？爸爸，我的书包你看见了吗？", pinyin: "Míngtiān jiù kāixué a? Bàba, wǒ de shūbāo nǐ kànjiàn le ma?", vietnamese: "Mai đã khai giảng rồi ạ? Bố ơi, bố có thấy cặp sách của con ở đâu không?" },
+          { speaker: "刘小明", hanzi: "明天就开学啊？爸爸，我的书包你看见了吗？", pinyin: "Míngtiān jiù kāixué a? Bàba, wǒ de shūbāo nǐ kànjiàn le ma?", vietnamese: "Mai đã khai giảng rồi ạ? Bố ơi, bố có thấy cặp sách của con để đâu không ạ?" },
           { speaker: "刘明", hanzi: "书包在门后面。", pinyin: "Shūbāo zài mén hòumiàn.", vietnamese: "Cặp sách ở phía sau cánh cửa kìa." },
           { speaker: "刘小明", hanzi: "书在哪儿呢？笔呢？", pinyin: "Shū zài nǎr ne? Bǐ ne?", vietnamese: "Sách ở đâu thế ạ? Còn bút đâu rồi ạ?" },
           { speaker: "刘明", hanzi: "书在床上，笔在桌子上。", pinyin: "Shū zài chuáng shang, bǐ zài zhuōzi shang.", vietnamese: "Sách ở trên giường, bút ở trên bàn học." },
           { speaker: "刘小明", hanzi: "太好了！现在都准备好了。", pinyin: "Tài hǎo le! Xiànzài dōu zhǔnbèi hǎo le.", vietnamese: "Tuyệt quá! Bây giờ mọi thứ đều chuẩn bị xong xuôi rồi." },
-          { speaker: "刘明", hanzi: "这次爸爸帮你，下次你自己准备，好不好？", pinyin: "Zhè cì bàba bāng nǐ, xià cì nǐ zìjǐ zhǔnbèi, hǎo bu hǎo?", vietnamese: "Lần này bố giúp con, lần sau con tự mình chuẩn bị nhé, được không?" },
-          { speaker: "刘小明", hanzi: "好！", pinyin: "Hǎo!", vietnamese: "Dạ được ạ!" }
+          { speaker: "刘明", hanzi: "这次爸爸帮你，下次你自己准备，好不好？", pinyin: "Zhè cì bàba bāng nǐ, xià cì nǐ zìjǐ zhǔnbèi, hǎo bu hǎo?", vietnamese: "Lần này bố chuẩn bị giúp con, từ lần sau con phải tự giác sắp xếp đồ đạc nhé, được không con trai?" },
+          { speaker: "刘小明", hanzi: "好！", pinyin: "Hǎo!", vietnamese: "Dạ vâng, con nhớ rồi ạ!" }
         ]
       },
       {
@@ -1324,7 +1565,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng ngủ)",
         context: "在房间，刘小雪在写日记。(Trong phòng ngủ, Lưu Tiểu Tuyết nắn nót viết nhật ký kể về gia đình).",
         lines: [
-          { speaker: "刘小雪", hanzi: "快要开学了，爸爸帮弟弟准备书包、本子和笔。我就要考试了，妈妈让我看书、看做错的题。我们上学，爸爸、妈妈比我们还忙。我问他们：“是我和弟弟上学还是你们上学？”我问完，他们都笑了。", pinyin: "Kuàiyào kāixué le, bàba bāng dìdi zhǔnbèi shūbāo, běnzi hé bǐ. Wǒ jiù yào kǎoshì le, māma ràng wǒ kàn shū, kàn zuòcuò de tí. Wǒmen shàngxué, bàba, māma bǐ wǒmen hái máng. Wǒ wèn tāmen: “Shì wǒ hé dìdi shàngxué háishi nǐmen shàngxué?” Wǒ wènwán, tāmen dōu xiào le.", vietnamese: "Sắp khai giảng rồi, bố giúp em trai chuẩn bị cặp sách, tập vở và bút. Tôi thì sắp thi, mẹ bảo tôi đọc sách, xem lại các bài đã làm sai. Tụi con đi học mà bố mẹ còn bận rộn hơn cả tụi con. Tôi liền hỏi bố mẹ: 'Là con với em đi học hay là bố mẹ đi học thế ạ?' Tôi vừa hỏi xong, cả nhà đều bật cười." }
+          { speaker: "刘小雪", hanzi: "快要开学了，爸爸帮弟弟准备书包、本子和笔。我就要考试了，妈妈让我看书、看做错的题。我们上学，爸爸、妈妈比我们还忙。我问他们：“是我和弟弟上学还是你们上学？”我问完，他们都笑了。", pinyin: "Kuàiyào kāixué le, bàba bāng dìdi zhǔnbèi shūbāo, běnzi hé bǐ. Wǒ jiù yào kǎoshì le, māma ràng wǒ kàn shū, kàn zuòcuò de tí. Wǒmen shàngxué, bàba, māma bǐ wǒmen hái máng. Wǒ wèn tāmen: “Shì wǒ hé dìdi shàngxué háishi nǐmen shàngxué?” Wǒ wènwán, tāmen dōu xiào le.", vietnamese: "Sắp khai giảng rồi, bố giúp em trai chuẩn bị cặp sách, tập vở và bút viết. Mình thì sắp bước vào kỳ thi, mẹ nhắc mình đọc sách, xem lại các bài từng làm sai. Bọn mình đi học mà bố mẹ còn lo lắng, bận rộn hơn cả hai đứa. Mình liền trêu bố mẹ: 'Là con với em đi học hay là bố mẹ đi học thế ạ?' Mình vừa dứt lời, cả nhà ai nấy đều bật cười khúc khích." }
         ]
       }
     ],
@@ -1426,12 +1667,12 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 1: 在教室 (Bài khóa 1: Ở trong lớp học)",
         context: "在教室，王一飞和白家月在聊天儿。(Trong lớp học, cô Vương Nhất Phi và Bạch Gia Nguyệt trò chuyện).",
         lines: [
-          { speaker: "王一飞", hanzi: "家月，都下课了，你怎么还不回家？", pinyin: "Jiāyuè, dōu xiàkè le, nǐ zěnme hái bù huí jiā?", vietnamese: "Gia Nguyệt, tan học rồi, sao em vẫn chưa về nhà thế?" },
-          { speaker: "白家月", hanzi: "我头疼，不太舒服。", pinyin: "Wǒ tóu téng, bú tài shūfu.", vietnamese: "Em bị đau đầu, trong người không được khỏe lắm cô ạ." },
-          { speaker: "王一飞", hanzi: "你这几天经常头疼，去医院看看吧。", pinyin: "Nǐ zhè jǐ tiān jīngcháng tóu téng, qù yīyuàn kànkan ba.", vietnamese: "Mấy hôm nay em thường xuyên đau đầu, đi bệnh viện khám xem sao nhé." },
-          { speaker: "白家月", hanzi: "我想休息一下，现在不能动，一动就疼。", pinyin: "Wǒ xiǎng xiūxi yíxià, xiànzài bù néng dòng, yí dòng jiù téng.", vietnamese: "Em muốn nghỉ một chút, giờ em không cử động được, hễ động đậy là lại đau." },
-          { speaker: "王一飞", hanzi: "那你在这儿坐着，我去开车，一会儿送你去医院。", pinyin: "Nà nǐ zài zhèr zuòzhe, wǒ qù kāichē, yíhuìr sòng nǐ qù yīyuàn.", vietnamese: "Vậy em cứ ngồi đây nhé, cô đi lấy xe ô tô, lát nữa cô chở em đến bệnh viện." },
-          { speaker: "白家月", hanzi: "谢谢王老师。", pinyin: "Xièxie Wáng lǎoshī.", vietnamese: "Em cảm ơn cô Vương ạ." }
+          { speaker: "王一飞", hanzi: "家月，都下课了，你怎么还不回家？", pinyin: "Jiāyuè, dōu xiàkè le, nǐ zěnme hái bù huí jiā?", vietnamese: "Gia Nguyệt ơi, tan học rồi, sao em vẫn chưa về nhà nghỉ ngơi thế?" },
+          { speaker: "白家月", hanzi: "我头疼，不太舒服。", pinyin: "Wǒ tóu téng, bú tài shūfu.", vietnamese: "Dạ em bị đau đầu, trong người thấy khó chịu quá cô ạ." },
+          { speaker: "王一飞", hanzi: "你这几天经常头疼，去医院看看吧。", pinyin: "Nǐ zhè jǐ tiān jīngcháng tóu téng, qù yīyuàn kànkan ba.", vietnamese: "Mấy hôm nay cô thấy em hay kêu đau đầu, để cô đưa em vào viện khám xem sao nhé." },
+          { speaker: "白家月", hanzi: "我想休息一下，现在不能动，一动就疼。", pinyin: "Wǒ xiǎng xiūxi yíxià, xiànzài bù néng dòng, yí dòng jiù téng.", vietnamese: "Em muốn ngồi nghỉ một lát ạ, giờ đầu em buốt quá, hễ cử động là lại đau nhói." },
+          { speaker: "王一飞", hanzi: "那你在这儿坐着，我去开车，一会儿送你去医院。", pinyin: "Nà nǐ zài zhèr zuòzhe, wǒ qù kāichē, yíhuìr sòng nǐ qù yīyuàn.", vietnamese: "Thế em cứ ngồi yên đây nghỉ nhé, cô đi lấy xe ô tô, lát nữa cô chở em vào viện khám ngay." },
+          { speaker: "白家月", hanzi: "谢谢王老师。", pinyin: "Xièxie Wáng lǎoshī.", vietnamese: "Dạ, em cảm ơn cô Vương nhiều lắm ạ." }
         ]
       },
       {
@@ -1469,7 +1710,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng ngủ)",
         context: "在房间，白家月在写日记。(Trong phòng ngủ, Bạch Gia Nguyệt cảm động ghi nhật ký).",
         lines: [
-          { speaker: "白家月", hanzi: "我这几天经常头疼，从药店买了点儿药，没去医院。今天下课后，王老师看我不舒服，就送我去医院了。从医院回来，李文也来看我了。现在他们都回去了，我也要睡觉了。", pinyin: "Wǒ zhè jǐ tiān jīngcháng tóu téng, cóng yàodiàn mǎile diǎnr yào, méi qù yīyuàn. Jīntiān xiàkè hòu, Wáng lǎoshī kàn wǒ bù shūfu, jiù sòng wǒ qù yīyuàn le. Cóng yīyuàn huílái, Lǐ Wén yě lái kàn wǒ le. Xiànzài tāmen dōu huíqù le, wǒ yě yào shuìjiào le.", vietnamese: "Mấy hôm nay tôi thường xuyên đau đầu, có mua ít thuốc ở hiệu thuốc chứ chưa đi bệnh viện. Hôm nay sau khi tan học, cô giáo Vương thấy tôi mệt mỏi liền chở tôi đến bệnh viện khám. Từ bệnh viện trở về, Lý Văn cũng qua thăm tôi. Bây giờ mọi người đều về rồi, tôi cũng chuẩn bị đi ngủ đây." }
+          { speaker: "白家月", hanzi: "我这几天经常头疼，从药店买了点儿药，没去医院。今天下课后，王老师看我不舒服，就送我去医院了。从医院回来，李文也来看我了。现在他们都回去了，我也要睡觉了。", pinyin: "Wǒ zhè jǐ tiān jīngcháng tóu téng, cóng yàodiàn mǎile diǎnr yào, méi qù yīyuàn. Jīntiān xiàkè hòu, Wáng lǎoshī kàn wǒ bù shūfu, jiù sòng wǒ qù yīyuàn le. Cóng yīyuàn huílái, Lǐ Wén yě lái kàn wǒ le. Xiànzài tāmen dōu huíqù le, wǒ yě yào shuìjiào le.", vietnamese: "Mấy hôm nay mình thường xuyên bị đau đầu, chỉ ghé hiệu thuốc mua tạm ít thuốc uống chứ chưa đi khám. Hôm nay sau giờ học, cô giáo Vương thấy mình mệt lả liền lấy xe chở mình đến bệnh viện khám ngay. Từ bệnh viện trở về, Lý Văn cũng tạt qua thăm mình. Giờ mọi người đều về cả rồi, mình cũng uống thuốc rồi đi ngủ đây." }
         ]
       }
     ],
@@ -1606,7 +1847,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng ngủ)",
         context: "在房间，白家月在写日记。(Trong phòng ngủ, Bạch Gia Nguyệt vui vẻ viết nhật ký).",
         lines: [
-          { speaker: "白家月", hanzi: "前几天天气不好，我没走路，每天坐两站地铁去学校。今天是个大晴天，李文让我跟他去外面跑步。他小时候经常跑步，跑得比我快，但是他会等我。跟李文一起跑步，我好高兴啊！", pinyin: "Qián jǐ tiān tiānqì bù hǎo, wǒ méi zǒulù, měi tiān zuò liǎng zhàn dìtiě qù xuéxiào. Jīntiān shì gè dà qíngtiān, Lǐ Wén ràng wǒ gēn tā qù wàimiàn pǎobù. Tā xiǎoshíhou jīngcháng pǎobù, pǎo de bǐ wǒ kuài, dànshì tā huì děng wǒ. Gēn Lǐ Wén yìqǐ pǎobù, wǒ hǎo gāoxìng a!", vietnamese: "Mấy hôm trước thời tiết xấu, tôi không đi bộ mà mỗi ngày đều đi hai trạm tàu điện ngầm đến trường. Hôm nay là một ngày nắng rực rỡ, Lý Văn rủ tôi cùng ra ngoài chạy bộ. Cậu ấy từ nhỏ đã hay chạy bộ nên chạy nhanh hơn tôi, nhưng cậu ấy luôn chạy chậm chờ tôi. Được chạy bộ cùng Lý Văn, tôi cảm thấy thật là vui sướng!" }
+          { speaker: "白家月", hanzi: "前几天天气不好，我没走路，每天坐两站地铁去学校。今天是个大晴天，李文让我跟他去外面跑步。他小时候经常跑步，跑得比我快，但是他会等我。跟李文一起跑步，我好高兴啊！", pinyin: "Qián jǐ tiān tiānqì bù hǎo, wǒ méi zǒulù, měi tiān zuò liǎng zhàn dìtiě qù xuéxiào. Jīntiān shì gè dà qíngtiān, Lǐ Wén ràng wǒ gēn tā qù wàimiàn pǎobù. Tā xiǎoshíhou jīngcháng pǎobù, pǎo de bǐ wǒ kuài, dànshì tā huì děng wǒ. Gēn Lǐ Wén yìqǐ pǎobù, wǒ hǎo gāoxìng a!", vietnamese: "Mấy hôm trước thời tiết xấu quá, mình không đi bộ mà ngày nào cũng đi hai trạm tàu điện ngầm tới trường. Hôm nay trời hửng nắng rực rỡ, Lý Văn rủ mình cùng ra ngoài chạy bộ. Cậu ấy chạy quen từ nhỏ nên chạy nhanh hơn mình nhiều, nhưng lúc nào cũng chạy chậm đợi mình. Được chạy bộ cùng Lý Văn, mình thấy vui ơi là vui!" }
         ]
       }
     ],
@@ -1648,7 +1889,10 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       { id: "hsk2-l12-w5", hanzi: "阴", pinyin: "yīn", hanViet: "âm", vietnamese: "âm u, nhiều mây", hskLevel: 2, radical: "阝", strokeCount: 6, example: "阴天", exampleTranslation: "ngày trời âm u", tags: ["Bài 12", "Tính từ"] },
       { id: "hsk2-l12-w6", hanzi: "从小", pinyin: "cóngxiǎo", hanViet: "tòng tiểu", vietnamese: "từ nhỏ", hskLevel: 2, radical: "人", strokeCount: 7, example: "从小就喜欢", exampleTranslation: "từ nhỏ đã thích", tags: ["Bài 12", "Phó từ"] },
       { id: "hsk2-l12-w7", hanzi: "地铁", pinyin: "dìtiě", hanViet: "địa thiết", vietnamese: "tàu điện ngầm", hskLevel: 2, radical: "土", strokeCount: 16, example: "坐地铁", exampleTranslation: "đi tàu điện ngầm", tags: ["Bài 12", "Danh từ"] },
-      { id: "hsk2-l12-w8", hanzi: "楼", pinyin: "lóu", hanViet: "lâu", vietnamese: "tòa nhà, tầng gác", hskLevel: 2, radical: "木", strokeCount: 13, example: "楼下见 / 上楼", exampleTranslation: "gặp dưới tầng / lên lầu", tags: ["Bài 12", "Danh từ"] }
+      { id: "hsk2-l12-w8", hanzi: "楼", pinyin: "lóu", hanViet: "lâu", vietnamese: "tòa nhà, tầng gác", hskLevel: 2, radical: "木", strokeCount: 13, example: "楼下见 / 上楼", exampleTranslation: "gặp dưới tầng / lên lầu", tags: ["Bài 12", "Danh từ"] },
+{ id: "hsk2-l12-w9", hanzi: "好", pinyin: "hǎo", hanViet: "Hảo", vietnamese: "tốt, đẹp, xong (bổ ngữ kết quả)", hskLevel: 2, radical: "女", strokeCount: 6, example: "商量好 / 准备好", exampleTranslation: "bàn bạc xong / chuẩn bị xong", tags: ["Bài 12", "Tính từ / Bổ ngữ"] },
+      { id: "hsk2-l12-w10", hanzi: "小时候", pinyin: "xiǎoshíhou", hanViet: "Tiểu Thời Hậu", vietnamese: "hồi nhỏ, khi còn bé", hskLevel: 2, radical: "小", strokeCount: 13, example: "小时候在南方长大", exampleTranslation: "hồi nhỏ lớn lên ở miền Nam", tags: ["Bài 12", "Danh từ thời gian"] },
+      { id: "hsk2-l12-w11", hanzi: "站", pinyin: "zhàn", hanViet: "Trạm", vietnamese: "trạm, ga, bến (xe buýt, tàu điện)", hskLevel: 2, radical: "立", strokeCount: 10, example: "坐两站地铁", exampleTranslation: "đi hai ga tàu điện ngầm", tags: ["Bài 12", "Lượng từ / Danh từ"] }
     ],
     exercises: [
       {
@@ -1743,7 +1987,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
         title: "课文 4: 在房间 (Bài khóa 4: Trong phòng)",
         context: "在房间，白家月在写日记。(Trong phòng, Bạch Gia Nguyệt viết nhật ký ghi lại niềm vui nhận quà năm mới và tặng hoa cho cô giáo).",
         lines: [
-          { speaker: "白家月", hanzi: "新年就要到了，安妮送给我一个新本子。她告诉我是在网上买的，比我的本子贵一点儿。我们班同学也送了王老师漂亮的花，希望她高高兴兴地过个新年。", pinyin: "Xīnnián jiù yào dào le, Ānnī sòng gěi wǒ yí gè xīn běnzi. Tā gàosu wǒ shì zài wǎngshang mǎi de, bǐ wǒ de běnzi guì yìdiǎnr. Wǒmen bān tóngxué yě sòngle Wáng lǎoshī piàoliang de huā, xīwàng tā gāogāoxìngxìng de guò gè xīnnián.", vietnamese: "Năm mới sắp đến rồi, Annie đã tặng cho mình một quyển sổ mới. Cậu ấy bảo với mình là mua trên mạng, đắt hơn quyển sổ của mình một chút. Cả lớp chúng mình cũng tặng cô giáo Vương bó hoa tươi thắm, hy vọng cô sẽ đón một năm mới thật vui vẻ." }
+          { speaker: "白家月", hanzi: "新年就要到了，安妮送给我一个新本子。她告诉我是在网上买的，比我的本子贵一点儿。我们班同学也送了王老师漂亮的花，希望她高高兴兴地过个新年。", pinyin: "Xīnnián jiù yào dào le, Ānnī sòng gěi wǒ yí gè xīn běnzi. Tā gàosu wǒ shì zài wǎngshang mǎi de, bǐ wǒ de běnzi guì yìdiǎnr. Wǒmen bān tóngxué yě sòngle Wáng lǎoshī piàoliang de huā, xīwàng tā gāogāoxìngxìng de guò gè xīnnián.", vietnamese: "Năm mới sắp đến rồi, Annie tặng cho mình một quyển sổ tay mới tinh. Cậu ấy bảo mua trên mạng, chỉ đắt hơn quyển sổ của mình một chút thôi. Cả lớp chúng mình cũng mua tặng cô giáo Vương một bó hoa tươi thắm, chúc cô đón một năm mới thật nhiều niềm vui và hạnh phúc." }
         ]
       }
     ],
@@ -1858,7 +2102,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
           { speaker: "王一飞", hanzi: "我家楼下？我看看。", pinyin: "Wǒ jiā lóu xià? Wǒ kànkan.", vietnamese: "Dưới nhà cô á? Để cô xem nào." },
           { speaker: "李文", hanzi: "那个人穿着黑色的裤子，手里还拿着一个黑色的包。", pinyin: "Nàge rén chuānzhe hēisè de kùzi, shǒuli hái názhe yí gè hēisè de bāo.", vietnamese: "Người đó mặc quần màu đen, trên tay còn đang xách một chiếc túi màu đen nữa." },
           { speaker: "王一飞", hanzi: "我看见那个人了，他是我男朋友。", pinyin: "Wǒ kànjiàn nàge rén le, tā shì wǒ nánpéngyou.", vietnamese: "Cô nhìn thấy người đó rồi, anh ấy là bạn trai cô." },
-          { speaker: "李文", hanzi: "那我们快过去吧。", pinyin: "Nà wǒmen kuài guòqù ba.", vietnamese: "Thế thì chúng ta mau qua đó đi ạ." }
+          { speaker: "李文", hanzi: "那我们快过去吧。", pinyin: "Nà wǒmen kuài guòqù ba.", vietnamese: "Dạ thế cô trò mình mau qua đó đi ạ cô!" }
         ]
       },
       {

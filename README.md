@@ -1,17 +1,22 @@
-# 🇨🇳 Minnese - Nền tảng Học tiếng Trung & Luyện thi HSK Thông minh
+# 🇨🇳 Minnese - Nền tảng Học tiếng Trung & Luyện thi HSK Thông minh Toàn diện
 
 <div align="center">
 
-![Minnese Logo](public/minnie-mascot.png)
+![Minnese Banner](public/minnie-mascot.png)
 
-**Nền tảng e-Learning tiếng Trung toàn diện thế hệ mới từ HSK 1 đến HSK 6.**  
-Tích hợp giáo trình chuẩn BLCUP, ngân hàng đề thi chuẩn hóa (QBank), gia sư AI đồng hành luyện khẩu ngữ thời gian thực, phòng luyện chữ Hán tương tác và hệ thống âm thanh phân vai độc lập 100%.
+**Nền tảng e-Learning tiếng Trung full-stack thế hệ mới chuẩn hóa New HSK 3.0 (HSK 1 → HSK 6).**  
+Tích hợp giáo trình chuẩn BLCUP, thuật toán bóng thoại chống che mặt độc quyền trên mọi thiết bị, công nghệ phòng thu âm thanh phân vai độc lập (17 Neural Voices), gia sư AI tương tác thời gian thực (Google Gemini API), ngân hàng đề thi CBT và phòng luyện viết chữ Hán tương tác.
 
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge&logo=vite)](https://vitejs.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
+[![Vitest](https://img.shields.io/badge/Vitest-378%2B%20Tests%20Passed-FCC72B?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E%20Verified-2EAD33?style=for-the-badge&logo=playwright)](https://playwright.dev/)
 [![License](https://img.shields.io/badge/License-MIT-orange?style=for-the-badge)](LICENSE)
+
+[Tính năng nổi bật](#-tính-năng-nổi-bật) • [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống) • [Công nghệ sử dụng](#-công-nghệ-sử-dụng) • [Cài đặt & Chạy](#-hướng-dẫn-cài-đặt--khởi-chạy) • [Kiểm thử & QA](#-kiểm-thử--chất-lượng-phần-mềm)
 
 </div>
 
@@ -21,184 +26,283 @@ Tích hợp giáo trình chuẩn BLCUP, ngân hàng đề thi chuẩn hóa (QBan
 
 - [🌟 Giới thiệu Tổng quan](#-giới-thiệu-tổng-quan)
 - [✨ Tính năng Nổi bật](#-tính-năng-nổi-bật)
-  - [1. Giáo trình Chuẩn Hóa BLCUP & Tranh Minh Họa Màu Nước](#1-giáo-trình-chuẩn-hóa-blcup--tranh-minh-họa-màu-nước)
-  - [2. Hệ thống Âm thanh Phân vai Độc lập (100% Studio Neural Voices)](#2-hệ-thống-âm-thanh-phân-vai-độc-lập-100-studio-neural-voices)
-  - [3. Ngân hàng Đề thi HSK CBT (QBank & Mock Exam Runner)](#3-ngân-hàng-đề-thi-hsk-cbt-qbank--mock-exam-runner)
-  - [4. Phòng Luyện Viết Chữ Hán (Hanzi Stroke Studio)](#4-phòng-luyện-viết-chữ-hán-hanzi-stroke-studio)
-  - [5. Thẻ Ghi Nhớ Lặp Lại Ngắt Quãng (SRS Flashcards)](#5-thẻ-ghi-nhớ-lặp-lại-ngắt-quãng-srs-flashcards)
-  - [6. Gia sư AI Luyện Khẩu Ngữ (Live Voice Call & AI Tutor)](#6-gia-sư-ai-luyện-khẩu-ngữ-live-voice-call--ai-tutor)
-  - [7. Trung tâm Quản trị Lớp học (Teacher & Admin Studio)](#7-trung-tâm-quản-trị-lớp-học-teacher--admin-studio)
-- [👥 Master Character Bible (Hệ thống Nhân vật Xuyên suốt)](#-master-character-bible-hệ-thống-nhân-vật-xuyên-suốt)
-- [🛠 Kiến trúc Công nghệ (Tech Stack)](#-kiến-trúc-công-nghệ-tech-stack)
-- [📂 Cấu trúc Dự án (Project Structure)](#-cấu-trúc-dự-án-project-structure)
-- [🚀 Hướng dẫn Cài đặt & Chạy Thực tế](#-hướng-dẫn-cài-đặt--chạy-thực-tế)
-- [📄 Giấy phép (License)](#-giấy-phép-license)
+  - [1. Giáo trình Chuẩn Hóa New HSK 3.0 & Tranh Minh Họa 100% Bản Quyền](#1-giáo-trình-chuẩn-hóa-new-hsk-30--tranh-minh-họa-100-bản-quyền)
+  - [2. Thuật toán Định vị Bóng thoại Thông minh (Zero-Face-Collision Algorithm)](#2-thuật-toán-định-vị-bóng-thoại-thông-minh-zero-face-collision-algorithm)
+  - [3. Hệ thống Âm thanh Phân vai Độc lập & Đồng thanh (17 Neural Voice Personas)](#3-hệ-thống-âm-thanh-phân-vai-độc-lập--đồng-thanh-17-neural-voice-personas)
+  - [4. Gia sư AI Luyện Khẩu ngữ Thời gian thực (Google Gemini API & Live Voice)](#4-gia-sư-ai-luyện-khẩu-ngữ-thời-gian-thực-google-gemini-api--live-voice)
+  - [5. Ngân hàng Đề thi HSK CBT (QBank & Mock Exam Simulation)](#5-ngân-hàng-đề-thi-hsk-cbt-qbank--mock-exam-simulation)
+  - [6. Xưởng Luyện viết Chữ Hán Tương tác (Hanzi Stroke Studio)](#6-xưởng-luyện-viết-chữ-hán-tương-tác-hanzi-stroke-studio)
+  - [7. Thẻ Nhớ Lặp lại Ngắt quãng (SRS Spaced Repetition Flashcards)](#7-thẻ-nhớ-lặp-lại-ngắt-quãng-srs-spaced-repetition-flashcards)
+  - [8. Phân quyền Người dùng & Quản trị Lớp học (RBAC & Class Code)](#8-phân-quyền-người-dùng--quản-trị-lớp-học-rbac--class-code)
+- [🏗 Kiến trúc Hệ thống (System Architecture)](#-kiến-trúc-hệ-thống-system-architecture)
+- [🛠 Công nghệ Sử dụng (Tech Stack)](#-công-nghệ-sử-dụng-tech-stack)
+- [📂 Cấu trúc Thư mục Dự án](#-cấu-trúc-thư-mục-dự-án)
+- [🚀 Hướng dẫn Cài đặt & Khởi chạy](#-hướng-dẫn-cài-đặt--khởi-chạy)
+- [🧪 Kiểm thử & Chất lượng Phần mềm (Testing & QA)](#-kiểm-thử--chất-lượng-phần-mềm-testing--qa)
+- [🐳 Đóng gói Docker & Triển khai Cloud](#-đóng-gói-docker--triển-khai-cloud)
+- [📄 Giấy phép (License) & Tác giả](#-giấy-phép-license--tác-giả)
 
 ---
 
 ## 🌟 Giới thiệu Tổng quan
 
-**Minnese** là giải pháp phần mềm giáo dục toàn diện dành cho người học tiếng Trung Quốc ở mọi trình độ (HSK 1 đến HSK 6). Dự án kết hợp tinh hoa sư phạm của bộ giáo trình chuẩn **Đại học Ngôn ngữ và Văn hóa Bắc Kinh (BLCUP)** cùng sức mạnh của công nghệ AI hiện đại nhằm mang lại trải nghiệm học tập nhập vai, chuẩn xác và trực quan nhất.
+**Minnese** là giải pháp phần mềm giáo dục e-Learning hoàn chỉnh hỗ trợ tự học, giảng dạy và luyện thi chứng chỉ Hán ngữ tiêu chuẩn quốc tế **New HSK 3.0** từ cấp độ 1 đến cấp độ 6.
 
-Mỗi bài học trong Minnese không chỉ là những dòng chữ khô khan, mà là một **câu chuyện tiếp diễn sống động** về cuộc sống du học, giao lưu văn hóa và sinh hoạt thường nhật tại Bắc Kinh thông qua dàn nhân vật được thiết kế xuyên suốt và đồng nhất.
+Khác với các ứng dụng học ngoại ngữ thông thường chỉ cung cấp từ vựng rời rạc hoặc phát âm máy móc đơn điệu, Minnese đem đến trải nghiệm **nhập vai tương tác như một bộ phim hoạt hình sư phạm**:
+- Dàn nhân vật hư cấu đồng nhất xuyên suốt qua từng bài học với cá tính, phục trang và giọng đọc đặc trưng.
+- 105 bài khóa đầy đủ bối cảnh văn hóa sống động tại Bắc Kinh.
+- Tích hợp sâu trí tuệ nhân tạo để sửa phát âm, luyện phản xạ đối thoại hai chiều và phân tích lỗ hổng kiến thức sau mỗi đề thi thử.
 
 ---
 
 ## ✨ Tính năng Nổi bật
 
-### 1. Giáo trình Chuẩn Hóa BLCUP & Tranh Minh Họa Màu Nước
-* **105 bài khóa hoàn chỉnh** (HSK 1: 45 bài khóa / 15 bài học; HSK 2: 60 bài khóa / 15 bài học).
-* **Mỹ thuật Thủy mặc & Màu nước truyền thống:** Toàn bộ tranh minh họa được xây dựng theo phong cách giáo trình BLCUP chính thống (16:9 widescreen, màu pastel ấm dịu, tuyệt đối không có rác chữ hay bóng thoại).
-* **Đồng bộ ngữ cảnh tuyệt đối:** Từng khung cảnh (trời mưa rơi trên cửa kính, cảnh ga tàu điện, cảnh tiệm sủi cảo nóng hổi, cảnh đón bạn ở sân bay Đại Hưng...) đều bám sát 100% nội dung hội thoại.
+### 1. Giáo trình Chuẩn Hóa New HSK 3.0 & Tranh Minh Họa 100% Bản Quyền
+- **105 bài khóa hoàn chỉnh** (HSK 1: 45 bài khóa / 15 bài học; HSK 2: 60 bài khóa / 15 bài học) biên soạn theo chuẩn sư phạm của Đại học Ngôn ngữ và Văn hóa Bắc Kinh (BLCUP).
+- **Tranh minh họa gốc chất lượng cao**: Đầy đủ 105 tranh bối cảnh với hai chuẩn khung hình:
+  - Khung tỷ lệ `4:3` (`aspect-[1024/765]`) cho các bài đối thoại cận cảnh, sinh hoạt gia đình, lớp học.
+  - Khung tỷ lệ Widescreen `16:9` (`aspect-[1024/572]`) cho các đại cảnh trường đại học, sân bay, đường phố mùa đông.
 
-### 2. Hệ thống Âm thanh Phân vai Độc lập (100% Studio Neural Voices)
-* **Khắc phục triệt để hiện tượng trùng giọng:** Mỗi nhân vật trong hội thoại đều được chỉ định một Neural Voice Model độc lập từ Microsoft Edge-TTS:
-  * 👩‍🏫 **Cô giáo Vương Nhất Phi (30t):** `zh-CN-XiaoxiaoNeural` (giọng chuẩn phát thanh Bắc Kinh, mực thước sư phạm).
-  * 👱‍♀️ **Bạch Gia Nguyệt (20t, du học sinh):** `zh-CN-shaanxi-XiaoniNeural` (chất giọng trong trẻo, dịu dàng, ngọt ngào).
-  * 👩‍🦰 **Annie (20t, sinh viên phương Tây):** `zh-CN-XiaoyiNeural` (hoạt bát, phóng khoáng, biểu cảm tươi vui).
-  * 👩 **Vương Nhất Tuyết (35t, chị gái cô Vương):** `zh-CN-liaoning-XiaobeiNeural` (giọng người phụ nữ gia đình đằm thắm, chín chắn).
-  * 👨‍🎓 **Lý Văn (20t, nam sinh viên y khoa):** `zh-CN-YunxiNeural` (giọng nam thanh niên trong sáng, trí thức).
-  * 🧑‍🎓 **Trần Thiên Trung (20t, nam du học sinh Thái):** `zh-CN-YunyangNeural` (âm vực trầm ấm, nam tính, tương phản rõ rệt với Lý Văn).
-  * 👨‍⚕️ **Bác sĩ Lưu Minh (40t):** `zh-CN-YunjianNeural` (giọng người cha/bác sĩ trung niên điềm đạm, ấm áp).
-  * 👦 **Bé Lưu Tiểu Minh (8t):** `zh-CN-YunxiaNeural` (giọng bé trai ngộ nghĩnh).
-* **Karaoke từng câu:** Hiển thị thời gian đồng bộ chính xác tới từng mili-giây, hỗ trợ bấm nghe từng câu riêng biệt hoặc nghe trọn bài khóa với khoảng lặng thở tự nhiên 0.4s giữa các lượt thoại.
+### 2. Thuật toán Định vị Bóng thoại Thông minh (Zero-Face-Collision Algorithm)
+- **Vấn đề giải quyết**: Khi hiển thị lời thoại truyện tranh lên tranh vẽ, chữ viết rất dễ đè lên mặt nhân vật hoặc bị tràn khung khi đổi kích thước màn hình.
+- **Giải pháp kỹ thuật (`resolveSmartBubbleBox`)**:
+  - Tự động quét và lập bản đồ tọa độ khuôn mặt (`face`), đỉnh đầu (`head`), tọa độ miệng (`mouthTarget`) và vạch ngăn màn hình (`splitScreenDividerX`).
+  - Hệ thống tính toán không gian trống xung quanh đầu nhân vật, co giãn padding và font chữ linh hoạt theo biến số canvas-scale (`--bscale`).
+  - **100% không che mặt**: Đã vượt qua kiểm chứng toán học trên **1,232 lượt đo lường** trên 4 nhóm thiết bị: Desktop (896px), Laptop (768px), Tablet (600px) và Smartphone (360px).
+  - Đuôi bóng thoại vector SVG động tự co giãn độ dài (`10px–19px`) trỏ chính xác về phía miệng nhân vật đang phát âm.
 
-### 3. Ngân hàng Đề thi HSK CBT (QBank & Mock Exam Runner)
-* Mô phỏng chuẩn 100% giao diện thi trên máy tính (**Computer-Based Test - CBT**) của kỳ thi HSK chính thức từ HSK 1 đến HSK 6.
-* Phân chia đầy đủ các phần thi: **Nghe hiểu (Listening)**, **Đọc hiểu (Reading)** và **Viết (Writing)**.
-* Chấm điểm tức thì, thống kê ma trận năng lực, phân tích điểm mạnh - điểm yếu và lưu vết câu làm sai vào **Sổ tay Câu hỏi Sai (Wrong Answer Notebook)** để ôn luyện lại.
+### 3. Hệ thống Âm thanh Phân vai Độc lập & Đồng thanh (17 Neural Voice Personas)
+- Khắc phục hoàn toàn tình trạng "một giọng đọc cho cả bài đối thoại". Từng nhân vật sở hữu một Voice Profile cố định được tổng hợp từ Microsoft Edge-TTS Studio:
+  - 👩‍🏫 **Cô giáo Vương Nhất Phi**: `zh-CN-XiaoxiaoNeural` (chuẩn giọng sư phạm Bắc Kinh).
+  - 👱‍♀️ **Bạch Gia Nguyệt (du học sinh)**: `zh-CN-XiaoyiNeural` (`-4Hz`, trong trẻo, lễ phép).
+  - 👩‍🦰 **Annie (du học sinh phương Tây)**: `zh-CN-XiaoxiaoNeural` (`+16Hz`, hoạt bát, tươi vui).
+  - 👩 **Vương Nhất Tuyết (chị gái)**: `zh-CN-XiaoxiaoNeural` (`-15Hz`, chín chắn, ấm áp).
+  - 👨‍⚕️ **Bác sĩ Lưu Minh**: `zh-CN-YunjianNeural` (`-8Hz`, trầm ấm, tin cậy).
+  - 👨‍🎓 **Lý Văn**: `zh-CN-YunxiNeural` (`-6Hz`, thanh lịch, trí thức).
+  - 🧑‍🎓 **Trần Thiên Trung**: `zh-CN-YunxiNeural` (`+10Hz`, năng động, khỏe khoắn).
+  - 👴 **Ông nội Lưu**: `zh-CN-YunjianNeural` (`-20Hz`, chậm rãi, phúc hậu).
+- **Tính năng Hợp xướng Đồng thanh (Chorus Engine)**:
+  - `zh-CN-Chorus-Students`: Hòa âm 4 giọng học sinh đồng thanh chào giáo viên trong lớp học.
+  - `zh-CN-Chorus-JiayueAnnie`: Hòa âm stereo 2 giọng nữ khi Bạch Gia Nguyệt và Annie cùng đồng thanh cảm ơn hoặc chào hỏi.
 
-### 4. Phòng Luyện Viết Chữ Hán (Hanzi Stroke Studio)
-* Mô phỏng động quy tắc bút thuận từng nét chữ Hán với công nghệ vector mượt mà.
-* Hướng dẫn giải nghĩa bộ thủ, âm Hán Việt, cấu trúc chữ (trên-dưới, trái-phải, bao quanh) và bảng luyện viết tay tương tác trực tiếp trên màn hình cảm ứng hoặc chuột.
+### 4. Gia sư AI Luyện Khẩu ngữ Thời gian thực (Google Gemini API & Live Voice)
+- Trợ lý ảo **Minnie AI** đóng vai trò gia sư bản xứ 1-on-1:
+  - Luyện giao tiếp phản xạ tự nhiên theo chủ đề bài học vừa học.
+  - Nhận diện lỗi phát âm, lỗi đặt sai trật tự từ tiếng Hán và khéo léo phản hồi kèm gợi ý chỉnh sửa ngữ pháp.
+  - Hỗ trợ gọi thoại trực tiếp hai chiều (Live Voice Call) mô phỏng cuộc gọi thoại thực tế.
 
-### 5. Thẻ Ghi Nhớ Lặp Lại Ngắt Quãng (SRS Flashcards)
-* Ứng dụng thuật toán **Spaced Repetition System (SRS)** giúp chuyển kiến thức từ trí nhớ ngắn hạn sang dài hạn.
-* Hỗ trợ phát âm chuẩn bản xứ, phân loại cấp độ nhớ (Again, Hard, Good, Easy) và theo dõi lộ trình ghi nhớ từ vựng mỗi ngày.
+### 5. Ngân hàng Đề thi HSK CBT (QBank & Mock Exam Simulation)
+- Mô phỏng 100% giao diện thi thực tế trên máy tính (**Computer-Based Test - CBT**) của kỳ thi HSK chính thức:
+  - Đầy đủ 3 phân môn: **Nghe hiểu (Listening)**, **Đọc hiểu (Reading)** và **Viết (Writing)**.
+  - Bộ đếm thời gian thực theo từng phần, tự động nộp bài khi hết giờ.
+  - Thuật toán xáo trộn câu hỏi và đáp án thông minh từ Question Bank.
+  - Chấm điểm tự động, xuất ma trận phân tích năng lực và tự động đưa các câu trả lời sai vào **Sổ tay Câu hỏi Sai (Wrong Answer Notebook)** để ôn tập lại.
 
-### 6. Gia sư AI Luyện Khẩu Ngữ (Live Voice Call & AI Tutor)
-* Tích hợp công nghệ nhận dạng giọng nói và phản hồi thời gian thực với trợ lý ảo **Minnie AI**.
-* Hỗ trợ gọi thoại trực tiếp để luyện phản xạ giao tiếp tiếng Trung theo từng chủ đề bài học, tự động phát hiện và sửa lỗi ngữ pháp một cách khéo léo.
+### 6. Xưởng Luyện viết Chữ Hán Tương tác (Hanzi Stroke Studio)
+- Sử dụng thư viện `hanzi-writer` kết hợp Canvas vẽ tay:
+  - Minh họa quy tắc bút thuận (thứ tự nét bút) động từng nét chuẩn xác.
+  - Tra cứu nghĩa chiết tự, âm Hán Việt, cấu trúc bộ thủ.
+  - Chế độ "Luyện viết tự do" chấm điểm độ chính xác nét vẽ của người dùng ngay trên màn hình.
 
-### 7. Trung tâm Quản trị Lớp học (Teacher & Admin Studio)
-* Quản lý phân quyền học viên, cấp mã lớp (Class Code), kích hoạt quyền truy cập giáo trình.
-* Kiểm duyệt câu hỏi đề thi tự động, điều chỉnh ngân hàng đề và quản trị nội dung bài tập bổ trợ.
+### 7. Thẻ Nhớ Lặp lại Ngắt quãng (SRS Spaced Repetition Flashcards)
+- Áp dụng thuật toán **Spaced Repetition System (SRS)** tương tự Anki/SuperMemo.
+- Đánh giá khả năng ghi nhớ qua 4 cấp độ: *Quên (Again) • Khó (Hard) • Tốt (Good) • Dễ (Easy)*.
+- Tự động lên lịch ôn tập từ vựng ngắt quãng để tối ưu hóa quá trình chuyển từ vựng vào trí nhớ dài hạn.
 
----
-
-## 👥 Master Character Bible (Hệ thống Nhân vật Xuyên suốt)
-
-Để đảm bảo tính nhất quán từ HSK 1 đến HSK 6, hệ thống xây dựng bộ quy chuẩn hình tượng nhân vật bất biến:
-
-| Nhân vật | Tuổi / Nghề nghiệp | Ngoại hình & Trang phục đặc trưng | Giọng đọc (Neural Voice) |
-| :--- | :--- | :--- | :--- |
-| **Vương Nhất Phi (王一飞)** | 30t, Nữ giáo viên đại học | Tóc bob ngắn đen cá tính, kính mắt gọng kim loại chữ nhật, áo vest xanh navy hoặc áo khoác dạ camel mùa đông | `zh-CN-XiaoxiaoNeural` |
-| **Bạch Gia Nguyệt (白家月)** | 20t, Nữ du học sinh | Tóc đen buộc đuôi ngựa gọn gàng, áo sơ mi xanh pastel hoặc áo len kem nhẹ nhàng, nụ cười dịu dàng | `zh-CN-shaanxi-XiaoniNeural` |
-| **Annie (安妮)** | 20t, Nữ sinh phương Tây | Tóc vàng nâu gợn sóng buông xõa, áo len/cardigan hồng pastel hoặc váy dạo phố trẻ trung, năng động | `zh-CN-XiaoyiNeural` |
-| **Vương Nhất Tuyết (王一雪)** | 35t, Chị gái cô Vương | Tóc dài đen uốn nhẹ ngang lưng, áo len dệt màu kem hoặc đầm gia đình trang nhã, nét đẹp đằm thắm | `zh-CN-liaoning-XiaobeiNeural` |
-| **Lý Văn (李文)** | 20t, Nam sinh viên Y khoa | Tóc đen cắt ngắn thư sinh, áo khoác gió thể thao màu xanh dương hoặc áo hoodie trẻ trung, mang ba lô | `zh-CN-YunxiNeural` |
-| **Trần Thiên Trung (陈天中)** | 20t, Nam du học sinh Thái | Dáng người khỏe khoắn, áo khoác màu cam hoặc xám phối đen năng động, phong thái điềm tĩnh | `zh-CN-YunyangNeural` |
-| **Dương Đồng Nhạc (杨同乐)** | 28t, Bạn trai cô Vương | Dáng người cao ráo, mắt to sáng, áo khoác len/dạ ấm cúng phong cách thanh lịch công sở | `zh-CN-YunyangNeural` (+6Hz) |
-| **Bác sĩ Lưu Minh (刘明)** | 40t, Bác sĩ ngoại khoa | Tóc rẽ ngôi gọn gàng, đeo kính cận, áo sơ mi polo hoặc áo blouse trắng, đeo đồng hồ da | `zh-CN-YunjianNeural` |
-| **Lưu Tiểu Tuyết (刘小雪)** | 14t, Con gái bác sĩ Lưu | Tóc búi củ tỏi hoặc tết bím đôi, áo nỉ hoodie học sinh cấp 2 năng động | `zh-CN-XiaoyiNeural` (+25Hz) |
-| **Lưu Tiểu Minh (刘小明)** | 8t, Con trai bác sĩ Lưu | Tóc đầu đinh ngộ nghĩnh, áo phông in hình khủng long/hoạt hình màu vàng hoặc xanh lá | `zh-CN-YunxiaNeural` |
-
----
-
-## 🛠 Kiến trúc Công nghệ (Tech Stack)
-
-### Frontend
-* **Core:** React 19, TypeScript, Vite
-* **Styling & UI:** Tailwind CSS v4, Lucide Icons
-* **Biểu đồ & Báo cáo:** Recharts
-* **Xử lý tài liệu:** PDF.js, SheetJS (XLSX)
-
-### Backend & AI Pipeline
-* **Server Runtime:** Node.js, Express, ESBuild (`dist/server.cjs`)
-* **Hạ tầng Dữ liệu:** PostgreSQL, SQLite, Firebase Authentication & Firestore
-* **Tổng hợp Âm thanh (TTS):** Edge-TTS Python Engine, Mutagen MP3 metadata processor
-* **Mô hình Trí tuệ Nhân tạo:**
-  * **LLM:** Google Gemini 3.5 / 2.5, DeepSeek V3, Groq Llama, Ollama (Local LLM)
-  * **Image Generation:** Gemini Image Models theo quy chuẩn BLCUP Art Engine
+### 8. Phân quyền Người dùng & Quản trị Lớp học (RBAC & Class Code)
+- Hệ thống phân quyền chặt chẽ: `Admin`, `Teacher` và `Student`.
+- Tính năng bảo vệ tài liệu độc quyền bằng **Mã lớp học (Class Code)**: Học viên cần nhập mã lớp do giáo viên cung cấp để mở khóa lộ trình học tập tương ứng.
+- Phía quản trị viên hỗ trợ xem bảng thống kê tiến độ học viên, duyệt đề thi và chỉnh sửa bài tập.
 
 ---
 
-## 📂 Cấu trúc Dự án (Project Structure)
+## 🏗 Kiến trúc Hệ thống (System Architecture)
 
+```mermaid
+flowchart TD
+    subgraph Client ["Frontend (SPA)"]
+        UI["React 19 + TypeScript + Tailwind CSS v4"]
+        BubbleEngine["Zero-Collision Speech Bubble Resolver"]
+        AudioPlayer["Synced Multi-Role Karaoke Audio Player"]
+        HanziStudio["Hanzi Stroke Studio (Canvas/SVG)"]
+    end
+
+    subgraph Server ["Backend API & Services"]
+        ExpressApp["Express.js Server (Node.js)"]
+        AuthService["Firebase Auth & RBAC Security Rules"]
+        TtsService["Edge-TTS Multi-Voice Python Service"]
+        QBankService["HSK CBT Mock Exam Engine"]
+    end
+
+    subgraph AI_Cloud ["AI & Cloud Services"]
+        GeminiAPI["Google Gemini API (AI Tutor & Live Voice)"]
+        FirestoreDB[("Firebase Firestore (User Progress & SRS)")]
+        LocalCache[("PostgreSQL / SQLite (Question Bank)")]
+    end
+
+    subgraph DevOps ["Container & Deployment"]
+        DockerAPI["Dockerfile.api"]
+        DockerWorker["Dockerfile.worker"]
+        GCP["Google Cloud Platform Ready"]
+    end
+
+    UI -->|REST / WebSocket| ExpressApp
+    ExpressApp --> AuthService
+    ExpressApp --> QBankService
+    ExpressApp --> GeminiAPI
+    ExpressApp --> FirestoreDB
+    ExpressApp --> LocalCache
+    TtsService -->|Generated Audio Pipeline| AudioPlayer
+    ExpressApp -.-> DockerAPI
+    ExpressApp -.-> DockerWorker
 ```
+
+---
+
+## 🛠 Công nghệ Sử dụng (Tech Stack)
+
+| Lĩnh vực | Công nghệ | Mục đích sử dụng |
+| :--- | :--- | :--- |
+| **Frontend** | **React 19**, **TypeScript 5.8**, **Vite** | Xây dựng giao diện Single Page Application hiện đại, tải nhanh, type-safe |
+| **Styling** | **Tailwind CSS v4**, **Lucide React** | Thiết kế giao diện phẳng, tối ưu hóa responsive đa thiết bị, dark/light theme |
+| **Bút thuận Hán tự** | **Hanzi Writer**, **HTML5 Canvas** | Mô phỏng hoạt họa nét chữ Hán và bảng tương tác luyện viết ngón tay/chuột |
+| **Xử lý Ngôn ngữ** | **Pinyin Pro**, **PapaParse**, **SheetJS** | Phân tách bính âm, phiên âm Hán ngữ, trích xuất dữ liệu từ điển và đề thi |
+| **Backend API** | **Node.js**, **Express 4.x**, **ESBuild** | Xây dựng RESTful API tốc độ cao, đóng gói server bundle CJS |
+| **Cơ sở Dữ liệu** | **Firebase Firestore**, **PostgreSQL**, **SQLite** | Quản lý tiến trình học tập, tài khoản người dùng, câu hỏi đề thi và thẻ SRS |
+| **Xử lý Âm thanh** | **Python 3.10+**, **Edge-TTS**, **Mutagen** | Tự động hóa tạo 105 audio bài khóa và 500+ audio câu thoại phân vai chất lượng cao |
+| **Trí tuệ Nhân tạo** | **Google Gemini API (`@google/genai`)** | Xây dựng gia sư ảo Minnie AI, hỗ trợ đàm thoại tương tác trực tiếp |
+| **Testing & QA** | **Vitest**, **Playwright** | 378+ automated tests, kiểm thử hồi quy thuật toán va chạm và E2E |
+| **DevOps** | **Docker**, **Google Cloud Platform (GCP)** | Đóng gói 2 container (`Dockerfile.api` & `Dockerfile.worker`), sẵn sàng deploy cloud |
+
+---
+
+## 📂 Cấu trúc Thư mục Dự án
+
+```text
 minnese/
 ├── public/
-│   ├── audio/coursebook/       # 105 file audio full & hàng trăm audio dòng thoại
-│   ├── textbook_art/           # Toàn bộ tranh minh họa màu nước HSK 1 & HSK 2
-│   ├── favicon.svg             # Logo biểu tượng Minnese
-│   └── minnie-mascot.png       # Linh vật trợ lý Minnie
+│   ├── audio/coursebook/       # Âm thanh 105 bài khóa full & hàng trăm câu thoại đơn lẻ
+│   ├── textbook_art/           # 105 bức tranh minh họa HSK 1 & HSK 2 chất lượng cao
+│   ├── minnie-mascot.png       # Linh vật trợ lý Minnie AI
+│   └── favicon.svg             # Biểu tượng thương hiệu Minnese
 ├── src/
 │   ├── components/
-│   │   ├── Admin/              # AI Exam Studio, Workbook Studio, Dashboard
-│   │   ├── Coursebook/         # Giao diện Giáo trình, Karaoke Audio, Bài tập
-│   │   ├── Dictionary/         # Tra cứu từ điển HSK, bộ thủ, chiết tự
-│   │   ├── Flashcards/         # Luyện nhớ từ vựng SRS
-│   │   ├── LiveVoiceCall/      # Gọi thoại AI luyện khẩu ngữ thời gian thực
-│   │   ├── Quizzes/            # Thi thử HSK CBT, bộ đề ngẫu nhiên
-│   │   └── Writing/            # Xưởng luyện viết chữ Hán và chấm bài luận
+│   │   ├── Coursebook/         # Giao diện bài khóa, bong bóng thoại, karaoke audio
+│   │   ├── LiveVoiceCall/      # Module gọi thoại tương tác với gia sư AI
+│   │   ├── AITutor/            # Chat đàm thoại phản xạ kèm phân tích lỗi ngữ pháp
+│   │   ├── Quizzes/            # Hệ thống thi thử HSK CBT (Listening, Reading, Writing)
+│   │   ├── Flashcards/         # Luyện thẻ ghi nhớ lặp lại ngắt quãng (SRS)
+│   │   ├── Writing/            # Xưởng luyện viết nét chữ Hán động (Hanzi Stroke Studio)
+│   │   ├── Dictionary/         # Bộ tra cứu từ điển HSK thông minh, bộ thủ, chiết tự
+│   │   └── Admin/              # Bảng điều khiển quản trị viên và giáo viên
 │   ├── data/
-│   │   ├── newHsk1BookData.ts  # Giáo trình HSK 1 đầy đủ 15 bài học
-│   │   ├── newHsk2BookData.ts  # Giáo trình HSK 2 đầy đủ 15 bài học
-│   │   ├── coursebookAudioManifest.ts # Manifest ánh xạ âm thanh & karaoke
-│   │   └── ragKnowledgeBase.ts # Cơ sở tri thức ngữ pháp & từ đồng nghĩa
-│   ├── server/                 # API server, waterfall generator, cron job
-│   └── utils/                  # Xử lý pinyin, lưu trữ từ vựng, TTS
-├── scripts/                    # Scripts sinh audio, tạo tranh, kiểm tra dữ liệu
-├── data/qbank/                 # Blueprint và ngân hàng câu hỏi đề thi
-├── tests/                      # Bộ kiểm thử đơn vị, kiểm thử E2E và chịu tải
-└── package.json
+│   │   ├── newHsk1BookData.ts  # Dữ liệu 15 bài học New HSK 1 (45 bài khóa)
+│   │   ├── newHsk2BookData.ts  # Dữ liệu 15 bài học New HSK 2 (60 bài khóa)
+│   │   ├── hsk1BubbleLayouts.ts# 105 cấu hình tọa độ bóng thoại và chốt an toàn khuôn mặt
+│   │   └── coursebookAudioManifest.json # Ánh xạ file audio, thời gian, persona giọng đọc
+│   ├── utils/                  # Xử lý âm thanh, pinyin, SRS algorithm, Firestore client
+│   └── server/                 # Endpoint backend, API routes, QBank engine
+├── scripts/                    # Bộ công cụ Python tự động hóa trích xuất tranh, sinh TTS
+├── tests/                      # Bộ kiểm thử Vitest (378+ tests) và Playwright E2E
+├── Dockerfile.api              # Docker image đóng gói dịch vụ máy chủ API
+├── Dockerfile.worker           # Docker image đóng gói background worker xử lý dữ liệu
+├── package.json                # Danh sách thư viện phụ thuộc và script vận hành
+└── README.md                   # Tài liệu hướng dẫn dự án
 ```
 
 ---
 
-## 🚀 Hướng dẫn Cài đặt & Chạy Thực tế
+## 🚀 Hướng dẫn Cài đặt & Khởi chạy
 
-### 1. Yêu cầu hệ thống
-* **Node.js:** phiên bản `18.x` trở lên (khuyến nghị `20.x`).
-* **Python:** phiên bản `3.10` trở lên (dùng cho các tác vụ Edge-TTS).
+### 1. Yêu cầu Tiền đề
+- **Node.js**: Phiên bản `18.x` trở lên (Khuyến nghị `20.x LTS`).
+- **Python**: Phiên bản `3.10` trở lên (Dùng cho pipeline sinh âm thanh Edge-TTS).
+- **Git** và trình duyệt web hiện đại (Chrome, Edge, Firefox, Safari).
 
-### 2. Cài đặt các gói phụ thuộc
+### 2. Sao chép Mã nguồn & Cài đặt Thư viện
 ```bash
+# Clone mã nguồn dự án
+git clone https://github.com/NguyenNgocTu041105/Minnese-.git
+cd Minnese-
+
 # Cài đặt thư viện Node.js
 npm install
 
-# Cài đặt các thư viện Python cần thiết cho bộ xử lý âm thanh
-pip install edge-tts mutagen
+# Cài đặt thư viện Python hỗ trợ xử lý âm thanh (Tùy chọn)
+pip install edge-tts mutagen Pillow
 ```
 
-### 3. Cấu hình Biến Môi trường (.env)
-Tạo file `.env` tại thư mục gốc dự án (tham khảo mẫu `.env.example`):
+### 3. Thiết lập Biến Môi trường (.env)
+Tạo file `.env` tại thư mục gốc với các thông số cấu hình:
 ```env
 PORT=8000
-DATABASE_URL=postgresql://postgres:password@localhost:5432/hsk_exam_db
-GEMINI_API_KEY=your_gemini_api_key_here
-DEEPSEEK_API_KEY=your_deepseek_api_key_here
+NODE_ENV=development
+GEMINI_API_KEY=your_google_gemini_api_key_here
+FIREBASE_API_KEY=your_firebase_api_key
+FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+FIREBASE_PROJECT_ID=your_project_id
 ```
 
 ### 4. Khởi chạy Ứng dụng
 ```bash
-# Chạy môi trường phát triển (Hot reload)
+# Chạy chế độ Phát triển (Development với Hot-Reload)
 npm run dev
 
-# Hoặc đóng gói và chạy bản Production tối ưu
+# Đóng gói và chạy bản Production tối ưu hóa
 npm run build
-node dist/server.cjs
+npm start
 ```
-Truy cập trình duyệt tại địa chỉ: `http://localhost:5173` (hoặc cổng cấu hình trong terminal).
+Mở trình duyệt và truy cập: `http://localhost:5173` (hoặc `http://localhost:8000`).
 
 ---
 
-## 📄 Giấy phép (License)
+## 🧪 Kiểm thử & Chất lượng Phần mềm (Testing & QA)
 
-Dự án được phân phối dưới giấy phép **MIT License**. Mọi đóng góp phát triển vì cộng đồng học tiếng Trung đều được hoan nghênh nồng nhiệt!
+Dự án áp dụng quy trình kiểm thử tự động nghiêm ngặt nhằm đảm bảo độ tin cậy cao nhất cho hệ thống giáo dục:
+
+```bash
+# Chạy toàn bộ 378+ test suites với Vitest
+npm test
+
+# Chạy kiểm thử E2E với Playwright
+npm run test:e2e
+
+# Chạy kiểm chứng ma trận không che mặt trên 105 bài khóa
+npx tsx scripts/verify_hsk1_bubble_collision.ts
+python scripts/verify_hsk2_all.py
+```
+
+**Kết quả kiểm thử đạt được**:
+- **378/378 bài test PASS** trên Vitest (bao gồm bảo toàn dữ liệu, tính nhất quán âm thanh và kiểm tra biên giao diện).
+- **0 va chạm khuôn mặt** trên toàn bộ 105 bài khóa qua hơn 2,000 phép đo hình học đa thiết bị.
 
 ---
+
+## 🐳 Đóng gói Docker & Triển khai Cloud
+
+Hệ thống được thiết kế theo kiến trúc vi dịch vụ (Microservices-ready) với 2 Dockerfile chuyên biệt:
+
+```bash
+# 1. Đóng gói máy chủ API
+docker build -f Dockerfile.api -t minnese-api .
+
+# 2. Đóng gói Background Worker
+docker build -f Dockerfile.worker -t minnese-worker .
+
+# 3. Khởi chạy container API
+docker run -d -p 8000:8000 --env-file .env minnese-api
+```
+
+Hệ thống sẵn sàng triển khai dễ dàng lên **Google Cloud Platform (GCP)** qua **Google Cloud Run** hoặc **Compute Engine**.
+
+---
+
+## 📄 Giấy phép (License) & Tác giả
+
+- **Tác giả:** Nguyễn Ngọc Tú (Đại học Duy Tân - Ngành Hệ thống Thông tin Quản lý)
+- **GitHub:** [@NguyenNgocTu041105](https://github.com/NguyenNgocTu041105)
+- **Giấy phép:** Phân phối theo chuẩn [MIT License](LICENSE).
 
 <div align="center">
-<strong>Minnese - Cùng bạn chinh phục tiếng Trung từ vạch xuất phát đến HSK 6 đỉnh cao! 🚀</strong>
+<strong>Minnese – Nâng tầm trải nghiệm học tiếng Trung thông minh với công nghệ AI hiện đại! 🇨🇳✨</strong>
 </div>

@@ -1,21 +1,16 @@
-# -*- coding: utf-8 -*-
-import fitz # PyMuPDF
-import sys, os
-
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
+import fitz
+import os
 
 pdf_path = r"D:\giáo trình hsk\[Xixi 3.0] GTC HSK2.pdf"
 doc = fitz.open(pdf_path)
-print("Total pages in HSK 2 PDF:", len(doc))
 
-out_dir = r"scratch\pdf_pages_hsk2"
+out_dir = r"C:\Users\Tunn\.gemini\antigravity\brain\83876778-6cee-4b77-ad06-7ebd339ce89f\temp_inspect"
 os.makedirs(out_dir, exist_ok=True)
 
-# Render pages 1 to 10 to inspect table of contents
-for p in range(min(10, len(doc))):
+# Save TOC pages (pages 8, 9, 10, 11, 12, 13, 14 in 0-indexed: 7, 8, 9, 10, 11, 12, 13)
+for p in range(7, 14):
     page = doc[p]
     pix = page.get_pixmap(dpi=150)
-    out_path = os.path.join(out_dir, f"page_{p+1}.jpg")
-    pix.save(out_path)
-    print(f"Rendered page {p+1} -> {out_path}")
+    pix.save(os.path.join(out_dir, f"hsk2_page_{p+1}.png"))
+
+print("Saved HSK2 TOC pages to temp_inspect")

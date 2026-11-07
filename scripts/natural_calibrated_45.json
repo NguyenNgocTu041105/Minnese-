@@ -1,0 +1,2030 @@
+{
+  "hsk1-l1-t1": {
+    "王一飞": {
+      "mouthTarget": {
+        "x": 42.5,
+        "y": 42.0
+      },
+      "faceBox": [
+        37.0,
+        31.0,
+        46.0,
+        44.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 42,
+        "y": 20
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "小语": {
+      "mouthTarget": {
+        "x": 71.5,
+        "y": 35.0
+      },
+      "faceBox": [
+        67.0,
+        24.0,
+        77.0,
+        37.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l1-t2": {
+    "学生们": {
+      "mouthTarget": {
+        "x": 26.5,
+        "y": 66.0
+      },
+      "faceBox": [
+        21.0,
+        56.0,
+        32.0,
+        68.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 26,
+        "y": 40
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 65.5,
+        "y": 27.0
+      },
+      "faceBox": [
+        62.0,
+        21.0,
+        69.0,
+        29.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 66,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "小语": {
+      "mouthTarget": {
+        "x": 79.5,
+        "y": 24.5
+      },
+      "faceBox": [
+        76.0,
+        18.0,
+        84.0,
+        26.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 80,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l1-t3": {
+    "学生们": {
+      "mouthTarget": {
+        "x": 41.5,
+        "y": 57.0
+      },
+      "faceBox": [
+        37.0,
+        49.0,
+        44.0,
+        58.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 42,
+        "y": 40
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 74.0,
+        "y": 22.5
+      },
+      "faceBox": [
+        71.5,
+        17.0,
+        77.0,
+        24.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "小语": {
+      "mouthTarget": {
+        "x": 84.5,
+        "y": 22.0
+      },
+      "faceBox": [
+        82.0,
+        17.5,
+        88.0,
+        24.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 84,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l10-t1": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 34.5,
+        "y": 35.5
+      },
+      "faceBox": [
+        27.0,
+        22.0,
+        40.0,
+        40.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "店员": {
+      "mouthTarget": {
+        "x": 76.5,
+        "y": 35.5
+      },
+      "faceBox": [
+        71.0,
+        22.0,
+        86.0,
+        40.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 76,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l10-t2": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 33.5,
+        "y": 31.5
+      },
+      "faceBox": [
+        26.0,
+        21.0,
+        38.0,
+        37.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "摊主": {
+      "mouthTarget": {
+        "x": 75.5,
+        "y": 31.5
+      },
+      "faceBox": [
+        72.0,
+        20.0,
+        84.0,
+        35.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 76,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l10-t3": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 41.5,
+        "y": 40.5
+      },
+      "faceBox": [
+        32.0,
+        27.0,
+        47.0,
+        45.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 32,
+        "y": 14
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 235
+    },
+    "刘明": {
+      "mouthTarget": {
+        "x": 65.5,
+        "y": 33.5
+      },
+      "faceBox": [
+        60.0,
+        19.0,
+        76.0,
+        39.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 66,
+        "y": 6
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l11-t1": {
+    "王一飞": {
+      "mouthTarget": {
+        "x": 24.0,
+        "y": 32.0
+      },
+      "faceBox": [
+        15.0,
+        17.0,
+        34.0,
+        37.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 38,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    },
+    "李文": {
+      "mouthTarget": {
+        "x": 74.5,
+        "y": 33.5
+      },
+      "faceBox": [
+        67.0,
+        18.0,
+        84.0,
+        38.0
+      ],
+      "placement": "custom",
+      "bubblePos": {
+        "x": 90,
+        "y": 49
+      },
+      "tailOrigin": "top",
+      "maxWidth": 160
+    }
+  },
+  "hsk1-l11-t2": {
+    "王一飞": {
+      "mouthTarget": {
+        "x": 33.5,
+        "y": 38.5
+      },
+      "faceBox": [
+        19.0,
+        24.0,
+        37.0,
+        43.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "李文": {
+      "mouthTarget": {
+        "x": 71.0,
+        "y": 37.5
+      },
+      "faceBox": [
+        66.0,
+        23.0,
+        82.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 70,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l11-t3": {
+    "刘明": {
+      "mouthTarget": {
+        "x": 38.5,
+        "y": 34.0
+      },
+      "faceBox": [
+        22.0,
+        12.0,
+        44.0,
+        40.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 58,
+        "y": 16
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 210
+    },
+    "刘小雪": {
+      "mouthTarget": {
+        "x": 72.5,
+        "y": 46.5
+      },
+      "faceBox": [
+        67.0,
+        27.0,
+        87.0,
+        52.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l12-t1": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 29.5,
+        "y": 37.5
+      },
+      "faceBox": [
+        21.0,
+        18.0,
+        38.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 30,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 72.5,
+        "y": 36.5
+      },
+      "faceBox": [
+        64.0,
+        22.0,
+        81.0,
+        40.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l12-t2": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 32.5,
+        "y": 39.5
+      },
+      "faceBox": [
+        21.0,
+        24.0,
+        37.0,
+        43.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 32,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 69.5,
+        "y": 35.5
+      },
+      "faceBox": [
+        64.0,
+        21.0,
+        80.0,
+        40.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 70,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l12-t3": {
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 31.0,
+        "y": 34.5
+      },
+      "faceBox": [
+        20.0,
+        19.0,
+        37.0,
+        39.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 46,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    },
+    "医生": {
+      "mouthTarget": {
+        "x": 72.5,
+        "y": 35.5
+      },
+      "faceBox": [
+        67.0,
+        20.0,
+        84.0,
+        39.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 58,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 175
+    }
+  },
+  "hsk1-l13-t1": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 34.5,
+        "y": 31.0
+      },
+      "faceBox": [
+        24.0,
+        12.0,
+        40.0,
+        36.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 10,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 160
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 72.5,
+        "y": 30.5
+      },
+      "faceBox": [
+        66.0,
+        12.0,
+        84.0,
+        35.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 52,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 175
+    }
+  },
+  "hsk1-l13-t2": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 28.5,
+        "y": 43.5
+      },
+      "faceBox": [
+        18.0,
+        29.0,
+        34.0,
+        48.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 28,
+        "y": 18
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "服务员": {
+      "mouthTarget": {
+        "x": 70.0,
+        "y": 32.5
+      },
+      "faceBox": [
+        63.0,
+        14.0,
+        78.0,
+        36.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 48,
+        "y": 18
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 210
+    }
+  },
+  "hsk1-l13-t3": {
+    "刘明": {
+      "mouthTarget": {
+        "x": 38.0,
+        "y": 35.5
+      },
+      "faceBox": [
+        24.0,
+        13.0,
+        44.0,
+        41.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 10,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 160
+    },
+    "服务员": {
+      "mouthTarget": {
+        "x": 67.5,
+        "y": 27.5
+      },
+      "faceBox": [
+        60.0,
+        14.0,
+        77.0,
+        32.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 90,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 160
+    }
+  },
+  "hsk1-l14-t1": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 34.5,
+        "y": 30.5
+      },
+      "faceBox": [
+        24.0,
+        12.0,
+        39.0,
+        35.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 10,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 160
+    },
+    "陈天中": {
+      "mouthTarget": {
+        "x": 71.0,
+        "y": 31.0
+      },
+      "faceBox": [
+        64.0,
+        13.0,
+        83.0,
+        36.0
+      ],
+      "placement": "custom",
+      "bubblePos": {
+        "x": 89,
+        "y": 45
+      },
+      "tailOrigin": "top",
+      "maxWidth": 190
+    }
+  },
+  "hsk1-l14-t2": {
+    "陈天中": {
+      "mouthTarget": {
+        "x": 39.0,
+        "y": 43.5
+      },
+      "faceBox": [
+        29.0,
+        30.0,
+        41.0,
+        48.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 38,
+        "y": 16
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 50.5,
+        "y": 39.5
+      },
+      "faceBox": [
+        47.0,
+        33.0,
+        52.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 50,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 60.5,
+        "y": 23.0
+      },
+      "faceBox": [
+        58.0,
+        18.0,
+        62.0,
+        24.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 78,
+        "y": 16
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l14-t3": {
+    "刘明": {
+      "mouthTarget": {
+        "x": 34.0,
+        "y": 39.5
+      },
+      "faceBox": [
+        25.0,
+        23.0,
+        38.0,
+        44.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一雪": {
+      "mouthTarget": {
+        "x": 55.5,
+        "y": 41.5
+      },
+      "faceBox": [
+        51.0,
+        25.0,
+        63.0,
+        46.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 58,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l15-t1": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 21.5,
+        "y": 57.0
+      },
+      "faceBox": [
+        15.0,
+        38.0,
+        26.0,
+        58.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 10,
+        "y": 26
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 190
+    },
+    "李文": {
+      "mouthTarget": {
+        "x": 37.0,
+        "y": 25.5
+      },
+      "faceBox": [
+        30.0,
+        6.0,
+        42.0,
+        28.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 56,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 160
+    },
+    "安妮": {
+      "mouthTarget": {
+        "x": 72.0,
+        "y": 54.0
+      },
+      "faceBox": [
+        68.0,
+        38.0,
+        77.0,
+        56.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 26
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "陈天中": {
+      "mouthTarget": {
+        "x": 78.0,
+        "y": 54.5
+      },
+      "faceBox": [
+        74.0,
+        33.0,
+        87.0,
+        57.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 84,
+        "y": 22
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l15-t2": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 22.0,
+        "y": 56.5
+      },
+      "faceBox": [
+        15.0,
+        38.0,
+        26.0,
+        58.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 20,
+        "y": 24
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "李文": {
+      "mouthTarget": {
+        "x": 51.5,
+        "y": 45.5
+      },
+      "faceBox": [
+        43.0,
+        27.0,
+        55.0,
+        48.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 52,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "安妮": {
+      "mouthTarget": {
+        "x": 70.5,
+        "y": 53.5
+      },
+      "faceBox": [
+        66.0,
+        37.0,
+        78.0,
+        56.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 74,
+        "y": 22
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "陈天中": {
+      "mouthTarget": {
+        "x": 78.5,
+        "y": 54.0
+      },
+      "faceBox": [
+        75.0,
+        33.0,
+        88.0,
+        57.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 86,
+        "y": 24
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l15-t3": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 27.5,
+        "y": 38.5
+      },
+      "faceBox": [
+        18.0,
+        17.0,
+        31.0,
+        42.0
+      ],
+      "placement": "custom",
+      "bubblePos": {
+        "x": 10,
+        "y": 55
+      },
+      "tailOrigin": "top",
+      "maxWidth": 160
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 52.5,
+        "y": 33.5
+      },
+      "faceBox": [
+        41.0,
+        7.0,
+        58.0,
+        38.0
+      ],
+      "placement": "custom",
+      "bubblePos": {
+        "x": 48,
+        "y": 55
+      },
+      "tailOrigin": "top",
+      "maxWidth": 210
+    },
+    "安妮": {
+      "mouthTarget": {
+        "x": 73.5,
+        "y": 39.0
+      },
+      "faceBox": [
+        68.0,
+        17.0,
+        83.0,
+        42.0
+      ],
+      "placement": "custom",
+      "bubblePos": {
+        "x": 89,
+        "y": 55
+      },
+      "tailOrigin": "top",
+      "maxWidth": 175
+    }
+  },
+  "hsk1-l2-t1": {
+    "陈天中": {
+      "mouthTarget": {
+        "x": 28.5,
+        "y": 38.5
+      },
+      "faceBox": [
+        22.0,
+        30.0,
+        30.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 28,
+        "y": 22
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 74.0,
+        "y": 25.5
+      },
+      "faceBox": [
+        71.0,
+        18.0,
+        78.0,
+        27.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 74,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l2-t2": {
+    "陈天中": {
+      "mouthTarget": {
+        "x": 40.0,
+        "y": 31.0
+      },
+      "faceBox": [
+        34.0,
+        20.0,
+        45.0,
+        33.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 40,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 64.5,
+        "y": 32.5
+      },
+      "faceBox": [
+        61.0,
+        22.0,
+        72.0,
+        35.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 64,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l2-t3": {
+    "李文": {
+      "mouthTarget": {
+        "x": 30.0,
+        "y": 20.0
+      },
+      "faceBox": [
+        24.0,
+        11.0,
+        34.0,
+        23.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 54,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 75.5,
+        "y": 39.0
+      },
+      "faceBox": [
+        73.0,
+        30.0,
+        83.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 76,
+        "y": 22
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l3-t1": {
+    "李文": {
+      "mouthTarget": {
+        "x": 33.5,
+        "y": 34.0
+      },
+      "faceBox": [
+        26.0,
+        22.0,
+        36.0,
+        37.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 77.0,
+        "y": 39.5
+      },
+      "faceBox": [
+        74.0,
+        30.0,
+        84.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 76,
+        "y": 20
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l3-t2": {
+    "陈天中": {
+      "mouthTarget": {
+        "x": 42.5,
+        "y": 35.0
+      },
+      "faceBox": [
+        34.0,
+        13.0,
+        49.0,
+        38.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 22,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 235
+    },
+    "安妮": {
+      "mouthTarget": {
+        "x": 62.5,
+        "y": 39.5
+      },
+      "faceBox": [
+        56.0,
+        24.0,
+        68.0,
+        43.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 64,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l3-t3": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 64.5,
+        "y": 46.0
+      },
+      "faceBox": [
+        58.0,
+        15.0,
+        77.0,
+        50.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 90,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 160
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 44.5,
+        "y": 58.5
+      },
+      "faceBox": [
+        41.0,
+        50.0,
+        48.0,
+        62.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 18,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l4-t1": {
+    "刘明": {
+      "mouthTarget": {
+        "x": 39.5,
+        "y": 37.0
+      },
+      "faceBox": [
+        30.0,
+        22.0,
+        44.0,
+        41.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 40,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一雪": {
+      "mouthTarget": {
+        "x": 61.5,
+        "y": 38.5
+      },
+      "faceBox": [
+        57.0,
+        24.0,
+        69.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 64,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l4-t2": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 33.0,
+        "y": 40.5
+      },
+      "faceBox": [
+        25.0,
+        28.0,
+        36.0,
+        44.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 32,
+        "y": 16
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 69.0,
+        "y": 37.5
+      },
+      "faceBox": [
+        65.0,
+        25.0,
+        77.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 68,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l4-t3": {
+    "刘小明": {
+      "mouthTarget": {
+        "x": 25.0,
+        "y": 56.0
+      },
+      "faceBox": [
+        17.0,
+        45.0,
+        28.0,
+        58.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 24,
+        "y": 38
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一雪": {
+      "mouthTarget": {
+        "x": 43.0,
+        "y": 28.5
+      },
+      "faceBox": [
+        37.0,
+        20.0,
+        47.0,
+        32.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 42,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 67.5,
+        "y": 29.5
+      },
+      "faceBox": [
+        63.0,
+        19.0,
+        75.0,
+        32.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 68,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l5-t1": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 42.0,
+        "y": 35.5
+      },
+      "faceBox": [
+        34.0,
+        22.0,
+        47.0,
+        39.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 38,
+        "y": 12
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "刘明": {
+      "mouthTarget": {
+        "x": 63.5,
+        "y": 33.0
+      },
+      "faceBox": [
+        58.0,
+        18.0,
+        74.0,
+        37.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 50,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l5-t2": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 33.0,
+        "y": 40.5
+      },
+      "faceBox": [
+        25.0,
+        28.0,
+        36.0,
+        44.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 32,
+        "y": 18
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 69.0,
+        "y": 37.5
+      },
+      "faceBox": [
+        65.0,
+        25.0,
+        77.0,
+        42.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 80,
+        "y": 10
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l5-t3": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 33.0,
+        "y": 38.0
+      },
+      "faceBox": [
+        25.0,
+        26.0,
+        36.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 32,
+        "y": 16
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 69.5,
+        "y": 33.5
+      },
+      "faceBox": [
+        64.0,
+        20.0,
+        79.0,
+        37.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 70,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l6-t1": {
+    "李文": {
+      "mouthTarget": {
+        "x": 35.5,
+        "y": 29.5
+      },
+      "faceBox": [
+        27.0,
+        14.0,
+        41.0,
+        33.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 58,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 76.5,
+        "y": 43.5
+      },
+      "faceBox": [
+        73.0,
+        32.0,
+        83.0,
+        46.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 76,
+        "y": 22
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l6-t2": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 34.0,
+        "y": 50.0
+      },
+      "faceBox": [
+        24.0,
+        34.0,
+        38.0,
+        54.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 26
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "陈天中": {
+      "mouthTarget": {
+        "x": 63.0,
+        "y": 33.5
+      },
+      "faceBox": [
+        56.0,
+        13.0,
+        73.0,
+        37.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 86,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l6-t3": {
+    "刘小明": {
+      "mouthTarget": {
+        "x": 26.0,
+        "y": 57.0
+      },
+      "faceBox": [
+        17.0,
+        45.0,
+        28.0,
+        60.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 12,
+        "y": 34
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 210
+    },
+    "刘明": {
+      "mouthTarget": {
+        "x": 39.5,
+        "y": 38.5
+      },
+      "faceBox": [
+        31.0,
+        24.0,
+        43.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 40,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一雪": {
+      "mouthTarget": {
+        "x": 59.5,
+        "y": 40.5
+      },
+      "faceBox": [
+        55.0,
+        28.0,
+        66.0,
+        44.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 62,
+        "y": 18
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "刘小雪": {
+      "mouthTarget": {
+        "x": 78.0,
+        "y": 53.5
+      },
+      "faceBox": [
+        74.0,
+        40.0,
+        87.0,
+        56.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 86,
+        "y": 30
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l7-t1": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 27.5,
+        "y": 41.0
+      },
+      "faceBox": [
+        16.0,
+        22.0,
+        35.0,
+        47.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 28,
+        "y": 6
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "安妮": {
+      "mouthTarget": {
+        "x": 73.5,
+        "y": 41.5
+      },
+      "faceBox": [
+        64.0,
+        24.0,
+        81.0,
+        47.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 74,
+        "y": 8
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l7-t2": {
+    "李文": {
+      "mouthTarget": {
+        "x": 28.5,
+        "y": 38.5
+      },
+      "faceBox": [
+        15.0,
+        16.0,
+        35.0,
+        43.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 28,
+        "y": 6
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 73.0,
+        "y": 44.5
+      },
+      "faceBox": [
+        66.0,
+        26.0,
+        82.0,
+        49.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l7-t3": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 27.5,
+        "y": 36.5
+      },
+      "faceBox": [
+        16.0,
+        18.0,
+        33.0,
+        41.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 28,
+        "y": 6
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "刘明": {
+      "mouthTarget": {
+        "x": 75.0,
+        "y": 37.0
+      },
+      "faceBox": [
+        67.0,
+        18.0,
+        85.0,
+        42.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 74,
+        "y": 6
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l8-t1": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 36.0,
+        "y": 46.5
+      },
+      "faceBox": [
+        29.0,
+        30.0,
+        41.0,
+        50.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 36,
+        "y": 22
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "王一飞": {
+      "mouthTarget": {
+        "x": 57.5,
+        "y": 31.5
+      },
+      "faceBox": [
+        52.0,
+        19.0,
+        63.0,
+        34.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 58,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "陈天中": {
+      "mouthTarget": {
+        "x": 70.0,
+        "y": 42.5
+      },
+      "faceBox": [
+        65.0,
+        29.0,
+        76.0,
+        46.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 80,
+        "y": 20
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l8-t2": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 29.5,
+        "y": 44.5
+      },
+      "faceBox": [
+        20.0,
+        24.0,
+        35.0,
+        48.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 30,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "李文": {
+      "mouthTarget": {
+        "x": 74.5,
+        "y": 43.5
+      },
+      "faceBox": [
+        66.0,
+        21.0,
+        84.0,
+        48.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 74,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l8-t3": {
+    "刘明": {
+      "mouthTarget": {
+        "x": 38.5,
+        "y": 32.5
+      },
+      "faceBox": [
+        27.0,
+        14.0,
+        43.0,
+        37.0
+      ],
+      "placement": "top-left",
+      "bubblePos": {
+        "x": 12,
+        "y": 6
+      },
+      "tailOrigin": "bottom-right",
+      "maxWidth": 175
+    },
+    "小胡": {
+      "mouthTarget": {
+        "x": 65.5,
+        "y": 33.5
+      },
+      "faceBox": [
+        60.0,
+        15.0,
+        75.0,
+        38.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 88,
+        "y": 8
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 175
+    }
+  },
+  "hsk1-l9-t1": {
+    "李文": {
+      "mouthTarget": {
+        "x": 28.5,
+        "y": 38.0
+      },
+      "faceBox": [
+        15.0,
+        16.0,
+        35.0,
+        42.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 52,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    },
+    "白家月": {
+      "mouthTarget": {
+        "x": 73.0,
+        "y": 44.0
+      },
+      "faceBox": [
+        66.0,
+        26.0,
+        82.0,
+        49.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 72,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l9-t2": {
+    "白家月": {
+      "mouthTarget": {
+        "x": 36.5,
+        "y": 44.5
+      },
+      "faceBox": [
+        25.0,
+        33.0,
+        39.0,
+        51.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 34,
+        "y": 20
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "陈天中": {
+      "mouthTarget": {
+        "x": 60.5,
+        "y": 28.0
+      },
+      "faceBox": [
+        54.0,
+        14.0,
+        69.0,
+        36.0
+      ],
+      "placement": "top-right",
+      "bubblePos": {
+        "x": 84,
+        "y": 6
+      },
+      "tailOrigin": "bottom-left",
+      "maxWidth": 235
+    }
+  },
+  "hsk1-l9-t3": {
+    "王一雪": {
+      "mouthTarget": {
+        "x": 33.0,
+        "y": 44.5
+      },
+      "faceBox": [
+        21.0,
+        26.0,
+        38.0,
+        49.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 32,
+        "y": 14
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    },
+    "杨同乐": {
+      "mouthTarget": {
+        "x": 66.5,
+        "y": 42.0
+      },
+      "faceBox": [
+        61.0,
+        24.0,
+        78.0,
+        46.0
+      ],
+      "placement": "top",
+      "bubblePos": {
+        "x": 66,
+        "y": 10
+      },
+      "tailOrigin": "bottom",
+      "maxWidth": 235
+    }
+  }
+}

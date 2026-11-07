@@ -1307,24 +1307,23 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                     : null;
                 const activeManifestLine = activeLineIdx >= 0 ? manifest?.lines?.[activeLineIdx] : null;
 
-                // Calculate exact 2D speaker head coordinate (X%, Y%) and dynamic callout placement
+                // Calculate exact 2D speaker head coordinate (X%, Y%) and natural comic balloon placement
                 const coords = activeLine
                   ? getSpeakerCoords(textItem.id, activeLine.speaker, textItem.lines, textItem.speakerAnchors as Record<string, CharacterAnchor2D | number> | undefined)
                   : { x: 50, y: 28 };
 
                 const headX = coords.x;
                 // Minimum top clearance so dialogue card doesn't clip off the top boundary
-                const headY = Math.max(18, coords.y);
+                const headY = Math.max(16, coords.y);
 
+                // Smart comic balloon alignment:
+                // When character is on left (<=38%), balloon shifts rightward into open space with tail on the left pointing down to speaker
+                // When character is on right (>=62%), balloon shifts leftward into open space with tail on the right pointing down to speaker
                 const cardShiftPercent =
-                  headX <= 22
-                    ? 16
-                    : headX <= 35
-                    ? 28
-                    : headX >= 80
-                    ? 84
-                    : headX >= 65
-                    ? 70
+                  headX <= 38
+                    ? 22
+                    : headX >= 62
+                    ? 78
                     : 50;
 
                 const pointerLeftPercent = `${cardShiftPercent}%`;
@@ -1332,62 +1331,69 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                 return (
                   <div
                     key={textItem.id}
-                    className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-5 sm:p-6 shadow-xs space-y-5"
+                    className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-4 sm:p-5 shadow-xs space-y-4"
                   >
-                    {/* Centered Scene Illustration with Precision Dialogue Bubble Anchored Directly at Speaker Head */}
+                    {/* Centered Scene Illustration with Natural Comic Speech Balloon */}
                     {illustration && (
-                      <div className="w-full max-w-4xl mx-auto overflow-hidden rounded-2xl sm:rounded-3xl border border-[var(--color-border)] shadow-md bg-[var(--color-bg-secondary)] relative">
-                        <div className="relative aspect-[4/3] sm:aspect-[1024/765] max-h-[600px] w-full overflow-hidden bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center">
+                      <div className="w-full max-w-4xl mx-auto overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-xs bg-[var(--color-bg-secondary)] relative">
+                        {/* Balanced aspect ratio: compact height so lesson content below remains visible without endless scrolling */}
+                        <div className="relative aspect-[4/3] sm:aspect-[16/10] max-h-[340px] sm:max-h-[380px] md:max-h-[420px] w-full overflow-hidden bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center">
+                          {/* Frozen stable artwork: no transitions or lazy reload on dialogue progression */}
                           <img
                             src={`${illustration.src}?v=20261107_v7`}
                             alt={textItem.title}
-                            className="w-full h-full object-contain sm:object-cover transition-transform duration-700"
-                            loading="lazy"
+                            className="w-full h-full object-contain sm:object-cover pointer-events-none select-none"
+                            loading="eager"
+                            decoding="async"
                           />
 
-                          {/* Top Controls Overlay: Toggle Speech Bubble */}
-                          <div className="absolute top-2.5 right-2.5 z-20">
+                          {/* Top Controls Overlay: Subtle toggle for speech bubbles */}
+                          <div className="absolute top-2 right-2 z-20">
                             <button
                               type="button"
                               onClick={() => setShowSpeechBubbles(!showSpeechBubbles)}
-                              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/40 hover:bg-black/60 text-white/90 backdrop-blur-xs transition-all flex items-center gap-1 cursor-pointer select-none"
                               title={showSpeechBubbles ? 'Ẩn bong bóng lời thoại' : 'Hiện bong bóng lời thoại'}
                             >
-                              <MessageSquare className="w-3 h-3 text-[var(--color-primary)]" />
+                              <MessageSquare className="w-2.5 h-2.5 text-white/80" />
                               <span>{showSpeechBubbles ? 'Bóng thoại: BẬT' : 'Bóng thoại: TẮT'}</span>
                             </button>
                           </div>
 
-                          {/* Precision Dialogue Bubble anchored right above speaker head */}
+                          {/* Authentic Comic Speech Balloon (Integrated organically into the artwork, NOT a generic UI card) */}
                           {activeLine && showSpeechBubbles && (
                             <div
-                              key={`bubble-${textItem.id}-${activeLineIdx}`}
-                              className="absolute z-20 transition-all duration-300 animate-in fade-in zoom-in-95 pointer-events-auto"
+                              key={`bubble-${textItem.id}`}
+                              className="absolute z-20 pointer-events-auto transition-[top,left,transform] duration-300 ease-out"
                               style={{
                                 top: `${headY}%`,
                                 left: `${headX}%`,
                                 transform: `translate(-${cardShiftPercent}%, calc(-100% - 10px))`,
                               }}
                             >
-                              {/* Inner card: Pure WHITE background, only Chinese characters + Vietnamese meaning, NO pinyin, NO speaker title */}
+                              {/* Organic rounded comic speech balloon with continuous comic ink border */}
                               <div
                                 onClick={() => handlePlayLineAudio(textItem.id, activeLineIdx, activeLine.hanzi)}
-                                className="relative bg-white text-slate-900 rounded-2xl px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.22)] border border-slate-200/90 whitespace-normal text-center min-w-[120px] max-w-[260px] sm:max-w-[320px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
+                                className="relative bg-white/95 text-slate-900 rounded-[18px] sm:rounded-[20px] px-3 py-1.5 sm:px-3.5 sm:py-2 shadow-[0_3px_10px_rgba(0,0,0,0.18)] border-[1.5px] border-slate-800/85 whitespace-normal text-center min-w-[90px] max-w-[190px] sm:max-w-[230px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
                                 title="Bấm để nghe đọc lại câu thoại này"
                               >
-                                {/* Text tiếng Trung */}
-                                <div className="text-sm sm:text-base md:text-lg font-bold font-chinese text-slate-900 tracking-wide leading-tight">
-                                  {activeLine.hanzi}
+                                <div key={activeLineIdx} className="animate-in fade-in duration-200">
+                                  {/* Text tiếng Trung (chữ Hán tự nhiên, nét mực thanh gọn, không che mặt) */}
+                                  <div className="text-xs sm:text-sm font-bold font-chinese text-slate-900 tracking-normal leading-snug">
+                                    {activeLine.hanzi}
+                                  </div>
+
+                                  {/* Nghĩa tiếng Việt ở dưới (phụ đề mộc mạc, không kẻ vạch ngăn cách thô cứng) */}
+                                  {activeLine.vietnamese && (
+                                    <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
+                                      {activeLine.vietnamese}
+                                    </div>
+                                  )}
                                 </div>
 
-                                {/* Nghĩa tiếng Việt ở dưới */}
-                                <div className="text-[11px] sm:text-xs text-slate-600 font-medium pt-1 mt-1 border-t border-slate-100 leading-snug">
-                                  {activeLine.vietnamese}
-                                </div>
-
-                                {/* Mũi tên SVG chỉ đúng chuẩn vào đầu người nói */}
+                                {/* Đuôi thoại nối liền tự nhiên vào bong bóng (Seamless Comic Pointer Tail) */}
                                 <div
-                                  className="absolute -bottom-2.5 pointer-events-none"
+                                  className="absolute -bottom-[9px] pointer-events-none"
                                   style={{
                                     left: pointerLeftPercent,
                                     transform: 'translateX(-50%)',
@@ -1397,15 +1403,18 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                                     width="16"
                                     height="10"
                                     viewBox="0 0 16 10"
-                                    className="filter drop-shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
-                                    fill="none"
+                                    className="overflow-visible"
                                   >
-                                    <path d="M0,0 L16,0 L8,9.5 Z" fill="#ffffff" />
+                                    {/* Lớp nền trắng che đường viền đáy của card tạo sự liền mạch */}
+                                    <path d="M1,-1 L15,-1 L8,9.5 Z" fill="#ffffff" />
+                                    {/* Hai nét mực viền đuôi thoại tiếp nối chuẩn xác nét viền bóng thoại */}
                                     <path
-                                      d="M0,0 L8,9.5 L16,0"
-                                      stroke="#e2e8f0"
-                                      strokeWidth="1.2"
+                                      d="M1,0 L8,9.5 L15,0"
+                                      stroke="rgba(30,41,59,0.85)"
+                                      strokeWidth="1.5"
+                                      strokeLinecap="round"
                                       strokeLinejoin="round"
+                                      fill="none"
                                     />
                                   </svg>
                                 </div>
@@ -1463,8 +1472,8 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                       </button>
                     </div>
 
-                    {/* Dialogue Lines with Persona and Karaoke Highlighting */}
-                    <div className="space-y-3 pt-1">
+                    {/* Dialogue Lines: Clean, airy and focused with natural speaker indicators */}
+                    <div className="space-y-2.5 pt-1">
                       {textItem.lines.map((line, lIdx) => {
                         const lineKey = `${textItem.id}-${lIdx}`;
                         const isSpeaking = playingLineId === lineKey;
@@ -1477,48 +1486,43 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                               setSelectedLineMap((prev) => ({ ...prev, [textItem.id]: lIdx }));
                               handlePlayLineAudio(textItem.id, lIdx, line.hanzi);
                             }}
-                            className={`p-4 rounded-xl border transition-all duration-300 flex items-start justify-between gap-4 cursor-pointer ${
+                            className={`p-3 sm:p-3.5 rounded-xl border transition-all duration-200 flex items-start justify-between gap-3 cursor-pointer ${
                               isSpeaking
-                                ? 'bg-rose-50/90 border-rose-400 dark:bg-rose-950/40 ring-2 ring-rose-400/40 shadow-sm scale-[1.008]'
+                                ? 'bg-rose-50/80 border-rose-300 dark:bg-rose-950/40 dark:border-rose-700/60 shadow-xs'
                                 : activeLineIdx === lIdx
-                                ? 'bg-[var(--color-surface)] border-[var(--color-primary)]/60 shadow-xs'
-                                : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-rose-300/60 dark:hover:border-rose-700/50'
+                                ? 'bg-[var(--color-surface)] border-[var(--color-primary)]/50 shadow-2xs'
+                                : 'bg-[var(--color-bg-secondary)]/60 border-[var(--color-border)] hover:bg-[var(--color-surface)] hover:border-slate-300 dark:hover:border-slate-700'
                             }`}
                           >
-                            <div className="space-y-1.5 flex-1">
-                              {/* Speaker & Persona Badge */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-base select-none">
+                            <div className="space-y-1 flex-1">
+                              {/* Clean Speaker Badge */}
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-sm select-none">
                                   {lineManifest?.avatar || (lIdx % 2 === 0 ? '👨' : '👩')}
                                 </span>
-                                <span className="text-xs font-bold text-[var(--color-primary)]">
+                                <span className="font-bold text-[var(--color-primary)]">
                                   {line.speaker}
                                 </span>
-                                {lineManifest?.persona && (
-                                  <span className="text-[10px] text-[var(--color-text-secondary)] font-normal px-1.5 py-0.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)]">
-                                    {lineManifest.persona}
-                                  </span>
-                                )}
                                 {isSpeaking && (
-                                  <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 animate-pulse ml-auto sm:ml-0">
-                                    <Sparkles className="w-3 h-3" />
+                                  <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500 ml-1.5">
+                                    <Volume2 className="w-3 h-3 animate-pulse" />
                                     Đang đọc
                                   </span>
                                 )}
                               </div>
 
                               {/* Hanzi (Chinese Characters) */}
-                              <div className="text-lg sm:text-xl font-bold font-chinese text-[var(--color-text-primary)] tracking-wide">
+                              <div className="text-base sm:text-lg font-bold font-chinese text-[var(--color-text-primary)] tracking-wide leading-snug">
                                 {line.hanzi}
                               </div>
 
                               {/* Pinyin */}
-                              <div className="text-xs sm:text-sm font-mono text-[var(--color-primary)]/80 font-medium">
+                              <div className="text-xs sm:text-[13px] font-mono text-[var(--color-primary)]/80 font-medium leading-tight">
                                 {line.pinyin}
                               </div>
 
                               {/* Vietnamese Translation */}
-                              <div className="text-xs text-[var(--color-text-secondary)] pt-0.5">
+                              <div className="text-xs text-[var(--color-text-secondary)] leading-snug">
                                 {line.vietnamese}
                               </div>
                             </div>
@@ -1526,15 +1530,19 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                             {/* Individual Line Voice Button */}
                             <button
                               type="button"
-                              onClick={() => handlePlayLineAudio(textItem.id, lIdx, line.hanzi)}
-                              className={`p-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer ${
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedLineMap((prev) => ({ ...prev, [textItem.id]: lIdx }));
+                                handlePlayLineAudio(textItem.id, lIdx, line.hanzi);
+                              }}
+                              className={`p-2 rounded-lg transition-all shrink-0 cursor-pointer ${
                                 isSpeaking
-                                  ? 'bg-rose-500 text-white'
+                                  ? 'bg-rose-500 text-white shadow-xs'
                                   : 'bg-[var(--color-surface)] hover:bg-rose-50 hover:text-rose-600 text-[var(--color-text-secondary)] border border-[var(--color-border)]'
                               }`}
                               title={`Luyện nghe câu này (${lineManifest?.persona || 'Giọng nhân vật'})`}
                             >
-                              <Volume2 className="w-4 h-4" />
+                              <Volume2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         );

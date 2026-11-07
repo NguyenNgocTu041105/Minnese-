@@ -837,8 +837,13 @@ function scheduleNextBatchRun(delayMs: number): void {
         // Continuous mode: if there are still questions needed, generate next batch in 5 seconds!
         // If all deficits met, check again in 30 seconds.
         const hasDeficit = typeof res.remainingDeficit === 'number' ? res.remainingDeficit > 0 : true;
-        const nextDelay = hasDeficit ? 5000 : 30000;
-        scheduleNextBatchRun(nextDelay);
+        // If batch failed completely (0 saved), back off 60s to prevent rate-limit thrashing
+        if (res.savedCount === 0) {
+          scheduleNextBatchRun(60000);
+        } else {
+          const nextDelay = hasDeficit ? 5000 : 30000;
+          scheduleNextBatchRun(nextDelay);
+        }
       } else {
         // Standard interval mode
         scheduleNextBatchRun(Math.round(currentConfig.intervalHours * 3600 * 1000));

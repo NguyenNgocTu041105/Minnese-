@@ -1,5 +1,8 @@
 import express, { Request, Response } from 'express';
 import compression from 'compression';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
@@ -492,6 +495,23 @@ async function startServer() {
   const PORT = Number.parseInt(process.env.PORT || '3000', 10);
   const HOST = process.env.HOST || '0.0.0.0';
 
+  // Defensive HTTP security headers via Helmet (preserve Vite HMR and inline script execution)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
+
+  // CORS origin configuration with credentials support
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+  ];
+  app.use(cors({ origin: allowedOrigins, credentials: true }));
+
   // Gzip / Brotli compression for high-concurrency bandwidth optimization.
   // In development mode, NEVER compress Vite dev server requests, ES modules, or SSE streams
   // to prevent chunked transfer dropouts and "Failed to fetch dynamically imported module" errors.
@@ -516,9 +536,47 @@ async function startServer() {
     })
   );
 
-  // Support large base64 image payloads for OCR of scanned PDF textbooks
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  // Rate Limiting defenses via express-rate-limit
+  // 1. Global API rate limiter on /api/: 500 requests per 15 minutes
+  const globalApiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 500,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many requests, please try again later.' },
+  });
+  app.use('/api/', globalApiLimiter);
+
+  // 2. AI proxy rate limiter on /api/gemini/, /api/ai/, /api/voice-chat/: 30 requests per minute
+  const aiProxyLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'AI request quota exceeded, please wait before retrying.' },
+  });
+  app.use(['/api/gemini/', '/api/ai/', '/api/voice-chat/'], aiProxyLimiter);
+
+  // Dedicated route-level 50MB parsers specifically for endpoints requiring large base64 image/PDF OCR payloads
+  const largeJsonParser = express.json({ limit: '50mb' });
+  const largeUrlencodedParser = express.urlencoded({ limit: '50mb', extended: true });
+  const largePayloadRoutes = [
+    '/api/ai/ocr-document',
+    '/api/ai/ocr-and-grade-writing',
+    '/api/ai/pdf-extract',
+    '/api/workbooks/parse-and-remix',
+    '/api/qbank/upload-file',
+  ];
+  for (const routePath of largePayloadRoutes) {
+    app.use(routePath, largeJsonParser);
+    app.use(routePath, largeUrlencodedParser);
+  }
+
+  // Global body parsing lowered to 2MB to protect against payload memory exhaustion DoS
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
   // Ensure public/audio directory exists and mount static audio serving for Edge-TTS
   const audioDir = path.join(process.cwd(), 'public', 'audio');

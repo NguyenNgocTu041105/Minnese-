@@ -124,7 +124,7 @@ export function unpackZipFiles(buffer: Buffer): Record<string, Buffer> {
           let decomp = compData;
           if (compMethod === 8) {
             try {
-              decomp = zlib.inflateRawSync(compData);
+              decomp = zlib.inflateRawSync(compData, { maxOutputLength: 20 * 1024 * 1024 });
             } catch {
               decomp = compData;
             }
@@ -156,7 +156,7 @@ export function unpackZipFiles(buffer: Buffer): Record<string, Buffer> {
         let decomp = compData;
         if (compMethod === 8) {
           try {
-            decomp = zlib.inflateRawSync(compData);
+            decomp = zlib.inflateRawSync(compData, { maxOutputLength: 20 * 1024 * 1024 });
           } catch {
             decomp = compData;
           }

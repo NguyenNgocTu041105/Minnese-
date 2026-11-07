@@ -2215,15 +2215,27 @@ qbankRouter.post('/tts-generate', async (req: Request, res: Response) => {
     const voiceFemale = typeof req.body?.voice_female === 'string' && req.body.voice_female.trim() ? req.body.voice_female.trim() : '';
     const introChime = req.body?.intro_chime !== false;
 
-    let pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim();
-    if (!pythonExec) {
-      const preferred = 'C:\\Users\\Tunn\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe';
-      if (fs.existsSync(preferred)) {
-        pythonExec = preferred;
-      } else {
-        pythonExec = 'python';
-      }
+    const SAFE_VOICE_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+    if (voice !== 'auto' && !SAFE_VOICE_REGEX.test(voice)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tên voice không hợp lệ. Chỉ cho phép chữ, số, gạch dưới và gạch ngang (1-64 ký tự).',
+      });
     }
+    if (voiceMale && !SAFE_VOICE_REGEX.test(voiceMale)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tên voice_male không hợp lệ. Chỉ cho phép chữ, số, gạch dưới và gạch ngang (1-64 ký tự).',
+      });
+    }
+    if (voiceFemale && !SAFE_VOICE_REGEX.test(voiceFemale)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tên voice_female không hợp lệ. Chỉ cho phép chữ, số, gạch dưới và gạch ngang (1-64 ký tự).',
+      });
+    }
+
+    const pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim() || process.env.PYTHON_PATH?.trim() || 'python';
 
     const scriptPath = path.join(process.cwd(), 'tts_service.py');
 

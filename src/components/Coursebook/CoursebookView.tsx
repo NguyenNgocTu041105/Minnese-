@@ -31,6 +31,7 @@ import { NEW_HSK4_FULL_LESSONS } from '../../data/newHsk4BookData';
 import { NEW_HSK5_FULL_LESSONS } from '../../data/newHsk5BookData';
 import { NEW_HSK6_FULL_LESSONS } from '../../data/newHsk6BookData';
 import { COURSEBOOK_AUDIO_MANIFEST } from '../../data/coursebookAudioManifest';
+import { COURSEBOOK_CHARACTER_ANCHORS, CharacterAnchor2D } from '../../data/coursebookCharacterAnchors';
 import { LessonExercisesStudio } from './LessonExercisesStudio';
 import { WorkbookView } from './WorkbookView';
 import { playChineseAudio } from '../../utils/chineseAudio';
@@ -515,106 +516,52 @@ const LESSON_ILLUSTRATIONS: Record<string, { src: string; caption: string }> = {
   },
 };
 
-// Deterministic character head X-coordinate (%) verified directly from HSK 1 3.0 scene illustrations
-// Guarantees dialogue arrow points directly into the active speaker's head without obscuring the person
-const HSK1_CHARACTER_HEAD_X: Record<string, Record<string, number>> = {
-  // Bài 1
-  'hsk1-l1-t1': { '王一飞': 40, '小语': 73 },
-  'hsk1-l1-t2': { '学生们': 38, '王一飞': 66, '小语': 81 },
-  'hsk1-l1-t3': { '学生们': 42, '王一飞': 74, '小语': 85 },
-
-  // Bài 2
-  'hsk1-l2-t1': { '陈天中': 26, '王一飞': 75 },
-  'hsk1-l2-t2': { '陈天中': 39, '白家月': 66 },
-  'hsk1-l2-t3': { '李文': 28, '白家月': 77 },
-
-  // Bài 3
-  'hsk1-l3-t1': { '李文': 31, '白家月': 79 },
-  'hsk1-l3-t2': { '陈天中': 42, '安妮': 64 },
-  'hsk1-l3-t3': { '王一雪': 70, '王一飞': 45 },
-
-  // Bài 4
-  'hsk1-l4-t1': { '刘明': 37, '王一雪': 65 },
-  'hsk1-l4-t2': { '王一雪': 30, '杨同乐': 72 },
-  'hsk1-l4-t3': { '刘小明': 22, '王一雪': 41, '杨同乐': 69 },
-
-  // Bài 5
-  'hsk1-l5-t1': { '王一雪': 39, '刘明': 66 },
-  'hsk1-l5-t2': { '王一雪': 30, '杨同乐': 72 },
-  'hsk1-l5-t3': { '王一雪': 29, '杨同乐': 71 },
-
-  // Bài 6
-  'hsk1-l6-t1': { '李文': 33, '白家月': 78 },
-  'hsk1-l6-t2': { '白家月': 31, '陈天中': 65 },
-  'hsk1-l6-t3': { '刘小明': 22, '刘明': 38, '王一雪': 61, '刘小雪': 81 },
-
-  // Bài 7
-  'hsk1-l7-t1': { '白家月': 25, '安妮': 74 },
-  'hsk1-l7-t2': { '李文': 25, '白家月': 75 },
-  'hsk1-l7-t3': { '王一雪': 25, '刘明': 76 },
-
-  // Bài 8
-  'hsk1-l8-t1': { '白家月': 34, '王一飞': 58, '陈天中': 72 },
-  'hsk1-l8-t2': { '白家月': 27, '李文': 75 },
-  'hsk1-l8-t3': { '刘明': 36, '小胡': 67 },
-
-  // Bài 9
-  'hsk1-l9-t1': { '李文': 26, '白家月': 74 },
-  'hsk1-l9-t2': { '白家月': 36, '陈天中': 61 },
-  'hsk1-l9-t3': { '王一雪': 32, '杨同乐': 67 },
-
-  // Bài 10
-  'hsk1-l10-t1': { '王一雪': 35, '店员': 77 },
-  'hsk1-l10-t2': { '王一雪': 33, '摊主': 77 },
-  'hsk1-l10-t3': { '王一雪': 41, '刘明': 66 },
-
-  // Bài 11
-  'hsk1-l11-t1': { '王一飞': 25, '李文': 75 },
-  'hsk1-l11-t2': { '王一飞': 33, '李文': 73 },
-  'hsk1-l11-t3': { '刘明': 37, '刘小雪': 75 },
-
-  // Bài 12
-  'hsk1-l12-t1': { '王一雪': 28, '王一飞': 73 },
-  'hsk1-l12-t2': { '王一雪': 31, '杨同乐': 71 },
-  'hsk1-l12-t3': { '杨同乐': 30, '医生': 74 },
-
-  // Bài 13
-  'hsk1-l13-t1': { '白家月': 35, '王一飞': 74 },
-  'hsk1-l13-t2': { '王一雪': 28, '服务员': 70 },
-  'hsk1-l13-t3': { '刘明': 37, '服务员': 69 },
-
-  // Bài 14
-  'hsk1-l14-t1': { '白家月': 35, '陈天中': 73 },
-  'hsk1-l14-t2': { '陈天中': 35, '白家月': 48, '王一飞': 60 },
-  'hsk1-l14-t3': { '刘明': 33, '王一雪': 56 },
-
-  // Bài 15
-  'hsk1-l15-t1': { '白家月': 22, '李文': 36, '安妮': 72, '陈天中': 80 },
-  'hsk1-l15-t2': { '白家月': 23, '李文': 50, '安妮': 71, '陈天中': 80 },
-  'hsk1-l15-t3': { '白家月': 26, '王一飞': 52, '安妮': 76 },
-};
-
-// Helper to determine exact speaker head position percentage
-const getSpeakerHeadX = (
+// Helper to determine exact speaker head position percentage (X%, Y%)
+// Guarantees speech bubble bottom pointer lands directly onto the speaker's head with custom height per person
+const getSpeakerCoords = (
   textId: string,
   speakerName: string,
   textLines: { speaker: string }[],
-  speakerAnchors?: Record<string, number>
-): number => {
+  speakerAnchors?: Record<string, CharacterAnchor2D | number>
+): CharacterAnchor2D => {
   const cleanName = speakerName.replace(/\s*\(.*?\)/, '').trim();
-  const sceneMap = speakerAnchors || HSK1_CHARACTER_HEAD_X[textId];
+  const sceneMap = speakerAnchors || COURSEBOOK_CHARACTER_ANCHORS[textId];
   if (sceneMap) {
     const matchedKey = Object.keys(sceneMap).find((k) => cleanName.includes(k) || k.includes(cleanName));
     if (matchedKey && sceneMap[matchedKey] !== undefined) {
-      return sceneMap[matchedKey];
+      const val = sceneMap[matchedKey];
+      if (typeof val === 'number') {
+        return { x: val, y: 28 };
+      }
+      return val;
     }
   }
+
+  // Fallback if not specified in anchor dictionary
   const uniqueSpeakers = Array.from(new Set(textLines.map((l) => l.speaker)));
   const sIdx = uniqueSpeakers.indexOf(speakerName);
-  if (uniqueSpeakers.length <= 2) {
-    return sIdx === 0 ? 36 : 68;
+
+  let defaultY = 28;
+  if (cleanName.includes('小明') || cleanName.includes('小雪')) {
+    defaultY = 38; // Children / teenagers are shorter
+  } else if (cleanName.includes('白家月') || cleanName.includes('安妮')) {
+    defaultY = 34; // College girls
+  } else if (cleanName.includes('陈天中')) {
+    defaultY = 22; // Tall athlete boy
+  } else if (cleanName.includes('刘爷爷') || cleanName.includes('爷爷') || cleanName.includes('刘奶奶') || cleanName.includes('奶奶')) {
+    defaultY = 32; // Elderly seated / shorter
   }
-  return sIdx === 0 ? 28 : sIdx === 1 ? 50 : 72;
+
+  if (uniqueSpeakers.length <= 2) {
+    return {
+      x: sIdx === 0 ? 36 : 68,
+      y: defaultY,
+    };
+  }
+  return {
+    x: sIdx === 0 ? 28 : sIdx === 1 ? 50 : 72,
+    y: defaultY,
+  };
 };
 
 
@@ -1360,10 +1307,14 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                     : null;
                 const activeManifestLine = activeLineIdx >= 0 ? manifest?.lines?.[activeLineIdx] : null;
 
-                // Calculate exact speaker head coordinate (0% - 100%) and dynamic compact callout placement
-                const headX = activeLine
-                  ? getSpeakerHeadX(textItem.id, activeLine.speaker, textItem.lines, textItem.speakerAnchors)
-                  : 50;
+                // Calculate exact 2D speaker head coordinate (X%, Y%) and dynamic callout placement
+                const coords = activeLine
+                  ? getSpeakerCoords(textItem.id, activeLine.speaker, textItem.lines, textItem.speakerAnchors as Record<string, CharacterAnchor2D | number> | undefined)
+                  : { x: 50, y: 28 };
+
+                const headX = coords.x;
+                // Minimum top clearance so dialogue card doesn't clip off the top boundary
+                const headY = Math.max(18, coords.y);
 
                 const cardShiftPercent =
                   headX <= 22
@@ -1376,7 +1327,6 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                     ? 70
                     : 50;
 
-                const cardTransform = `translateX(-${cardShiftPercent}%)`;
                 const pointerLeftPercent = `${cardShiftPercent}%`;
 
                 return (
@@ -1414,15 +1364,15 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                               key={`bubble-${textItem.id}-${activeLineIdx}`}
                               className="absolute z-20 transition-all duration-300 animate-in fade-in zoom-in-95 pointer-events-auto"
                               style={{
-                                top: '12px',
+                                top: `${headY}%`,
                                 left: `${headX}%`,
+                                transform: `translate(-${cardShiftPercent}%, calc(-100% - 10px))`,
                               }}
                             >
                               {/* Inner card: Pure WHITE background, only Chinese characters + Vietnamese meaning, NO pinyin, NO speaker title */}
                               <div
                                 onClick={() => handlePlayLineAudio(textItem.id, activeLineIdx, activeLine.hanzi)}
                                 className="relative bg-white text-slate-900 rounded-2xl px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.22)] border border-slate-200/90 whitespace-normal text-center min-w-[120px] max-w-[260px] sm:max-w-[320px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
-                                style={{ transform: cardTransform }}
                                 title="Bấm để nghe đọc lại câu thoại này"
                               >
                                 {/* Text tiếng Trung */}

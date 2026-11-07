@@ -300,9 +300,9 @@ textarea:focus-visible {
   }
 }
 
-/* Page view: fade + slide up */
+/* Page view: fade in cleanly without transform to ensure position: sticky/fixed works reliably */
 .view-enter {
-  animation: fadeSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Card/grid stagger — apply via JS or @starting-style */

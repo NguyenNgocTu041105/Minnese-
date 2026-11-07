@@ -781,7 +781,7 @@ export default function App() {
     userProfile?.email === 'babysharkkk123@gmail.com';
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)] flex flex-col font-sans relative overflow-x-hidden transition-colors selection:bg-[var(--color-primary)] selection:text-white">
+    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)] flex flex-col font-sans relative overflow-x-clip transition-colors selection:bg-[var(--color-primary)] selection:text-white">
       {/* Subtle Ambient Glow */}
       <div className="absolute top-[-120px] left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[var(--color-primary)]/5 blur-[120px] rounded-full pointer-events-none" />
 

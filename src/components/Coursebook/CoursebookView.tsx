@@ -698,7 +698,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     stopAllCoursebookAudio();
     const manifestItem = COURSEBOOK_AUDIO_MANIFEST[textId];
     if (manifestItem?.fullAudioUrl) {
-      const audio = new Audio(manifestItem.fullAudioUrl);
+      const audio = new Audio(`${manifestItem.fullAudioUrl}?v=20261107_v4`);
       audio.playbackRate = playbackSpeed;
       coursebookAudioRef.current = audio;
       setActivePlayingTextId(textId);
@@ -747,7 +747,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     const lineAudio = manifestItem?.lines?.[lineIndex];
 
     if (lineAudio?.audioUrl) {
-      const audio = new Audio(lineAudio.audioUrl);
+      const audio = new Audio(`${lineAudio.audioUrl}?v=20261107_v4`);
       audio.playbackRate = playbackSpeed;
       coursebookAudioRef.current = audio;
 
@@ -1418,37 +1418,20 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                                 left: `${headX}%`,
                               }}
                             >
-                              {/* Inner card: Compact, snug around text, avoids covering any avatar */}
+                              {/* Inner card: Pure WHITE background, only Chinese characters + Vietnamese meaning, NO pinyin, NO speaker title */}
                               <div
                                 onClick={() => handlePlayLineAudio(textItem.id, activeLineIdx, activeLine.hanzi)}
-                                className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm text-slate-800 dark:text-slate-100 rounded-2xl px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] border border-slate-200/90 dark:border-slate-700/80 whitespace-normal text-center min-w-[130px] max-w-[260px] sm:max-w-[320px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
+                                className="relative bg-white text-slate-900 rounded-2xl px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.22)] border border-slate-200/90 whitespace-normal text-center min-w-[120px] max-w-[260px] sm:max-w-[320px] cursor-pointer hover:scale-[1.02] transition-transform select-none"
                                 style={{ transform: cardTransform }}
                                 title="Bấm để nghe đọc lại câu thoại này"
                               >
-                                {/* Speaker Badge */}
-                                <div className="flex items-center justify-center gap-1 mb-0.5">
-                                  <span className="text-xs select-none">
-                                    {activeManifestLine?.avatar || (activeLineIdx % 2 === 0 ? '👨' : '👩')}
-                                  </span>
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-primary)]">
-                                    {activeLine.speaker}
-                                  </span>
-                                </div>
-
                                 {/* Text tiếng Trung */}
-                                <div className="text-sm sm:text-base md:text-lg font-bold font-chinese text-slate-900 dark:text-white tracking-wide leading-tight">
+                                <div className="text-sm sm:text-base md:text-lg font-bold font-chinese text-slate-900 tracking-wide leading-tight">
                                   {activeLine.hanzi}
                                 </div>
 
-                                {/* Pinyin */}
-                                {activeLine.pinyin && (
-                                  <div className="text-[10px] sm:text-xs text-[var(--color-primary)] font-medium leading-tight mt-0.5">
-                                    {activeLine.pinyin}
-                                  </div>
-                                )}
-
                                 {/* Nghĩa tiếng Việt ở dưới */}
-                                <div className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium pt-1 mt-1 border-t border-slate-100 dark:border-slate-800/80 leading-snug">
+                                <div className="text-[11px] sm:text-xs text-slate-600 font-medium pt-1 mt-1 border-t border-slate-100 leading-snug">
                                   {activeLine.vietnamese}
                                 </div>
 
@@ -1464,13 +1447,13 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                                     width="16"
                                     height="10"
                                     viewBox="0 0 16 10"
-                                    className="filter drop-shadow-[0_2px_3px_rgba(0,0,0,0.12)]"
+                                    className="filter drop-shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
                                     fill="none"
                                   >
-                                    <path d="M0,0 L16,0 L8,9.5 Z" className="fill-white dark:fill-slate-900" />
+                                    <path d="M0,0 L16,0 L8,9.5 Z" fill="#ffffff" />
                                     <path
                                       d="M0,0 L8,9.5 L16,0"
-                                      className="stroke-slate-200/90 dark:stroke-slate-700/80"
+                                      stroke="#e2e8f0"
                                       strokeWidth="1.2"
                                       strokeLinejoin="round"
                                     />

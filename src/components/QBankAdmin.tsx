@@ -1388,18 +1388,28 @@ export const QBankAdmin: React.FC = () => {
     setSchedulerActionLoading(false);
   }, [promptTokenModal]);
 
-  // Poll scheduler status & pending questions every 4 seconds while background batch is running
+  // Poll scheduler status & pending questions smoothly while robot is enabled or running
   useEffect(() => {
-    if (!schedulerStatus?.isRunning) return;
+    if (!schedulerStatus?.enabled && !schedulerStatus?.isRunning) return;
     const interval = setInterval(async () => {
       const res = await safeApiCall<{ status: any }>('/api/qbank/scheduler/status');
       if (res.success && res.data?.status) {
         const nextStatus = res.data.status;
+        const wasRunning = schedulerStatus?.isRunning;
+        const hasStateChange =
+          nextStatus.isRunning !== schedulerStatus?.isRunning ||
+          nextStatus.generatedToday !== schedulerStatus?.generatedToday ||
+          nextStatus.lastBatchId !== schedulerStatus?.lastBatchId;
+
         setSchedulerStatus(nextStatus);
-        loadPendingQuestions(undefined, true);
-        loadProgress();
-        loadPoolStats();
-        if (!nextStatus.isRunning) {
+
+        if (hasStateChange) {
+          loadPendingQuestions(undefined, true);
+          loadProgress();
+          loadPoolStats();
+        }
+
+        if (wasRunning && !nextStatus.isRunning) {
           loadCoverageDashboard();
           if (nextStatus.lastError) {
             setActionErrorMsg(`Đợt sinh đề nền kết thúc với cảnh báo: ${nextStatus.lastError}`);
@@ -1412,7 +1422,7 @@ export const QBankAdmin: React.FC = () => {
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [schedulerStatus?.isRunning, loadPendingQuestions, loadProgress, loadPoolStats, loadCoverageDashboard]);
+  }, [schedulerStatus?.enabled, schedulerStatus?.isRunning, schedulerStatus?.generatedToday, schedulerStatus?.lastBatchId, loadPendingQuestions, loadProgress, loadPoolStats, loadCoverageDashboard]);
 
   // Initial fetch
   useEffect(() => {

@@ -21,6 +21,7 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
 }) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [customLogoUrl, setCustomLogoUrl] = useState<string | null>(null);
+  const [imgLoadError, setImgLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load custom logo if user uploaded one
@@ -80,6 +81,7 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
   };
 
   const mascotSrc = customLogoUrl || DEFAULT_MASCOT_SRC;
+  useEffect(() => { setImgLoadError(false); }, [mascotSrc]);
 
   // Mascot circular badge image element with soft lavender border (#D8B4FE)
   const renderMascotImg = (imgSize: number, extraClasses = '') => (
@@ -93,14 +95,21 @@ export const MinnieLogo: React.FC<MinnieLogoProps> = ({
         }
       }}
     >
-      <img
-        src={mascotSrc}
-        alt="Minnie & Corgi Mascot"
-        className="w-full h-full object-cover rounded-full select-none"
-        loading="eager"
-        decoding="async"
-        referrerPolicy="no-referrer"
-      />
+      {!imgLoadError ? (
+        <img
+          src={mascotSrc}
+          alt="Minnie & Corgi Mascot"
+          className="w-full h-full object-cover rounded-full select-none"
+          loading="eager"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImgLoadError(true)}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-purple-500 to-indigo-600 text-white font-black text-xs select-none">
+          MC
+        </div>
+      )}
     </div>
   );
 

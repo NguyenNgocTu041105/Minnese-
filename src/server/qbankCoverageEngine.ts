@@ -3354,8 +3354,50 @@ export function getPriorityDeficitGroup(
     // If generation_runs table does not exist yet in mock db, silently ignore
   }
 
+  // Cross-level and cross-skill balancing statistics
+  const levelTotals = new Map<number, number>();
+  const levelSkillTotals = new Map<string, number>();
+
+  for (let lvl = 1; lvl <= 6; lvl++) {
+    levelTotals.set(lvl, 0);
+  }
+
+  for (const r of matrix.rows) {
+    const tot = r.approvedCount + (r.pendingCount || 0);
+    levelTotals.set(r.level, (levelTotals.get(r.level) || 0) + tot);
+    const lsKey = `${r.level}_${r.skill}`;
+    levelSkillTotals.set(lsKey, (levelSkillTotals.get(lsKey) || 0) + tot);
+  }
+
+  const maxLevelTotal = Math.max(...Array.from(levelTotals.values()));
+
   const scored = eligibleRows.map((row) => {
     const totalInFlight = row.approvedCount + (row.pendingCount || 0);
+
+    // 1. Cross-Level Balancing: Give major priority to levels with fewer total questions
+    const currentLvlTotal = levelTotals.get(row.level) || 0;
+    const levelDeficit = Math.max(0, maxLevelTotal - currentLvlTotal);
+    const levelBalanceScore = !targetLevel ? Math.round(levelDeficit * 1200) : 0;
+
+    // 2. Cross-Skill Balancing within the level: Balance listening, reading, writing
+    const skillsInLevel = ['listening', 'reading', 'writing'].filter((s) => row.level > 1 || s !== 'writing');
+    const skillTotals = skillsInLevel.map((s) => levelSkillTotals.get(`${row.level}_${s}`) || 0);
+    const maxSkillInLevel = Math.max(...skillTotals);
+    const currentSkillTotal = levelSkillTotals.get(`${row.level}_${row.skill}`) || 0;
+    const skillDeficit = Math.max(0, maxSkillInLevel - currentSkillTotal);
+    const skillBalanceScore = Math.round(skillDeficit * 800);
+
+    // 3. Progressive Backpressure Penalty: Heavily suppress part types with high pending backlog
+    const pendingCount = row.pendingCount || 0;
+    let pendingBackpressurePenalty = 0;
+    if (pendingCount >= 100) pendingBackpressurePenalty = 2500000;
+    else if (pendingCount >= 50) pendingBackpressurePenalty = 1200000;
+    else if (pendingCount >= 30) pendingBackpressurePenalty = 500000;
+    else if (pendingCount >= 15) pendingBackpressurePenalty = 180000;
+    else if (pendingCount >= 5) pendingBackpressurePenalty = 40000;
+
+    // 4. In-Flight Dampening: slightly suppress parts that already have more questions
+    const inFlightDampening = Math.round(totalInFlight * 1500);
 
     // Critical Priority Brackets with in-flight queue awareness (R3)
     let criticalBoost = 0;
@@ -3369,9 +3411,6 @@ export function getPriorityDeficitGroup(
     } else if (row.approvedCount === 0 && (row.pendingCount || 0) < 5) {
       criticalBoost += 25000;
     }
-
-    // Backpressure: if a part type already has 10+ pending questions awaiting review, de-prioritize to let other empty parts catch up
-    const pendingBackpressurePenalty = (row.pendingCount || 0) >= 10 ? 100000 : ((row.pendingCount || 0) >= 5 ? 40000 : 0);
 
     // 1. Blueprint exam ready deficit
     const examDeficitScore = (row.examSetsDeficit || 0) * 500;
@@ -3397,7 +3436,7 @@ export function getPriorityDeficitGroup(
     const failCount = failureCountMap.get(failKey) || 0;
     const cooldownPenalty = failCount * 200000;
 
-    const priorityScore = (criticalBoost + ratioScore + examDeficitScore + tier0Score + foundationTieBreaker + skillTieBreaker) - cooldownPenalty - pendingBackpressurePenalty;
+    const priorityScore = (levelBalanceScore + skillBalanceScore + criticalBoost + ratioScore + examDeficitScore + tier0Score + foundationTieBreaker + skillTieBreaker) - cooldownPenalty - pendingBackpressurePenalty - inFlightDampening;
 
     return {
       level: row.level,

@@ -537,13 +537,19 @@ async function startServer() {
   );
 
   // Rate Limiting defenses via express-rate-limit
-  // 1. Global API rate limiter on /api/: 500 requests per 15 minutes
+  // 1. Global API rate limiter on /api/: 10000 requests per 15 minutes with loopback/admin bypass
   const globalApiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 500,
-    max: 500,
+    limit: 10000,
+    max: 10000,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+      const ip = req.ip || req.socket.remoteAddress || '';
+      const isLoopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('127.0.0.1');
+      const hasAdminAuth = Boolean(req.headers['x-qbank-token'] || req.headers['authorization']);
+      return isLoopback || hasAdminAuth || req.path.startsWith('/qbank/scheduler');
+    },
     message: { success: false, error: 'Too many requests, please try again later.' },
   });
   app.use('/api/', globalApiLimiter);

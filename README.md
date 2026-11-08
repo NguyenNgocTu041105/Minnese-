@@ -7,6 +7,7 @@
 **Nền tảng e-Learning tiếng Trung full-stack thế hệ mới chuẩn hóa New HSK 3.0 (HSK 1 → HSK 6).**  
 Tích hợp giáo trình chuẩn BLCUP, thuật toán bóng thoại chống che mặt độc quyền trên mọi thiết bị, công nghệ phòng thu âm thanh phân vai độc lập (17 Neural Voices), gia sư AI tương tác thời gian thực (Google Gemini API), ngân hàng đề thi CBT và phòng luyện viết chữ Hán tương tác.
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-minnese.onrender.com-success?style=for-the-badge&logo=render)](https://minnese.onrender.com)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)

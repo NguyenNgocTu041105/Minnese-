@@ -5,7 +5,6 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { assertStagingDatabaseIsolation } from './src/server/dbPaths.js';
@@ -583,8 +582,8 @@ async function startServer() {
   fs.mkdirSync(audioDir, { recursive: true });
   app.use('/audio', express.static(audioDir));
 
-  // Health check
-  app.get('/api/health', (req: Request, res: Response) => {
+  // Health check (supports /health and /api/health for PaaS uptime monitoring)
+  app.get(['/health', '/api/health'], (req: Request, res: Response) => {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -3459,18 +3458,34 @@ Return ONLY a JSON object matching this schema:
   });
 
   // Production bundle or pre-compiled distribution serving (eliminates Cloud Run 429 rate limiting on unbundled files)
-  const distPath = path.join(process.cwd(), 'dist');
+  const distCandidates = [
+    path.join(process.cwd(), 'dist'),
+    __dirname,
+    path.join(__dirname, '..', 'dist'),
+    process.cwd(),
+  ];
+
+  const distPath = distCandidates.find((d) => fs.existsSync(path.join(d, 'index.html'))) || path.join(process.cwd(), 'dist');
   const hasBuiltDist = fs.existsSync(path.join(distPath, 'index.html'));
-  const isProduction = process.env.NODE_ENV === 'production' || hasBuiltDist;
+  const isCjsBundle = typeof __filename === 'string' && (__filename.endsWith('.cjs') || __filename.includes('dist'));
+  const isProduction = process.env.NODE_ENV === 'production' || hasBuiltDist || isCjsBundle;
 
   if (isProduction) {
-    app.use(express.static(distPath));
-    app.use(express.static(path.join(process.cwd(), 'public')));
-    app.get('*', (req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    if (hasBuiltDist) {
+      app.use(express.static(distPath));
+      app.use(express.static(path.join(process.cwd(), 'public')));
+      app.get('*', (req: Request, res: Response) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    } else {
+      console.warn('[Static] Production mode active but dist/index.html not found. Checked paths:', distCandidates);
+      app.get('*', (req: Request, res: Response) => {
+        res.status(503).send('Building application or static index.html not found. Please refresh shortly.');
+      });
+    }
   } else {
-    const vite = await createViteServer({
+    const { createServer: createViteDevServer } = await import('vite');
+    const vite = await createViteDevServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });

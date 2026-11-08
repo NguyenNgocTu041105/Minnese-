@@ -503,14 +503,8 @@ async function startServer() {
     })
   );
 
-  // CORS origin configuration with credentials support
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-  ];
-  app.use(cors({ origin: allowedOrigins, credentials: true }));
+  // CORS origin configuration with credentials support (supports local dev and live Render deployments)
+  app.use(cors({ origin: true, credentials: true }));
 
   // Gzip / Brotli compression for high-concurrency bandwidth optimization.
   // In development mode, NEVER compress Vite dev server requests, ES modules, or SSE streams
@@ -3420,9 +3414,11 @@ Return ONLY a JSON object matching this schema:
   // Production bundle or pre-compiled distribution serving (eliminates Cloud Run 429 rate limiting on unbundled files)
   const distPath = path.join(process.cwd(), 'dist');
   const hasBuiltDist = fs.existsSync(path.join(distPath, 'index.html'));
+  const isProduction = process.env.NODE_ENV === 'production' || hasBuiltDist;
 
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction) {
     app.use(express.static(distPath));
+    app.use(express.static(path.join(process.cwd(), 'public')));
     app.get('*', (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

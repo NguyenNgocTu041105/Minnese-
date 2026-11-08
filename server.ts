@@ -1945,6 +1945,53 @@ QUY TẮC BẮT BUỘC:
     }
   });
 
+  // High-Fidelity Standard Putonghua Audio Streaming Endpoint (一级甲等普通话)
+  const putonghuaTtsCache = new Map<string, Buffer>();
+  const MAX_PUTONGHUA_CACHE = 3000;
+
+  app.get('/api/tts', async (req: Request, res: Response) => {
+    const text = typeof req.query.text === 'string' ? req.query.text.trim() : '';
+    if (!text) {
+      return res.status(400).json({ error: 'Text query parameter is required' });
+    }
+
+    const cacheKey = text.slice(0, 250);
+    if (putonghuaTtsCache.has(cacheKey)) {
+      const cached = putonghuaTtsCache.get(cacheKey)!;
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(cached);
+    }
+
+    try {
+      const googleTtsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=' + encodeURIComponent(cacheKey);
+      const audioRes = await fetch(googleTtsUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Referer': 'https://translate.google.com/',
+        },
+      });
+
+      if (!audioRes.ok) {
+        return res.status(audioRes.status).json({ error: 'Failed to fetch audio from TTS upstream' });
+      }
+
+      const buffer = Buffer.from(await audioRes.arrayBuffer());
+      if (putonghuaTtsCache.size >= MAX_PUTONGHUA_CACHE) {
+        const firstKey = putonghuaTtsCache.keys().next().value;
+        if (firstKey) putonghuaTtsCache.delete(firstKey);
+      }
+      putonghuaTtsCache.set(cacheKey, buffer);
+
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(buffer);
+    } catch (err: any) {
+      console.warn('[TTS Server Error]', err?.message);
+      return res.status(500).json({ error: 'Internal TTS service error' });
+    }
+  });
+
   // In-memory server-side cache & rate-limit cooldown for Gemini TTS
   const serverTtsCache = new Map<string, { audioBase64: string; mimeType: string; sampleRate: number }>();
   const MAX_SERVER_TTS_CACHE = 1000;

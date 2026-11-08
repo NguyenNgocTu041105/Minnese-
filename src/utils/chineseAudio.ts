@@ -572,7 +572,7 @@ export function rankVoice(
     if (n.includes('yunxi')) score += 60;
     else if (n.includes('yunjian') || n.includes('yunyang')) score += 50;
     else if (n.includes('male') || n.includes('danny') || n.includes('brian')) score += 20;
-    else if (n.includes('kangkang')) score += 5; // Legacy robotic SAPI5 fallback
+    else if (n.includes('kangkang')) score -= 200; // Heavily penalize legacy robotic SAPI5
 
     // Heavily penalize female voices when searching for male
     if (
@@ -590,7 +590,7 @@ export function rankVoice(
     if (n.includes('xiaoxiao')) score += 60;
     else if (n.includes('xiaoyi') || n.includes('tingting')) score += 50;
     else if (n.includes('female') || n.includes('google') || n.includes('meijia')) score += 20;
-    else if (n.includes('huihui') || n.includes('yaoyao')) score += 5; // Legacy robotic SAPI5 fallback
+    else if (n.includes('huihui') || n.includes('yaoyao')) score -= 200; // Heavily penalize legacy robotic SAPI5
 
     // Heavily penalize male voices when searching for female
     if (
@@ -604,9 +604,10 @@ export function rankVoice(
     }
   } else {
     // Narrator / default: Prioritize best natural neural voices (Xiaoxiao, Yunxi, etc.)
-    if (n.includes('xiaoxiao') || n.includes('yunxi')) score += 50;
-    else if (n.includes('yunjian') || n.includes('xiaoyi') || n.includes('tingting')) score += 40;
-    else if (n.includes('google')) score += 20;
+    if (n.includes('xiaoxiao') || n.includes('yunxi')) score += 60;
+    else if (n.includes('yunjian') || n.includes('xiaoyi') || n.includes('tingting')) score += 50;
+    else if (n.includes('google')) score += 30;
+    else if (n.includes('huihui') || n.includes('kangkang') || n.includes('yaoyao')) score -= 200;
   }
 
   // Bonus for modern non-local web service voices (Edge Natural voices have localService === false)
@@ -754,6 +755,60 @@ function playBrowserUtterance(
  * Supports Chinese (zh), English (en), and Vietnamese (vi).
  * Defaults to 'zh' so Pinyin or Chinese terms are always voiced using Chinese pronunciation.
  */
+const ttsAudioCache = new Map<string, HTMLAudioElement>();
+
+/**
+ * High-Fidelity National Standard Putonghua Audio Stream (一级甲等普通话)
+ * Plays studio-grade, pleasant, crystal-clear Mandarin audio across Grammar, Vocabulary, and Dictionary.
+ */
+export async function playPutonghuaAudioStream(text: string, rate: number = 1.0): Promise<void> {
+  stopChineseAudio();
+
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  const url = `/api/tts?text=${encodeURIComponent(trimmed)}`;
+
+  return new Promise((resolve, reject) => {
+    let audio: HTMLAudioElement;
+    if (ttsAudioCache.has(trimmed)) {
+      audio = ttsAudioCache.get(trimmed)!;
+      audio.currentTime = 0;
+    } else {
+      audio = new Audio(url);
+      if (ttsAudioCache.size < 600) {
+        ttsAudioCache.set(trimmed, audio);
+      }
+    }
+
+    activeHtmlAudio = audio;
+    audio.playbackRate = rate || 1.0;
+
+    const timer = setTimeout(() => {
+      audio.pause();
+      reject(new Error('TTS timeout'));
+    }, 3000);
+
+    audio.onended = () => {
+      clearTimeout(timer);
+      activeHtmlAudio = null;
+      resolve();
+    };
+
+    audio.onerror = (e) => {
+      clearTimeout(timer);
+      activeHtmlAudio = null;
+      reject(e);
+    };
+
+    audio.play().catch((err) => {
+      clearTimeout(timer);
+      activeHtmlAudio = null;
+      reject(err);
+    });
+  });
+}
+
 export async function playChineseAudio(
   text: string,
   overrideRate?: number,
@@ -949,9 +1004,16 @@ export async function playMultilingualVoice(
       }
     }
 
-    // Default fast path: Instant 0-delay native speech
-    await playBrowserUtterance(cleanText, settings, overrideRate, overridePitch);
-    return;
+    // Default High-Fidelity National First-Class Putonghua Audio Stream (一级甲等普通话)
+    // Plays studio-quality standard Putonghua across Vocabulary, Grammar, and Dictionary
+    try {
+      await playPutonghuaAudioStream(cleanText, overrideRate);
+      return;
+    } catch {
+      // Seamless fallback to browser speech synthesis if offline or network error
+      await playBrowserUtterance(cleanText, settings, overrideRate, overridePitch);
+      return;
+    }
   }
 
   // For English (en) or Vietnamese (vi) browser voice synthesis

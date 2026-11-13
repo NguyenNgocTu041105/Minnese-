@@ -160,6 +160,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   const [onlineExams, setOnlineExams] = useState<OnlineExamDoc[]>([]);
   const [fileStores, setFileStores] = useState<FileSearchStoreDoc[]>([]);
 
+  // Super Admin (root owner) vs Sub-Admin (granted admin/teacher with class-student detail isolation)
+  const isSuperAdmin = useMemo(() => {
+    return (
+      currentAdminEmail === 'babysharkkk123@gmail.com' ||
+      (currentAdmin as any)?.admin_tier === 'super_admin'
+    );
+  }, [currentAdminEmail, currentAdmin]);
+
   // Ownership verification functions: strict per-teacher class & student privacy
   const isClassOwner = (cls: ClassDoc): boolean => {
     if (!cls) return false;
@@ -226,11 +234,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
       if (studentFilter === 'unassigned') {
         return isUnassigned;
       }
-      // Strict privacy: "Tất cả" only shows students in THIS teacher's classes or unassigned students,
-      // never exposing students enrolled in other teachers' classes.
+      // Super Admin sees all students; Sub-Admins/Teachers only see their own class students + unassigned students
+      if (isSuperAdmin) {
+        return true;
+      }
       return Boolean(isInMyClass) || isUnassigned;
     });
-  }, [students, studentFilter, myClassIdSet, myClassCodeSet]);
+  }, [students, studentFilter, myClassIdSet, myClassCodeSet, isSuperAdmin]);
 
   // Check if an assignment has passed its deadline
   const isAssignmentExpired = (asg: AssignmentDoc): boolean => {
@@ -1557,13 +1567,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                     <span>
                       Sĩ số:{' '}
                       <strong className="text-[var(--color-text-primary)]">
-                        {isOwner ? `${actualStudentCount} học viên` : 'Riêng tư'}
+                        {actualStudentCount} học viên
                       </strong>
                     </span>
                     <span>Ngày tạo: {c.created_at}</span>
                   </div>
 
-                  {isOwner ? (
+                  {isOwner || isSuperAdmin ? (
                     <button
                       type="button"
                       onClick={() => setInspectingClass(c)}
@@ -1574,11 +1584,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                     </button>
                   ) : (
                     <div
-                      className="w-full py-2 px-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] text-[11px] font-medium flex items-center justify-center gap-1.5 opacity-75 select-none"
-                      title="Chỉ giáo viên dạy lớp này mới có quyền xem danh sách học viên"
+                      className="w-full py-2 px-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] text-[11px] font-medium flex items-center justify-center gap-1.5 opacity-80 select-none"
+                      title="Admin cấp dưới chỉ xem được sĩ số lớp khác, không xem được thông tin chi tiết học viên"
                     >
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Chỉ giáo viên phụ trách mới xem được học viên</span>
+                      <Lock className="w-3.5 h-3.5 shrink-0" />
+                      <span>Chỉ xem sĩ số • Khóa chi tiết học viên</span>
                     </div>
                   )}
                 </div>
@@ -2054,11 +2064,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                             </span>
                             {isPrimaryOwner ? (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/15 text-amber-600 border border-amber-500/30">
-                                🌟 Chủ sở hữu gốc
+                                🌟 Admin Cấp Cao (Chủ sở hữu)
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20">
-                                Quản trị viên (Admin)
+                                Admin cấp dưới (Chỉ xem sĩ số lớp khác)
                               </span>
                             )}
                           </div>
@@ -2073,6 +2083,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                           <span className="text-[11px] text-[var(--color-text-secondary)] italic flex items-center gap-1">
                             <Lock className="w-3 h-3 text-amber-500" />
                             Được bảo vệ
+                          </span>
+                        ) : !isSuperAdmin ? (
+                          <span className="text-[11px] text-[var(--color-text-secondary)] italic flex items-center gap-1">
+                            <Lock className="w-3 h-3" />
+                            Chỉ Admin cấp cao gỡ quyền
                           </span>
                         ) : (
                           <button
@@ -3079,8 +3094,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
         onUploadRagFile={handleUploadRagFile}
       />
 
-      {/* MODAL: XEM TIẾN ĐỘ HỌC VIÊN TỪNG LỚP HỌC (INSPECTING CLASS - STRICT TEACHER OWNERSHIP) */}
-      {inspectingClass && isClassOwner(inspectingClass) && (
+      {/* MODAL: XEM TIẾN ĐỘ HỌC VIÊN TỪNG LỚP HỌC (INSPECTING CLASS - OWNER OR SUPER ADMIN) */}
+      {inspectingClass && (isClassOwner(inspectingClass) || isSuperAdmin) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}

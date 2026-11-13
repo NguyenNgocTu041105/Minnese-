@@ -497,11 +497,12 @@ async function startServer() {
   const PORT = Number.parseInt(process.env.PORT || '3000', 10);
   const HOST = process.env.HOST || '0.0.0.0';
 
-  // Defensive HTTP security headers via Helmet (preserve Vite HMR and inline script execution)
+  // Defensive HTTP security headers via Helmet (preserve Vite HMR, OAuth popup authentication, and inline script execution)
   app.use(
     helmet({
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
     })
   );
 
@@ -3652,6 +3653,7 @@ Return ONLY a JSON object matching this schema:
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
         res.setHeader('Surrogate-Control', 'no-store');
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
         res.sendFile(path.join(distPath, 'index.html'));
       };
       app.get('/', serveFreshIndexHtml);

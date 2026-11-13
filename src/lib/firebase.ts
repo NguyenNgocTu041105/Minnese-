@@ -56,6 +56,7 @@ export const db = initializeFirestore(
 );
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // List of Initial Bootstrap Admin Emails
 export const PRIMARY_OWNER_EMAIL = 'babysharkkk123@gmail.com';

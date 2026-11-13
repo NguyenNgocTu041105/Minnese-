@@ -336,7 +336,7 @@ export function getAuthErrorMessage(error: any): string {
     case 'auth/network-request-failed':
       return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng Internet của bạn.';
     case 'auth/popup-closed-by-user':
-      return 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất xác thực.';
+      return 'Cửa sổ đăng nhập chưa hoàn tất (do bị gián đoạn hoặc bị tiện ích chặn quảng cáo AdBlock chặn tải). Vui lòng thử lại.';
     case 'auth/cancelled-popup-request':
       return 'Yêu cầu mở cửa sổ đăng nhập đã bị hủy do có thao tác mới.';
     case 'auth/popup-blocked':

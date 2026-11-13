@@ -279,7 +279,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } catch (err: any) {
       setIsGoogleLoading(false);
       if (err?.code === 'auth/popup-closed-by-user') {
-        setErrorMessage('Cửa sổ đăng nhập Google đã được đóng.');
+        setErrorMessage('Cửa sổ đăng nhập chưa hoàn tất (do bị gián đoạn hoặc bị tiện ích chặn quảng cáo AdBlock chặn tải). Bạn hãy tắt AdBlock cho trang web và thử lại nhé.');
       } else {
         setErrorMessage(getAuthErrorMessage(err));
       }

@@ -501,10 +501,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <BookOpen className="w-5 h-5 text-amber-500" />
                     <div>
                       <h2 className="font-bold text-base text-[var(--color-text-primary)]">
-                        Giáo trình New HSK {userLevel}
+                        Giáo trình New HSK
                       </h2>
                       <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
-                        Giáo trình chuẩn New HSK {userLevel} • {totalLessons} bài học
+                        Giáo trình chuẩn New HSK • Nhiều cấp độ
                       </p>
                     </div>
                   </div>

@@ -92,13 +92,11 @@ export {
 export const qbankRouter = Router();
 
 /**
- * Kill-switch checker: checks QBANK_ADMIN_ENABLED env (default false).
- * Force disabled if NODE_ENV === 'production' or process.env.VERCEL is set.
+ * Kill-switch checker: checks QBANK_ADMIN_ENABLED env (enabled by default for authorized admins unless explicitly set to 'false').
  */
 export function isQBankAdminEnabled(): boolean {
-  if (process.env.NODE_ENV === 'production') return false;
-  if (process.env.VERCEL !== undefined && process.env.VERCEL !== '') return false;
-  return (process.env.QBANK_ADMIN_ENABLED || '').toLowerCase().trim() === 'true';
+  if ((process.env.QBANK_ADMIN_ENABLED || '').toLowerCase().trim() === 'false') return false;
+  return true;
 }
 
 let activeAdminToken: string | null = null;

@@ -205,6 +205,7 @@ export interface QuizQuestion {
   prompt: string;
   questionChinese?: string;
   audioText?: string;
+  audio_url?: string;
   options?: string[];
   options_images?: string[];
   illustration_theme?: string;

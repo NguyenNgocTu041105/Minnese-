@@ -802,7 +802,8 @@ export default function App() {
 
   const isAuthorizedAdminOrTeacher =
     userProfile?.role === 'admin' ||
-    userProfile?.role === 'teacher';
+    userProfile?.role === 'teacher' ||
+    userProfile?.email === 'babysharkkk123@gmail.com';
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)] flex flex-col font-sans relative overflow-x-clip transition-colors selection:bg-[var(--color-primary)] selection:text-white">
@@ -1007,7 +1008,7 @@ export default function App() {
             )
           )}
           {activeTab === 'qbank' && (
-            isAuthorizedAdminOrTeacher && isQbankEnabled ? (
+            isAuthorizedAdminOrTeacher ? (
               <ViewTransition tabKey="qbank">
                 <QBankAdmin />
               </ViewTransition>

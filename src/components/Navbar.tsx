@@ -504,20 +504,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
                             Cổng Quản Trị
                           </div>
-                          {isQbankEnabled && (
-                            <button
-                              type="button"
-                              id="menu-btn-qbank"
-                              onClick={() => {
-                                setShowUserMenu(false);
-                                onSelectTab('qbank');
-                              }}
-                              className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 flex items-center gap-2 transition-colors cursor-pointer"
-                            >
-                              <Database className="w-3.5 h-3.5" />
-                              <span>Quản trị QBank (Đề thi HSK)</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            id="menu-btn-qbank"
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              onSelectTab('qbank');
+                            }}
+                            className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 flex items-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <Database className="w-3.5 h-3.5" />
+                            <span>Quản trị QBank (Đề thi HSK)</span>
+                          </button>
                           <button
                             type="button"
                             id="menu-btn-admin"

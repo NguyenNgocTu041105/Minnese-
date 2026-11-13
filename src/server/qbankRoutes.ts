@@ -28,6 +28,7 @@ import {
 } from './examExportService.js';
 import { describeValidationIssue, summarizeCandidateIssues } from './llm/validationDiagnostics.js';
 import { writeValidationDiagnosticArtifact } from './llm/validationArtifact.js';
+import { isFirebaseAdminConfigured, verifyFirebaseAdminIdToken } from './firebaseAdminAuth.js';
 import {
   syncApprovedQuestion,
   syncApprovedQuestionToPool,
@@ -168,7 +169,7 @@ export function setQBankAdminTokenForTesting(t: string | null): void {
  *    - Validates server environment token (refuses requests if unset or weak)
  *    - Performs constant-time timing-safe comparison (crypto.timingSafeEqual)
  */
-export function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
   // 1. Loopback IP check: req.socket.remoteAddress must be loopback ('127.0.0.1', '::1', '::ffff:127.0.0.1')
   const remoteIp = (req.socket?.remoteAddress || req.ip || '').trim();
   const isLoopbackIp =
@@ -207,7 +208,38 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
     }
   }
 
-  // 4. Token auth: require Authorization: Bearer <token>, X-QBank-Token, or X-QBank-Admin-Token
+  // 4a. Cryptographic Firebase Admin ID Token verification (for authenticated Firebase Admins)
+  const rawFirebaseHeader = req.headers['x-firebase-id-token'];
+  const bearerHeader =
+    typeof req.headers.authorization === 'string' &&
+    req.headers.authorization.trim().toLowerCase().startsWith('bearer ')
+      ? req.headers.authorization.trim().slice(7).trim()
+      : '';
+  const hasExplicitQBankToken = Boolean(
+    (typeof req.headers['x-qbank-token'] === 'string' && req.headers['x-qbank-token'].trim()) ||
+      (typeof req.headers['x-qbank-admin-token'] === 'string' && req.headers['x-qbank-admin-token'].trim())
+  );
+  const candidateFirebaseJwt =
+    typeof rawFirebaseHeader === 'string' && rawFirebaseHeader.trim()
+      ? rawFirebaseHeader.trim()
+      : !hasExplicitQBankToken && bearerHeader.split('.').length === 3
+        ? bearerHeader
+        : '';
+
+  if (candidateFirebaseJwt && isFirebaseAdminConfigured()) {
+    const fbAuth = await verifyFirebaseAdminIdToken(candidateFirebaseJwt);
+    if (fbAuth.authorized) {
+      return next();
+    }
+    if (!hasExplicitQBankToken) {
+      return res.status(403).json({
+        success: false,
+        error: fbAuth.reason || 'Từ chối truy cập: Tài khoản Firebase không có quyền Quản trị viên QBank.',
+      });
+    }
+  }
+
+  // 4b. Token auth: require Authorization: Bearer <token>, X-QBank-Token, or X-QBank-Admin-Token
   let clientToken: string | undefined;
   const xToken = req.headers['x-qbank-token'] || req.headers['x-qbank-admin-token'];
   if (typeof xToken === 'string' && xToken.trim()) {

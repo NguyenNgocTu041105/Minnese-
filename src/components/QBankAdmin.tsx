@@ -43,6 +43,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { AIExamStudio } from './Admin/AIExamStudio';
+import { auth } from '../lib/firebase';
 import { HSKIllustrationCanvas, resolveSceneKey } from './HSKIllustrationCanvas';
 import { ExportExamModal, downloadExportFile } from './Admin/ExportExamModal';
 import { GoldenPromptLibraryModal } from './Admin/GoldenPromptLibraryModal';
@@ -493,6 +494,21 @@ async function safeApiCall<T = any>(
       headers.set('Authorization', `Bearer ${token}`);
       headers.set('X-QBank-Admin-Token', token);
       headers.set('X-QBank-Token', token);
+    }
+
+    // Automatically attach cryptographically signed Firebase ID Token for authenticated Admins
+    if (auth?.currentUser) {
+      try {
+        const firebaseIdToken = await auth.currentUser.getIdToken();
+        if (firebaseIdToken) {
+          headers.set('X-Firebase-Id-Token', firebaseIdToken);
+          if (!token) {
+            headers.set('Authorization', `Bearer ${firebaseIdToken}`);
+          }
+        }
+      } catch {
+        // Ignore token fetch errors and fall back to manual QBANK_ADMIN_TOKEN if present
+      }
     }
 
     const res = await fetch(url, { ...options, headers });

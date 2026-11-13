@@ -346,6 +346,9 @@ export function getAuthErrorMessage(error: any): string {
       const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'minnese.onrender.com';
       return `Tên miền "${currentHost}" chưa được cấp phép trong Firebase. Vui lòng thêm "${currentHost}" vào mục Authorized domains trong Firebase Console.`;
     }
+    case 'auth/unauthorized-continue-uri':
+    case 'auth/invalid-continue-uri':
+      return 'Đường dẫn chuyển hướng (Continue URL) chưa được cấp phép trong Firebase Authorized domains.';
     case 'auth/operation-not-allowed':
       return 'Hệ thống đăng nhập bằng Email tạm thời đang bảo trì cấu hình. Vui lòng thử lại sau hoặc tiếp tục với Google.';
     case 'auth/configuration-not-found':
@@ -457,7 +460,19 @@ export async function resetPassword(email: string): Promise<{ success: boolean; 
     } : undefined;
 
     if (actionCodeSettings) {
-      await sendPasswordResetEmail(auth, email.trim(), actionCodeSettings);
+      try {
+        await sendPasswordResetEmail(auth, email.trim(), actionCodeSettings);
+      } catch (innerErr: any) {
+        if (
+          innerErr?.code === 'auth/unauthorized-continue-uri' ||
+          innerErr?.code === 'auth/invalid-continue-uri'
+        ) {
+          // Fallback to default Firebase reset email when running on an unauthorized continue URI (e.g. localhost)
+          await sendPasswordResetEmail(auth, email.trim());
+        } else {
+          throw innerErr;
+        }
+      }
     } else {
       await sendPasswordResetEmail(auth, email.trim());
     }

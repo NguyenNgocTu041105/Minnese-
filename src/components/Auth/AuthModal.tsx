@@ -223,7 +223,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isBusy) {
           onClose();
@@ -234,18 +234,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
-        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden text-[var(--color-text-primary)]"
+        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden text-[var(--color-text-primary)] my-auto max-h-[calc(100vh-2rem)] flex flex-col"
         id="auth-modal"
       >
         {/* Subtle background glow */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-primary)]/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Close Button */}
+        {/* Close Button - always pinned top-right and accessible */}
         <button
           type="button"
           onClick={onClose}
           disabled={isBusy}
-          className="absolute top-5 right-5 p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="absolute top-3.5 right-3.5 z-20 p-2 rounded-xl text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           title="Đóng cửa sổ"
           aria-label="Đóng cửa sổ đăng nhập"
           id="auth-modal-close-btn"
@@ -253,55 +253,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Brand Header */}
-        <div className="text-center space-y-2 relative z-10 flex flex-col items-center">
-          <MinnieLogo size={72} variant="badge" />
-          <h2
-            id="auth-modal-title"
-            className="text-2xl font-black tracking-tight text-[var(--color-text-primary)]"
-          >
-            {mode === 'login' && 'Chào mừng trở lại!'}
-            {mode === 'register' && 'Tạo tài khoản học Minnie Chinese'}
-            {mode === 'forgot' && 'Khôi phục mật khẩu'}
-          </h2>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            {mode === 'login' && 'Đăng nhập để đồng bộ tiến độ ôn tập Flashcards và lịch sử điểm số.'}
-            {mode === 'register' && 'Bắt đầu hành trình chinh phục HSK 1-6 chuẩn quốc tế với AI.'}
-            {mode === 'forgot' && 'Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu an toàn.'}
-          </p>
-        </div>
-
-        {/* Tab Switcher (Login vs Register) */}
-        {mode !== 'forgot' && (
-          <div className="flex p-1 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] relative z-10">
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => handleSwitchMode('login')}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                mode === 'login'
-                  ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-              }`}
-              id="auth-tab-login"
+        {/* Scrollable content container for perfect mobile & small laptop fit */}
+        <div className="overflow-y-auto px-5 py-5 sm:px-7 sm:py-6 space-y-4 relative z-10 overscroll-contain">
+          {/* Brand Header */}
+          <div className="text-center space-y-1.5 relative z-10 flex flex-col items-center">
+            <MinnieLogo size={52} variant="badge" />
+            <h2
+              id="auth-modal-title"
+              className="text-xl sm:text-2xl font-black tracking-tight text-[var(--color-text-primary)]"
             >
-              Đăng nhập
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => handleSwitchMode('register')}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                mode === 'register'
-                  ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-              }`}
-              id="auth-tab-register"
-            >
-              Đăng ký mới
-            </button>
+              {mode === 'login' && 'Chào mừng trở lại!'}
+              {mode === 'register' && 'Tạo tài khoản học Minnie Chinese'}
+              {mode === 'forgot' && 'Khôi phục mật khẩu'}
+            </h2>
+            <p className="text-xs text-[var(--color-text-secondary)] max-w-xs leading-relaxed">
+              {mode === 'login' && 'Đăng nhập để đồng bộ tiến độ ôn tập Flashcards và lịch sử điểm số.'}
+              {mode === 'register' && 'Bắt đầu hành trình chinh phục HSK 1-6 chuẩn quốc tế với AI.'}
+              {mode === 'forgot' && 'Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu an toàn.'}
+            </p>
           </div>
-        )}
+
+          {/* Tab Switcher (Login vs Register) */}
+          {mode !== 'forgot' && (
+            <div className="flex p-1 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] relative z-10">
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleSwitchMode('login')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  mode === 'login'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                }`}
+                id="auth-tab-login"
+              >
+                Đăng nhập
+              </button>
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleSwitchMode('register')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  mode === 'register'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                }`}
+                id="auth-tab-register"
+              >
+                Đăng ký mới
+              </button>
+            </div>
+          )}
 
         {/* Feedback Alerts */}
         {errorMessage && (
@@ -328,13 +330,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* Email/Password Form */}
-        <form onSubmit={handleEmailSubmit} className="space-y-3.5 relative z-10">
+        <form onSubmit={handleEmailSubmit} className="space-y-3 relative z-10">
           {/* Display Name (Register only) */}
           {mode === 'register' && (
             <div>
               <label
                 htmlFor="auth-input-name"
-                className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5"
+                className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
               >
                 Họ và tên
               </label>
@@ -359,7 +361,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div>
             <label
               htmlFor="auth-input-email"
-              className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5"
+              className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
             >
               Địa chỉ Email
             </label>
@@ -381,8 +383,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Password */}
           {mode !== 'forgot' && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between mb-1.5">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between mb-1">
                 <label
                   htmlFor="auth-input-password"
                   className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider"
@@ -525,10 +527,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Confirm Password (Register only) */}
           {mode === 'register' && (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label
                 htmlFor="auth-input-confirm-password"
-                className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5"
+                className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
               >
                 Xác nhận mật khẩu
               </label>
@@ -579,7 +581,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={isBusy}
-            className="w-full py-3 px-4 rounded-xl bg-[var(--color-primary)] text-white font-bold text-sm hover:bg-[var(--color-primary-dark)] active:scale-[0.99] transition-all shadow-md shadow-[var(--color-primary)]/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-primary)] text-white font-bold text-sm hover:bg-[var(--color-primary-dark)] active:scale-[0.99] transition-all shadow-md shadow-[var(--color-primary)]/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-1.5"
             id="auth-submit-btn"
           >
             {isLoading ? (
@@ -626,7 +628,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             {/* Google 1-Click Login & Guest Mode */}
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -663,13 +665,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={handleGuestContinue}
                 disabled={isBusy}
-                className="w-full py-2 px-4 rounded-xl text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-medium text-center transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-1.5 px-4 rounded-xl text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-medium text-center transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Dùng thử ngay (Chế độ Khách)
               </button>
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

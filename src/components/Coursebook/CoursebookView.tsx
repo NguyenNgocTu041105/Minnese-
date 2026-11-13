@@ -984,8 +984,15 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     if (typeof initialLessonIndex === 'number' && initialLessonIndex >= 0) {
       return initialLessonIndex;
     }
+    if (!hasEnrolledClass && !isAdmin) return 0;
     try {
       const lvl = (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1;
+      const userPrefix = userProfile?.id ? `minnie_${userProfile.id}_` : 'minnie_';
+      const savedUser = localStorage.getItem(`${userPrefix}current_lesson_hsk_${lvl}`);
+      if (savedUser !== null) {
+        const val = parseInt(savedUser, 10);
+        if (!isNaN(val) && val >= 0) return val;
+      }
       const saved = localStorage.getItem(`minnie_current_lesson_hsk_${lvl}`);
       if (saved !== null) {
         const val = parseInt(saved, 10);
@@ -995,8 +1002,12 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     return 0;
   });
   const [completedLessonNums, setCompletedLessonNums] = useState<number[]>(() => {
+    if (!hasEnrolledClass && !isAdmin) return [];
     try {
       const lvl = initialHskLevel || (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1;
+      const userPrefix = userProfile?.id ? `minnie_${userProfile.id}_` : 'minnie_';
+      const savedUser = localStorage.getItem(`${userPrefix}completed_lessons_hsk_${lvl}`);
+      if (savedUser) return JSON.parse(savedUser);
       const saved = localStorage.getItem(`minnie_completed_lessons_hsk_${lvl}`);
       if (saved) return JSON.parse(saved);
     } catch {}
@@ -1337,6 +1348,9 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
   const handleSelectLesson = (idx: number) => {
     setSelectedLessonIndex(idx);
     try {
+      if (userProfile?.id) {
+        localStorage.setItem(`minnie_${userProfile.id}_current_lesson_hsk_${selectedHskLevel}`, String(idx));
+      }
       localStorage.setItem(`minnie_current_lesson_hsk_${selectedHskLevel}`, String(idx));
       window.dispatchEvent(new Event('minnie_lesson_progress_updated'));
       logStudyActivity('new_lesson', `Mở bài học mới: HSK ${selectedHskLevel} - Bài ${idx + 1}`);
@@ -1353,6 +1367,9 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     }
     setCompletedLessonNums(next);
     try {
+      if (userProfile?.id) {
+        localStorage.setItem(`minnie_${userProfile.id}_completed_lessons_hsk_${selectedHskLevel}`, JSON.stringify(next));
+      }
       localStorage.setItem(`minnie_completed_lessons_hsk_${selectedHskLevel}`, JSON.stringify(next));
       window.dispatchEvent(new Event('minnie_lesson_progress_updated'));
     } catch {}
@@ -1369,9 +1386,13 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     setLockedLevelNotice(null);
     setSelectedHskLevel(lvl);
     try {
-      const savedIdx = localStorage.getItem(`minnie_current_lesson_hsk_${lvl}`);
+      const userPrefix = userProfile?.id ? `minnie_${userProfile.id}_` : 'minnie_';
+      const savedUserIdx = localStorage.getItem(`${userPrefix}current_lesson_hsk_${lvl}`);
+      const savedIdx = savedUserIdx !== null ? savedUserIdx : localStorage.getItem(`minnie_current_lesson_hsk_${lvl}`);
       setSelectedLessonIndex(savedIdx !== null ? parseInt(savedIdx, 10) || 0 : 0);
-      const savedCompleted = localStorage.getItem(`minnie_completed_lessons_hsk_${lvl}`);
+
+      const savedUserCompleted = localStorage.getItem(`${userPrefix}completed_lessons_hsk_${lvl}`);
+      const savedCompleted = savedUserCompleted || localStorage.getItem(`minnie_completed_lessons_hsk_${lvl}`);
       setCompletedLessonNums(savedCompleted ? JSON.parse(savedCompleted) : []);
     } catch {
       setSelectedLessonIndex(0);

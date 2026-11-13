@@ -9,7 +9,10 @@ import {
   FileText,
   GraduationCap,
   Volume2,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
+import { isUserAdmin } from '../../lib/firebase';
 import {
   ResponsiveContainer,
   BarChart,
@@ -55,6 +58,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenJoinClass,
   onStartAssignment,
 }) => {
+  const isAdmin = userProfile?.role === 'admin' || userProfile?.email === 'babysharkkk123@gmail.com' || isUserAdmin(userProfile?.email);
+  const hasEnrolledClass = Boolean(userProfile?.class_code);
+  const userPrefix = userProfile?.id ? `minnie_${userProfile.id}_` : 'minnie_';
+
   const userLevel = (userProfile.current_level as 1 | 2 | 3 | 4) || 1;
   const levelLessons =
     userLevel === 1
@@ -67,7 +74,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalLessons = levelLessons.length || (userLevel === 3 || userLevel === 4 ? 10 : 15);
 
   const [completedLessonNums, setCompletedLessonNums] = useState<number[]>(() => {
+    if (!hasEnrolledClass && !isAdmin) return [];
     try {
+      const savedUser = localStorage.getItem(`${userPrefix}completed_lessons_hsk_${userLevel}`);
+      if (savedUser) return JSON.parse(savedUser);
       const saved = localStorage.getItem(`minnie_completed_lessons_hsk_${userLevel}`);
       if (saved) return JSON.parse(saved);
     } catch {}
@@ -75,7 +85,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   });
 
   const [activeLessonIndex, setActiveLessonIndex] = useState<number>(() => {
+    if (!hasEnrolledClass && !isAdmin) return 0;
     try {
+      const savedUser = localStorage.getItem(`${userPrefix}current_lesson_hsk_${userLevel}`);
+      if (savedUser !== null) {
+        const val = parseInt(savedUser, 10);
+        if (!isNaN(val) && val >= 0 && val < totalLessons) return val;
+      }
       const saved = localStorage.getItem(`minnie_current_lesson_hsk_${userLevel}`);
       if (saved !== null) {
         const val = parseInt(saved, 10);
@@ -106,10 +122,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   useEffect(() => {
     const syncProgress = () => {
+      if (!hasEnrolledClass && !isAdmin) {
+        setCompletedLessonNums([]);
+        setActiveLessonIndex(0);
+        return;
+      }
       try {
-        const saved = localStorage.getItem(`minnie_completed_lessons_hsk_${userLevel}`);
-        if (saved) setCompletedLessonNums(JSON.parse(saved));
-        const savedIdx = localStorage.getItem(`minnie_current_lesson_hsk_${userLevel}`);
+        const savedUserComp = localStorage.getItem(`${userPrefix}completed_lessons_hsk_${userLevel}`);
+        const savedComp = savedUserComp || localStorage.getItem(`minnie_completed_lessons_hsk_${userLevel}`);
+        if (savedComp) setCompletedLessonNums(JSON.parse(savedComp));
+
+        const savedUserIdx = localStorage.getItem(`${userPrefix}current_lesson_hsk_${userLevel}`);
+        const savedIdx = savedUserIdx !== null ? savedUserIdx : localStorage.getItem(`minnie_current_lesson_hsk_${userLevel}`);
         if (savedIdx !== null) {
           const val = parseInt(savedIdx, 10);
           if (!isNaN(val) && val >= 0 && val < totalLessons) setActiveLessonIndex(val);
@@ -123,15 +147,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       window.removeEventListener('storage', syncProgress);
       window.removeEventListener('minnie_lesson_progress_updated', syncProgress);
     };
-  }, [userLevel, totalLessons]);
+  }, [userLevel, totalLessons, hasEnrolledClass, isAdmin, userPrefix]);
 
   const currentLessonData = levelLessons[activeLessonIndex] || levelLessons[0];
   const completedCount = completedLessonNums.length;
   // Progress percentage across the curriculum
-  const lessonProgressPercent = Math.min(
-    100,
-    Math.round(((completedCount > 0 ? completedCount : (activeLessonIndex + 1)) / totalLessons) * 100)
-  );
+  const lessonProgressPercent = (!hasEnrolledClass && !isAdmin)
+    ? 0
+    : Math.min(
+        100,
+        Math.round(((completedCount > 0 ? completedCount : (activeLessonIndex + 1)) / totalLessons) * 100)
+      );
 
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
@@ -161,7 +187,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const isTodayZeroActivity = (todayActivity?.total ?? 0) === 0;
 
   // Filter assignments matching user's official HSK level, enrolled class, or created assignments
-  const isAdmin = userProfile.role === 'admin' || userProfile.email === 'babysharkkk123@gmail.com';
   const userAssignments = assignments.filter((a) => {
     if (!a.is_active) return false;
     // Hide assignments that expired more than 7 days ago, but keep recent overdue ones visible for students
@@ -468,112 +493,182 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Coursebook Level Progress & Current Lesson Widget */}
         <div className="silk-card p-6 flex flex-col justify-between space-y-5">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-[var(--color-primary)]" />
-                <div>
-                  <h2 className="font-bold text-base text-[var(--color-text-primary)]">
-                    Tiến độ giáo trình HSK {userLevel}
-                  </h2>
-                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
-                    Giáo trình chuẩn New HSK {userLevel} • {totalLessons} bài học
-                  </p>
+          {!hasEnrolledClass && !isAdmin ? (
+            <div className="flex flex-col h-full justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <h2 className="font-bold text-base text-[var(--color-text-primary)]">
+                        Giáo trình New HSK {userLevel}
+                      </h2>
+                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
+                        Giáo trình chuẩn New HSK {userLevel} • {totalLessons} bài học
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                    Chưa kích hoạt
+                  </span>
+                </div>
+
+                {/* Locked illustration card */}
+                <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-5 text-center space-y-3 my-2">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center mx-auto shadow-sm">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
+                      Chưa tham gia lớp học
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                      Giáo trình được phân quyền riêng biệt cho từng lớp học. Vui lòng kích hoạt Mã lớp học (Class Code) do giáo viên cung cấp để bắt đầu học.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-                {lessonProgressPercent}%
-              </span>
-            </div>
 
-            {/* Circular Progress Ring - Lesson Progress */}
-            <div className="relative w-36 h-36 mx-auto flex items-center justify-center my-3">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  stroke="var(--color-border)"
-                  strokeWidth="8"
-                  fill="transparent"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  stroke="var(--color-primary)"
-                  strokeWidth="8"
-                  strokeDasharray={`${2 * Math.PI * 40}`}
-                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - lessonProgressPercent / 100)}`}
-                  strokeLinecap="round"
-                  fill="transparent"
-                  className="transition-all duration-1000 ease-out"
-                />
-              </svg>
-              <div className="absolute text-center">
-                <span className="text-3xl font-extrabold text-[var(--color-text-primary)] font-mono">
-                  {currentLessonData.lessonNumber}
-                </span>
-                <span className="text-[11px] text-[var(--color-text-secondary)] block font-medium">
-                  / {totalLessons} bài học
-                </span>
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenJoinClass) {
+                      onOpenJoinClass();
+                    } else {
+                      onNavigate('coursebook');
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-primary)] text-white font-bold text-xs sm:text-sm hover:bg-[var(--color-primary-dark)] flex items-center justify-center gap-2 transition-all shadow-md shadow-[var(--color-primary)]/20 cursor-pointer"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  <span>Kích hoạt mã lớp học ngay</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigate('quizzes')}
+                  className="w-full py-2 px-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-emerald-500" />
+                    Luyện thi & làm trắc nghiệm HSK tự do
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-[var(--color-primary)]" />
+                    <div>
+                      <h2 className="font-bold text-base text-[var(--color-text-primary)]">
+                        Tiến độ giáo trình HSK {userLevel}
+                      </h2>
+                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
+                        Giáo trình chuẩn New HSK {userLevel} • {totalLessons} bài học
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                    {lessonProgressPercent}%
+                  </span>
+                </div>
 
-            {/* Current Lesson Info Card */}
-            <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-3 text-left space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-bold text-[var(--color-primary)] flex items-center gap-1">
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  Bài học hiện tại
-                </span>
-                <span className="text-[var(--color-text-secondary)] font-mono">
-                  Trang {currentLessonData.pageStart}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold font-chinese text-[var(--color-text-primary)]">
-                  Bài {currentLessonData.lessonNumber}: {currentLessonData.titleHanzi}
-                </span>
-                <span className="text-xs text-[var(--color-text-secondary)] truncate">
-                  ({currentLessonData.titleVietnamese})
-                </span>
-              </div>
-              <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-1">
-                {currentLessonData.objectives?.[0] || currentLessonData.titlePinyin}
-              </p>
-              <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]/50 text-[11px]">
-                <span className="text-[var(--color-text-secondary)]">Trạng thái:</span>
-                <span className={`font-semibold ${completedLessonNums.includes(currentLessonData.lessonNumber) ? 'text-emerald-500' : 'text-amber-500'}`}>
-                  {completedLessonNums.includes(currentLessonData.lessonNumber) ? '✓ Đã hoàn thành' : '📖 Đang tiếp diễn'}
-                </span>
-              </div>
-            </div>
-          </div>
+                {/* Circular Progress Ring - Lesson Progress */}
+                <div className="relative w-36 h-36 mx-auto flex items-center justify-center my-3">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      stroke="var(--color-border)"
+                      strokeWidth="8"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      stroke="var(--color-primary)"
+                      strokeWidth="8"
+                      strokeDasharray={`${2 * Math.PI * 40}`}
+                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - lessonProgressPercent / 100)}`}
+                      strokeLinecap="round"
+                      fill="transparent"
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute text-center">
+                    <span className="text-3xl font-extrabold text-[var(--color-text-primary)] font-mono">
+                      {currentLessonData.lessonNumber}
+                    </span>
+                    <span className="text-[11px] text-[var(--color-text-secondary)] block font-medium">
+                      / {totalLessons} bài học
+                    </span>
+                  </div>
+                </div>
 
-          <div className="space-y-2 pt-1">
-            <button
-              type="button"
-              onClick={() => onNavigate('coursebook')}
-              className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-primary)] text-white font-bold text-xs sm:text-sm hover:bg-[var(--color-primary-dark)] flex items-center justify-center gap-2 transition-all shadow-md shadow-[var(--color-primary)]/20 cursor-pointer"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Vào học Giáo trình HSK {userLevel} (Bài {currentLessonData.lessonNumber})</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+                {/* Current Lesson Info Card */}
+                <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-3 text-left space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-[var(--color-primary)] flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      Bài học hiện tại
+                    </span>
+                    <span className="text-[var(--color-text-secondary)] font-mono">
+                      Trang {currentLessonData.pageStart}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold font-chinese text-[var(--color-text-primary)]">
+                      Bài {currentLessonData.lessonNumber}: {currentLessonData.titleHanzi}
+                    </span>
+                    <span className="text-xs text-[var(--color-text-secondary)] truncate">
+                      ({currentLessonData.titleVietnamese})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-1">
+                    {currentLessonData.objectives?.[0] || currentLessonData.titlePinyin}
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]/50 text-[11px]">
+                    <span className="text-[var(--color-text-secondary)]">Trạng thái:</span>
+                    <span className={`font-semibold ${completedLessonNums.includes(currentLessonData.lessonNumber) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                      {completedLessonNums.includes(currentLessonData.lessonNumber) ? '✓ Đã hoàn thành' : '📖 Đang tiếp diễn'}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => onNavigate('tutor')}
-              className="w-full py-2 px-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
-            >
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-500" />
-                Luyện đàm thoại bài khóa với Gia sư AI
-              </span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onNavigate('coursebook')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-primary)] text-white font-bold text-xs sm:text-sm hover:bg-[var(--color-primary-dark)] flex items-center justify-center gap-2 transition-all shadow-md shadow-[var(--color-primary)]/20 cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Vào học Giáo trình HSK {userLevel} (Bài {currentLessonData.lessonNumber})</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigate('tutor')}
+                  className="w-full py-2 px-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xs font-medium flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-500" />
+                    Luyện đàm thoại bài khóa với Gia sư AI
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

@@ -160,19 +160,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   const [onlineExams, setOnlineExams] = useState<OnlineExamDoc[]>([]);
   const [fileStores, setFileStores] = useState<FileSearchStoreDoc[]>([]);
 
-  // Ownership verification functions
+  // Ownership verification functions: strict per-teacher class & student privacy
   const isClassOwner = (cls: ClassDoc): boolean => {
     if (!cls) return false;
-    // Admins and root users have universal management authority over all classes
-    if (currentAdmin?.role === 'admin' || currentAdminEmail.includes('admin') || currentAdminEmail.includes('babysharkkk123')) return true;
-    const createdBy = (cls.created_by || '').toLowerCase();
-    const teacherName = (cls.teacher_name || '').toLowerCase();
-    return (
-      createdBy === currentAdminEmail ||
-      (currentAdmin?.id && cls.teacher_id === currentAdmin.id) ||
-      teacherName.includes(currentAdminEmail.split('@')[0]) ||
-      (currentAdminEmail.includes('babysharkkk123') && createdBy.includes('babysharkkk123'))
-    );
+    const createdBy = (cls.created_by || '').toLowerCase().trim();
+    const teacherName = (cls.teacher_name || '').toLowerCase().trim();
+    const emailPrefix = currentAdminEmail.split('@')[0]?.toLowerCase() || '';
+    const adminNameLower = (currentAdminName || '').toLowerCase().trim();
+
+    if (createdBy && createdBy === currentAdminEmail) return true;
+    if (currentAdmin?.id && cls.teacher_id && cls.teacher_id === currentAdmin.id) return true;
+    if (teacherName && adminNameLower && teacherName === adminNameLower) return true;
+    if (emailPrefix && teacherName && teacherName.includes(emailPrefix)) return true;
+    return false;
   };
 
   const myClasses = useMemo(() => classes.filter(isClassOwner), [classes, currentAdminEmail]);
@@ -202,6 +202,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   const [assignmentScope, setAssignmentScope] = useState<'my_assignments' | 'all_assignments'>('my_assignments');
 
   const [showPrivacyNotice, setShowPrivacyNotice] = useState<boolean>(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState<boolean>(false);
   const myClassIdSet = useMemo(() => new Set(myClasses.map((c) => c.id)), [myClasses]);
   const myClassCodeSet = useMemo(() => new Set(myClasses.map((c) => c.class_code)), [myClasses]);
 
@@ -214,14 +215,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
 
   const displayedStudents = useMemo(() => {
     return students.filter((s) => {
-      const isInMyClass = (s.class_id && myClassIdSet.has(s.class_id)) || (s.class_code && myClassCodeSet.has(s.class_code));
+      const isInMyClass =
+        (s.class_id && myClassIdSet.has(s.class_id)) ||
+        (s.class_code && myClassCodeSet.has(s.class_code));
+      const isUnassigned = !s.class_id && !s.class_code;
+
       if (studentFilter === 'my_students') {
-        return isInMyClass;
+        return Boolean(isInMyClass);
       }
       if (studentFilter === 'unassigned') {
-        return !s.class_id && !s.class_code;
+        return isUnassigned;
       }
-      return true;
+      // Strict privacy: "Tất cả" only shows students in THIS teacher's classes or unassigned students,
+      // never exposing students enrolled in other teachers' classes.
+      return Boolean(isInMyClass) || isUnassigned;
     });
   }, [students, studentFilter, myClassIdSet, myClassCodeSet]);
 
@@ -1184,79 +1191,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
 
   return (
     <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6" id="admin-panel-container">
-      {/* Top Header with Admin Identity and Multi-Teacher Isolation Status */}
-      <div className="bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-border)] space-y-4 silk-card">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
-                  Bảng điều khiển Quản trị viên (Admin Portal)
-                </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-                  RBAC: Admin Authenticated
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Bảo mật riêng tư từng lớp
-                </span>
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                Tài khoản đang đăng nhập: <strong className="text-[var(--color-text-primary)]">{currentAdminName}</strong> ({currentAdminEmail})
-              </p>
-            </div>
+      {/* Clean, Focused Admin Header */}
+      <div className="bg-[var(--color-surface)] px-5 py-4 rounded-2xl border border-[var(--color-border)] silk-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
+            <ShieldCheck className="w-5 h-5" />
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              disabled={isLoadingData}
-              onClick={loadRealData}
-              className="px-3.5 py-2 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
-              title="Đồng bộ lại toàn bộ dữ liệu thực tế từ Firestore"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin text-[var(--color-primary)]' : ''}`} />
-              <span>{isLoadingData ? 'Đang tải...' : 'Đồng bộ Firestore'}</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={seedLoading}
-              onClick={handleSeedData}
-              className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-              title="Khởi tạo tài khoản demo, bài tập, 10 flashcard SRS và đề quiz mẫu nếu cần"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${seedLoading ? 'animate-spin' : ''}`} />
-              <span>{seedLoading ? 'Đang nạp...' : 'Tùy chọn Seed Mẫu'}</span>
-            </button>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold text-[var(--color-text-primary)]">
+                Quản trị Lớp học & Bài tập
+              </h1>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
+                Phụ trách {myClasses.length} lớp
+              </span>
+            </div>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+              Giáo viên: <strong className="text-[var(--color-text-primary)]">{currentAdminName}</strong> ({currentAdminEmail})
+            </p>
           </div>
         </div>
 
-        {/* Privacy Notice Banner - Sleek & Collapsible */}
-        <div className="bg-[var(--color-background)] rounded-xl border border-[var(--color-border)] overflow-hidden transition-all">
-          <div className="p-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-              <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                <strong className="text-[var(--color-text-primary)]">Quy chế Phân quyền:</strong> Bạn đang phụ trách <strong className="text-[var(--color-primary)]">{myClasses.length} lớp học</strong>. Các lớp khác ở chế độ chỉ xem.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPrivacyNotice(!showPrivacyNotice)}
-              className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline shrink-0 cursor-pointer"
-            >
-              {showPrivacyNotice ? 'Thu gọn ▲' : 'Xem chi tiết ▼'}
-            </button>
-          </div>
-          {showPrivacyNotice && (
-            <div className="px-3 pb-3 pt-1 border-t border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] leading-relaxed">
-              Hệ thống áp dụng chính sách bảo mật độc lập — mỗi giáo viên/admin chỉ có toàn quyền quản lý, đổi mã, giao bài và điều phối học viên trong các lớp do chính mình phụ trách. Dữ liệu học viên và bài tập được phân quyền cách ly an toàn trên Firestore.
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={isLoadingData}
+            onClick={loadRealData}
+            className="px-3 py-2 rounded-xl bg-[var(--color-background)] hover:bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Đồng bộ lại toàn bộ dữ liệu thực tế từ Firestore"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin text-[var(--color-primary)]' : ''}`} />
+            <span>{isLoadingData ? 'Đang tải...' : 'Đồng bộ'}</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={seedLoading}
+            onClick={handleSeedData}
+            className="px-3 py-2 rounded-xl bg-[var(--color-background)] hover:bg-amber-500/10 border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-amber-600 text-xs font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            title="Khởi tạo dữ liệu mẫu demo nếu hệ thống trống"
+          >
+            <RefreshCw className={`w-3 h-3 ${seedLoading ? 'animate-spin' : ''}`} />
+            <span>{seedLoading ? 'Đang nạp...' : 'Seed mẫu'}</span>
+          </button>
         </div>
       </div>
 
@@ -1279,33 +1257,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
         </div>
       )}
 
-      {/* Categorized Navigation Tabs Bar */}
+      {/* Primary Streamlined Navigation Tabs */}
       <div className="bg-[var(--color-surface)] p-2 rounded-2xl border border-[var(--color-border)] shadow-xs space-y-2">
-        {/* Category: Vận hành Lớp học */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider shrink-0">
-            <GraduationCap className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-            <span>Lớp & Học viên:</span>
-          </div>
-
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab('classes')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'classes'
                   ? 'bg-[var(--color-primary)] text-white shadow-xs font-bold'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5" />
-              <span>Lớp học</span>
+              <span>Lớp học ({myClasses.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('students')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'students'
                   ? 'bg-[var(--color-primary)] text-white shadow-xs font-bold'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
@@ -1317,21 +1289,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
 
             <button
               type="button"
-              onClick={() => setActiveTab('admins')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'admins'
-                  ? 'bg-[var(--color-primary)] text-white shadow-xs font-bold'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Phân quyền Admin</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setActiveTab('assignments')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'assignments'
                   ? 'bg-[var(--color-primary)] text-white shadow-xs font-bold'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
@@ -1340,17 +1299,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
               <FileText className="w-3.5 h-3.5" />
               <span>Giao bài tập</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('admins')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'admins'
+                  ? 'bg-[var(--color-primary)] text-white shadow-xs font-bold'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Phân quyền</span>
+            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAdvancedTools((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+              showAdvancedTools || ['workbooks', 'vocab', 'rag', 'prompts', 'tester'].includes(activeTab)
+                ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400'
+                : 'bg-[var(--color-background)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Công cụ AI & Giáo trình</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvancedTools || ['workbooks', 'vocab', 'rag', 'prompts', 'tester'].includes(activeTab) ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
-        {/* Category: Nội dung & RAG AI */}
-        <div className="pt-2 border-t border-[var(--color-border)] flex flex-col lg:flex-row lg:items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider shrink-0">
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            <span>Giáo trình & AI RAG:</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
+        {(showAdvancedTools || ['workbooks', 'vocab', 'rag', 'prompts', 'tester'].includes(activeTab)) && (
+          <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab('workbooks')}
@@ -1360,7 +1340,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                   : 'text-[var(--color-text-secondary)] hover:text-purple-600 hover:bg-[var(--color-background)]'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Sách Bài Tập & Trộn Đề AI</span>
             </button>
 
@@ -1416,7 +1396,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
               <span>Kiểm tra RAG</span>
             </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* TAB 0: CLASSES MANAGEMENT */}
@@ -1574,18 +1554,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)] pt-1 border-t border-[var(--color-border)]">
-                    <span>Sĩ số: <strong className="text-[var(--color-text-primary)]">{actualStudentCount} học viên</strong></span>
+                    <span>
+                      Sĩ số:{' '}
+                      <strong className="text-[var(--color-text-primary)]">
+                        {isOwner ? `${actualStudentCount} học viên` : 'Riêng tư'}
+                      </strong>
+                    </span>
                     <span>Ngày tạo: {c.created_at}</span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setInspectingClass(c)}
-                    className="w-full py-2 px-3 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Xem tiến độ học tập {actualStudentCount} học viên lớp này</span>
-                  </button>
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() => setInspectingClass(c)}
+                      className="w-full py-2 px-3 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Xem học viên & tiến độ ({actualStudentCount})</span>
+                    </button>
+                  ) : (
+                    <div
+                      className="w-full py-2 px-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] text-[11px] font-medium flex items-center justify-center gap-1.5 opacity-75 select-none"
+                      title="Chỉ giáo viên dạy lớp này mới có quyền xem danh sách học viên"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Chỉ giáo viên phụ trách mới xem được học viên</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1700,14 +1695,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-[var(--color-text-primary)]">
-                  Danh sách người dùng & học viên ({students.length})
+                  Học viên thuộc quyền quản lý ({displayedStudents.length})
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                  ● Realtime Sync Firestore
+                  ● Bảo mật theo lớp
                 </span>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)]">
-                Tự động đồng bộ tài khoản thật. Bạn có thể đổi vai trò (Học viên, Giáo viên, Admin) trực tiếp tại đây.
+                Chỉ hiển thị học viên trong các lớp bạn giảng dạy và học viên tự do chưa vào lớp.
               </p>
             </div>
 
@@ -1723,7 +1718,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
-                  Lớp của tôi ({displayedStudents.filter((s) => s.class_id && myClassIdSet.has(s.class_id)).length})
+                  Lớp của tôi ({students.filter((s) => (s.class_id && myClassIdSet.has(s.class_id)) || (s.class_code && myClassCodeSet.has(s.class_code))).length})
                 </button>
                 <button
                   type="button"
@@ -1734,7 +1729,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
-                  Học tự do ({students.filter((s) => !s.class_id).length})
+                  Học tự do ({students.filter((s) => !s.class_id && !s.class_code).length})
                 </button>
                 <button
                   type="button"
@@ -1745,7 +1740,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
-                  Tất cả ({students.length})
+                  Lớp tôi & Tự do ({students.filter((s) => (s.class_id && myClassIdSet.has(s.class_id)) || (s.class_code && myClassCodeSet.has(s.class_code)) || (!s.class_id && !s.class_code)).length})
                 </button>
               </div>
 
@@ -3084,8 +3079,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
         onUploadRagFile={handleUploadRagFile}
       />
 
-      {/* MODAL: XEM TIẾN ĐỘ HỌC VIÊN TỪNG LỚP HỌC (INSPECTING CLASS) */}
-      {inspectingClass && (
+      {/* MODAL: XEM TIẾN ĐỘ HỌC VIÊN TỪNG LỚP HỌC (INSPECTING CLASS - STRICT TEACHER OWNERSHIP) */}
+      {inspectingClass && isClassOwner(inspectingClass) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}

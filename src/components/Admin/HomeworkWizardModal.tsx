@@ -1113,6 +1113,21 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     setCurrentStep(4);
   };
 
+  // Express 1-click creation from Step 1 straight to Step 4 review & publish
+  const handleQuickCreate = () => {
+    setErrorMsg('');
+    const synthesized = synthesizeLessonQuestions(
+      effectiveLessonForGeneration,
+      targetLevel,
+      selectedFormats,
+      questionCount,
+      difficultyLevel,
+      selectedVoice
+    );
+    setQuestions(synthesized);
+    setCurrentStep(4);
+  };
+
   // Inline editing handlers
   const startEditingQuestion = (q: QuizQuestion) => {
     setEditingQuestionId(q.id);
@@ -1509,33 +1524,16 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                   })}
                 </div>
 
-                {/* Lesson Preview Card */}
+                {/* Compact Lesson Preview Pill */}
                 {selectedLesson && (
-                  <div className="p-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs space-y-2">
-                    <div className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                      <span>Trọng tâm bài học: Bài {selectedLesson.lessonNumber} - {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})</span>
+                  <div className="px-3.5 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+                      <span>Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})</span>
                     </div>
-                    {selectedLesson.objectives && selectedLesson.objectives.length > 0 && (
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">
-                        🎯 <span className="font-semibold">Mục tiêu:</span> {selectedLesson.objectives.join('; ')}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {selectedLesson.vocabulary?.slice(0, 8).map((v) => (
-                        <span
-                          key={v.id || v.hanzi}
-                          className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] text-[var(--color-text-primary)] font-medium"
-                        >
-                          {v.hanzi} ({v.pinyin} - {v.vietnamese})
-                        </span>
-                      ))}
-                      {(selectedLesson.vocabulary?.length || 0) > 8 && (
-                        <span className="text-[10px] text-[var(--color-text-secondary)] self-center">
-                          +{selectedLesson.vocabulary.length - 8} từ khác...
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-[11px] text-[var(--color-text-secondary)]">
+                      {selectedLesson.vocabulary?.length || 0} từ vựng • {selectedLesson.grammarPoints?.length || 0} ngữ pháp
+                    </span>
                   </div>
                 )}
               </div>
@@ -1569,28 +1567,36 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
               </div>
 
               {/* Step 1 Footer Navigation */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[var(--color-border)]">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-3 border-t border-[var(--color-border)]">
                 <div className="text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
-                  <span className="font-medium text-[var(--color-text-primary)]">
-                    Đã chọn:
-                  </span>
                   <span className="px-2 py-0.5 rounded-md bg-[var(--color-background)] border border-[var(--color-border)] font-semibold text-[var(--color-primary)]">
                     {targetType === 'class' ? (selectedClass?.class_name || `Lớp HSK ${targetLevel}`) : `HSK ${targetLevel}`}
                   </span>
-                  <span>•</span>
-                  <span className="truncate max-w-[260px]">
-                    Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})
+                  <span className="truncate max-w-[220px]">
+                    Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi}
                   </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(2)}
-                  className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
-                >
-                  <span>Tiếp tục: Chọn nguồn câu hỏi</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleQuickCreate}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                    title="Tạo nhanh 10 câu hỏi theo bài học và chuyển thẳng sang bước duyệt & giao bài"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Tạo nhanh 1 chạm</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="px-4 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                  >
+                    <span>Tiếp tục: Chọn nguồn câu hỏi</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1599,37 +1605,17 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           {/* STEP 2: QUESTION SOURCE & GOLDEN PROMPT */}
           {/* ============================================================== */}
           {currentStep === 2 && (
-            <div className="space-y-5 animate-fadeIn">
-              <div>
-                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-2">
-                  Chọn kênh nạp hoặc sinh câu hỏi bài tập:
+            <div className="space-y-4 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="text-xs font-bold text-[var(--color-text-primary)]">
+                  Nguồn tạo đề:
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 bg-[var(--color-background)] p-1 rounded-xl border border-[var(--color-border)]">
                   {[
-                    {
-                      key: 'curriculum',
-                      label: 'Tạo từ Bài học Giáo trình',
-                      desc: 'Từ vựng & Cấu trúc bài này',
-                      icon: BookOpen,
-                    },
-                    {
-                      key: 'golden_prompt',
-                      label: 'System Prompt Theo Bài Học',
-                      desc: 'Tùy chỉnh từ vựng & cấu trúc ra đề',
-                      icon: Sparkles,
-                    },
-                    {
-                      key: 'raw_text',
-                      label: 'Nhập Văn bản / Tài liệu',
-                      desc: 'Dán bài tập, file text',
-                      icon: FileText,
-                    },
-                    {
-                      key: 'exam_bank',
-                      label: 'Kho Đề Thi Có Sẵn',
-                      desc: 'Nạp từ Online Exams',
-                      icon: Layers,
-                    },
+                    { key: 'curriculum', label: 'Từ Bài học', icon: BookOpen },
+                    { key: 'golden_prompt', label: 'System Prompt', icon: Sparkles },
+                    { key: 'raw_text', label: 'Dán văn bản', icon: FileText },
+                    { key: 'exam_bank', label: 'Kho Đề thi', icon: Layers },
                   ].map((src) => {
                     const isSelected = questionSource === src.key;
                     const Icon = src.icon;
@@ -1638,23 +1624,14 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                         key={src.key}
                         type="button"
                         onClick={() => setQuestionSource(src.key as any)}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                           isSelected
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]/40 shadow-xs ring-1 ring-[var(--color-primary)]'
-                            : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 bg-[var(--color-surface)]'
+                            ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                         }`}
                       >
-                        <div className="w-7 h-7 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center mb-2">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-[var(--color-text-primary)]">
-                            {src.label}
-                          </div>
-                          <div className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">
-                            {src.desc}
-                          </div>
-                        </div>
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{src.label}</span>
                       </button>
                     );
                   })}
@@ -1663,20 +1640,15 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
 
               {/* Shared Teacher Vocabulary & Grammar Customizer for Curriculum & Golden Prompt */}
               {(questionSource === 'curriculum' || questionSource === 'golden_prompt') && (
-                <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-4">
+                <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                        <BookOpen className="w-4 h-4 text-[var(--color-primary)]" />
-                        <span>
-                          Quyền Tự Chủ Của Giáo Viên — Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
-                        Khác với đề thi tổng hợp cả level, bài tập về nhà chỉ kiểm tra đúng những từ vựng và cấu trúc ngữ pháp mà giáo viên đã dạy trong bài học hoặc tự chỉ định bên dưới.
-                      </p>
-                    </div>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold">
+                    <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-[var(--color-primary)]" />
+                      <span>
+                        Từ vựng & Ngữ pháp — Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})
+                      </span>
+                    </h4>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold">
                       HSK {targetLevel} • Bài {selectedLesson.lessonNumber}
                     </span>
                   </div>

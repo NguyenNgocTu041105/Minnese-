@@ -341,8 +341,10 @@ export function getAuthErrorMessage(error: any): string {
       return 'Yêu cầu mở cửa sổ đăng nhập đã bị hủy do có thao tác mới.';
     case 'auth/popup-blocked':
       return 'Trình duyệt đã chặn cửa sổ đăng nhập pop-up. Vui lòng cho phép mở pop-up và thử lại.';
-    case 'auth/unauthorized-domain':
-      return 'Tên miền hiện tại chưa được cấp phép trong cấu hình xác thực của hệ thống.';
+    case 'auth/unauthorized-domain': {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'minnese.onrender.com';
+      return `Tên miền "${currentHost}" chưa được cấp phép trong Firebase. Vui lòng thêm "${currentHost}" vào mục Authorized domains trong Firebase Console.`;
+    }
     case 'auth/operation-not-allowed':
       return 'Hệ thống đăng nhập bằng Email tạm thời đang bảo trì cấu hình. Vui lòng thử lại sau hoặc tiếp tục với Google.';
     case 'auth/configuration-not-found':

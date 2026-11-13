@@ -176,6 +176,14 @@ describe('Auth Validation & Password Strength Suite', () => {
       expect(msg).toContain('Tên miền');
     });
 
+    it('translates invalid-action-code and expired-action-code', () => {
+      const invalidCodeMsg = getAuthErrorMessage({ code: 'auth/invalid-action-code' });
+      expect(invalidCodeMsg).toContain('Mã xác thực không hợp lệ');
+
+      const expiredCodeMsg = getAuthErrorMessage({ code: 'auth/expired-action-code' });
+      expect(expiredCodeMsg).toContain('Mã xác thực đã hết hạn');
+    });
+
     it('sanitizes raw Firebase internal errors', () => {
       const msg = getAuthErrorMessage({
         message: 'Firebase: Error (auth/internal-error). Some technical trace',

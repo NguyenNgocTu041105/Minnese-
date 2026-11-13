@@ -6,6 +6,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   updateProfile,
   signOut as fbSignOut,
   User as FirebaseUser,
@@ -347,6 +349,10 @@ export function getAuthErrorMessage(error: any): string {
       return 'Cấu hình xác thực hệ thống chưa sẵn sàng. Vui lòng liên hệ ban quản trị.';
     case 'auth/requires-recent-login':
       return 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục thao tác này.';
+    case 'auth/invalid-action-code':
+      return 'Mã xác thực không hợp lệ hoặc đã được sử dụng. Vui lòng kiểm tra lại hoặc yêu cầu gửi mã mới.';
+    case 'auth/expired-action-code':
+      return 'Mã xác thực đã hết hạn. Vui lòng gửi lại yêu cầu để nhận mã mới.';
     case 'auth/account-exists-with-different-credential':
       return 'Email này đã liên kết với một phương thức đăng nhập khác. Vui lòng đăng nhập bằng phương thức tương ứng.';
     case 'auth/credential-already-in-use':
@@ -442,10 +448,53 @@ export async function loginWithEmailPassword(email: string, pass: string): Promi
 
 export async function resetPassword(email: string): Promise<{ success: boolean; message: string }> {
   try {
-    await sendPasswordResetEmail(auth, email.trim());
+    const actionCodeSettings = typeof window !== 'undefined' && window.location?.origin ? {
+      url: `${window.location.origin}/?mode=resetPassword`,
+      handleCodeInApp: true,
+    } : undefined;
+
+    if (actionCodeSettings) {
+      await sendPasswordResetEmail(auth, email.trim(), actionCodeSettings);
+    } else {
+      await sendPasswordResetEmail(auth, email.trim());
+    }
     return {
       success: true,
-      message: 'Đã gửi liên kết khôi phục mật khẩu đến email của bạn. Vui lòng kiểm tra hộp thư đến hoặc mục Thư rác (Spam).',
+      message: 'Đã gửi liên kết và mã xác thực đến email của bạn. Vui lòng kiểm tra hộp thư đến hoặc mục Thư rác (Spam).',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: getAuthErrorMessage(err),
+    };
+  }
+}
+
+export async function verifyResetCode(code: string): Promise<{ success: boolean; email?: string; message: string }> {
+  try {
+    const email = await verifyPasswordResetCode(auth, code.trim());
+    return {
+      success: true,
+      email,
+      message: 'Mã xác thực hợp lệ.',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: getAuthErrorMessage(err),
+    };
+  }
+}
+
+export async function completePasswordReset(
+  code: string,
+  newPassword: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    await confirmPasswordReset(auth, code.trim(), newPassword);
+    return {
+      success: true,
+      message: 'Mật khẩu đã được cập nhật thành công! Bạn có thể đăng nhập ngay với mật khẩu mới.',
     };
   } catch (err: any) {
     return {

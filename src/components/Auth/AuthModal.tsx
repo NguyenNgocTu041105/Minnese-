@@ -18,6 +18,8 @@ import {
   loginWithEmailPassword,
   loginWithGoogle,
   resetPassword,
+  verifyResetCode,
+  completePasswordReset,
   getAuthErrorMessage,
 } from '../../lib/firebase';
 import { UserProfile } from '../../types';
@@ -32,7 +34,8 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (profile: UserProfile) => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'forgot' | 'resetNewPassword';
+  initialResetCode?: string;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -40,14 +43,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onSuccess,
   initialMode = 'login',
+  initialResetCode = '',
 }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'resetNewPassword'>(initialMode);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // In-App Password Reset State
+  const [resetCode, setResetCode] = useState(initialResetCode);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -56,11 +67,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const isBusy = isLoading || isGoogleLoading;
 
-  // Real-time password strength calculation
+  // Real-time password strength calculation for registration
   const passwordStrength = useMemo(
     () => evaluatePasswordStrength(password),
     [password]
   );
+
+  // Real-time password strength calculation for password reset
+  const newPasswordStrength = useMemo(
+    () => evaluatePasswordStrength(newPassword),
+    [newPassword]
+  );
+
+  // Auto-detect oobCode from URL parameters (e.g. when user clicks email link)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('oobCode');
+    if (code) {
+      setResetCode(code);
+      setMode('resetNewPassword');
+      setSuccessMessage('Đã nhận diện mã xác thực từ email. Vui lòng nhập mật khẩu mới.');
+    }
+  }, []);
+
+  // Helper to extract clean oobCode if user pastes a complete URL
+  const handleResetCodeChange = (raw: string) => {
+    let clean = raw.trim();
+    if (clean.includes('oobCode=')) {
+      try {
+        const u = new URL(clean);
+        clean = u.searchParams.get('oobCode') || clean;
+      } catch {
+        const m = clean.match(/oobCode=([a-zA-Z0-9_\-]+)/);
+        if (m) clean = m[1];
+      }
+    }
+    setResetCode(clean);
+  };
 
   // Close modal via Escape key (WCAG 2.1 AA)
   useEffect(() => {
@@ -76,11 +120,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSwitchMode = (newMode: 'login' | 'register' | 'forgot') => {
+  const handleSwitchMode = (newMode: 'login' | 'register' | 'forgot' | 'resetNewPassword') => {
     if (isBusy) return;
     setErrorMessage(null);
     setSuccessMessage(null);
     setConfirmPassword('');
+    setConfirmNewPassword('');
     if (newMode === 'forgot') {
       setPassword('');
     }
@@ -102,9 +147,52 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const res = await resetPassword(email.trim());
       setIsLoading(false);
       if (res.success) {
-        setSuccessMessage(res.message);
+        setSuccessMessage(`Đã gửi liên kết và mã xác thực đến ${email.trim()}. Vui lòng kiểm tra email và nhập mã xác thực bên dưới để đặt mật khẩu mới.`);
+        // Seamlessly transition to Step 2 so user can enter the verification code & new password!
+        setMode('resetNewPassword');
       } else {
         setErrorMessage(res.message);
+      }
+      return;
+    }
+
+    if (mode === 'resetNewPassword') {
+      if (!resetCode.trim()) {
+        setErrorMessage('Vui lòng nhập hoặc dán mã xác thực nhận được trong email.');
+        return;
+      }
+      const passValidation = validateRegistrationPassword(newPassword);
+      if (!passValidation.isValid) {
+        setErrorMessage(passValidation.message || 'Mật khẩu mới chưa đáp ứng tiêu chuẩn an toàn.');
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        setErrorMessage('Mật khẩu xác nhận không khớp.');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const res = await completePasswordReset(resetCode.trim(), newPassword);
+        setIsLoading(false);
+        if (res.success) {
+          setSuccessMessage(res.message);
+          setNewPassword('');
+          setConfirmNewPassword('');
+          setResetCode('');
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+          setTimeout(() => {
+            setMode('login');
+            setSuccessMessage('Mật khẩu đã được cập nhật thành công! Vui lòng đăng nhập với mật khẩu mới.');
+          }, 1800);
+        } else {
+          setErrorMessage(res.message);
+        }
+      } catch (err: any) {
+        setIsLoading(false);
+        setErrorMessage(getAuthErrorMessage(err));
       }
       return;
     }
@@ -265,16 +353,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {mode === 'login' && 'Chào mừng trở lại!'}
               {mode === 'register' && 'Tạo tài khoản học Minnie Chinese'}
               {mode === 'forgot' && 'Khôi phục mật khẩu'}
+              {mode === 'resetNewPassword' && 'Đặt mật khẩu mới'}
             </h2>
             <p className="text-xs text-[var(--color-text-secondary)] max-w-xs leading-relaxed">
               {mode === 'login' && 'Đăng nhập để đồng bộ tiến độ ôn tập Flashcards và lịch sử điểm số.'}
               {mode === 'register' && 'Bắt đầu hành trình chinh phục HSK 1-6 chuẩn quốc tế với AI.'}
-              {mode === 'forgot' && 'Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu an toàn.'}
+              {mode === 'forgot' && 'Nhập email đã đăng ký để nhận liên kết hoặc mã xác thực an toàn.'}
+              {mode === 'resetNewPassword' && 'Nhập mã xác thực từ email và thiết lập mật khẩu mới cho tài khoản.'}
             </p>
           </div>
 
           {/* Tab Switcher (Login vs Register) */}
-          {mode !== 'forgot' && (
+          {mode !== 'forgot' && mode !== 'resetNewPassword' && (
             <div className="flex p-1 bg-[var(--color-background)] rounded-2xl border border-[var(--color-border)] relative z-10">
               <button
                 type="button"
@@ -331,250 +421,407 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Email/Password Form */}
         <form onSubmit={handleEmailSubmit} className="space-y-3 relative z-10">
-          {/* Display Name (Register only) */}
-          {mode === 'register' && (
-            <div>
-              <label
-                htmlFor="auth-input-name"
-                className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
-              >
-                Họ và tên
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  required
-                  disabled={isBusy}
-                  autoComplete="name"
-                  placeholder="VD: Nguyễn Minh Châu"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                  id="auth-input-name"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Email Address */}
-          <div>
-            <label
-              htmlFor="auth-input-email"
-              className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
-            >
-              Địa chỉ Email
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                required
-                disabled={isBusy}
-                autoComplete="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
-                id="auth-input-email"
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          {mode !== 'forgot' && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between mb-1">
+          {mode === 'resetNewPassword' ? (
+            <div className="space-y-3">
+              {/* Reset Code Input */}
+              <div>
                 <label
-                  htmlFor="auth-input-password"
-                  className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider"
+                  htmlFor="auth-input-reset-code"
+                  className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
                 >
-                  Mật khẩu
+                  Mã xác thực từ Email
                 </label>
-                {mode === 'login' && (
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    disabled={isBusy}
+                    placeholder="Dán mã hoặc toàn bộ liên kết từ email"
+                    value={resetCode}
+                    onChange={(e) => handleResetCodeChange(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="auth-input-reset-code"
+                  />
+                </div>
+                <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">
+                  Mẹo: Bạn có thể dán toàn bộ đường link nhận được trong email vào ô này.
+                </p>
+              </div>
+
+              {/* New Password */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="auth-input-new-password"
+                  className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
+                >
+                  Mật khẩu mới
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    disabled={isBusy}
+                    autoComplete="new-password"
+                    placeholder="Tối thiểu 8 ký tự"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="auth-input-new-password"
+                  />
                   <button
                     type="button"
                     disabled={isBusy}
-                    onClick={() => handleSwitchMode('forgot')}
-                    className="text-xs font-semibold text-[var(--color-primary)] hover:underline cursor-pointer disabled:opacity-50"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer p-1 disabled:opacity-50"
                   >
-                    Quên mật khẩu?
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
+                </div>
+
+                {/* Real-time Password Strength Meter UI for Reset */}
+                {newPassword.length > 0 && (
+                  <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-1.5" aria-hidden="true">
+                      {[1, 2, 3, 4].map((tier) => {
+                        const isFilled = newPasswordStrength.score >= tier;
+                        return (
+                          <div
+                            key={tier}
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                              isFilled
+                                ? newPasswordStrength.barColorClass
+                                : 'bg-[var(--color-border)]'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[var(--color-text-secondary)]">Độ mạnh mật khẩu:</span>
+                      <span className={`font-bold ${newPasswordStrength.colorClass}`}>
+                        {newPasswordStrength.label}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] pt-1 border-t border-[var(--color-border)]/50">
+                      <div className={`flex items-center gap-1.5 ${newPasswordStrength.criteria.minLength ? 'text-emerald-500 font-medium' : 'text-[var(--color-text-secondary)]'}`}>
+                        {newPasswordStrength.criteria.minLength ? <Check className="w-3.5 h-3.5 shrink-0" /> : <X className="w-3.5 h-3.5 shrink-0" />}
+                        <span>Tối thiểu 8 ký tự</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${newPasswordStrength.criteria.hasUpperCase && newPasswordStrength.criteria.hasLowerCase ? 'text-emerald-500 font-medium' : 'text-[var(--color-text-secondary)]'}`}>
+                        {newPasswordStrength.criteria.hasUpperCase && newPasswordStrength.criteria.hasLowerCase ? <Check className="w-3.5 h-3.5 shrink-0" /> : <X className="w-3.5 h-3.5 shrink-0" />}
+                        <span>Chữ hoa & thường</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${newPasswordStrength.criteria.hasDigit || newPasswordStrength.criteria.hasSpecialChar ? 'text-emerald-500 font-medium' : 'text-[var(--color-text-secondary)]'}`}>
+                        {newPasswordStrength.criteria.hasDigit || newPasswordStrength.criteria.hasSpecialChar ? <Check className="w-3.5 h-3.5 shrink-0" /> : <X className="w-3.5 h-3.5 shrink-0" />}
+                        <span>Số / ký tự đặc biệt</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${newPasswordStrength.criteria.notBlacklisted ? 'text-emerald-500 font-medium' : 'text-rose-500 font-medium'}`}>
+                        {newPasswordStrength.criteria.notBlacklisted ? <Check className="w-3.5 h-3.5 shrink-0" /> : <X className="w-3.5 h-3.5 shrink-0" />}
+                        <span>Không dễ đoán</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  disabled={isBusy}
-                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-                  placeholder={mode === 'register' ? 'Tối thiểu 8 ký tự' : 'Nhập mật khẩu của bạn'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
-                  id="auth-input-password"
-                />
-                <button
-                  type="button"
-                  disabled={isBusy}
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer p-1 disabled:opacity-50"
+
+              {/* Confirm New Password */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="auth-input-confirm-new-password"
+                  className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  Xác nhận mật khẩu mới
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showConfirmNewPassword ? 'text' : 'password'}
+                    required
+                    disabled={isBusy}
+                    autoComplete="new-password"
+                    placeholder="Nhập lại mật khẩu mới"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="auth-input-confirm-new-password"
+                  />
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    aria-label={showConfirmNewPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer p-1 disabled:opacity-50"
+                  >
+                    {showConfirmNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Password Match Status Indicator */}
+                {confirmNewPassword.length > 0 && (
+                  <div className="pt-1">
+                    {newPassword === confirmNewPassword ? (
+                      <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium animate-in fade-in">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                        <span>Mật khẩu xác nhận trùng khớp</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-[11px] text-rose-500 font-medium animate-in fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Mật khẩu xác nhận chưa khớp</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* Real-time Password Strength Meter UI (Register only) */}
-              {mode === 'register' && password.length > 0 && (
-                <div className="space-y-2 pt-1 animate-in fade-in duration-150">
-                  {/* Visual 4-Segment Progress Bar */}
-                  <div className="flex items-center gap-1.5" aria-hidden="true">
-                    {[1, 2, 3, 4].map((tier) => {
-                      const isFilled = passwordStrength.score >= tier;
-                      return (
-                        <div
-                          key={tier}
-                          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                            isFilled
-                              ? passwordStrength.barColorClass
-                              : 'bg-[var(--color-border)]'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Strength Label */}
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-[var(--color-text-secondary)]">Độ mạnh mật khẩu:</span>
-                    <span className={`font-bold ${passwordStrength.colorClass}`}>
-                      {passwordStrength.label}
-                    </span>
-                  </div>
-
-                  {/* Requirements Checklist */}
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] pt-1 border-t border-[var(--color-border)]/50">
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        passwordStrength.criteria.minLength
-                          ? 'text-emerald-500 font-medium'
-                          : 'text-[var(--color-text-secondary)]'
-                      }`}
-                    >
-                      {passwordStrength.criteria.minLength ? (
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                      ) : (
-                        <X className="w-3.5 h-3.5 shrink-0" />
-                      )}
-                      <span>Tối thiểu 8 ký tự</span>
-                    </div>
-
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        passwordStrength.criteria.hasUpperCase &&
-                        passwordStrength.criteria.hasLowerCase
-                          ? 'text-emerald-500 font-medium'
-                          : 'text-[var(--color-text-secondary)]'
-                      }`}
-                    >
-                      {passwordStrength.criteria.hasUpperCase &&
-                      passwordStrength.criteria.hasLowerCase ? (
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                      ) : (
-                        <X className="w-3.5 h-3.5 shrink-0" />
-                      )}
-                      <span>Chữ hoa & thường</span>
-                    </div>
-
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        passwordStrength.criteria.hasDigit ||
-                        passwordStrength.criteria.hasSpecialChar
-                          ? 'text-emerald-500 font-medium'
-                          : 'text-[var(--color-text-secondary)]'
-                      }`}
-                    >
-                      {passwordStrength.criteria.hasDigit ||
-                      passwordStrength.criteria.hasSpecialChar ? (
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                      ) : (
-                        <X className="w-3.5 h-3.5 shrink-0" />
-                      )}
-                      <span>Số / ký tự đặc biệt</span>
-                    </div>
-
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        passwordStrength.criteria.notBlacklisted
-                          ? 'text-emerald-500 font-medium'
-                          : 'text-rose-500 font-medium'
-                      }`}
-                    >
-                      {passwordStrength.criteria.notBlacklisted ? (
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                      ) : (
-                        <X className="w-3.5 h-3.5 shrink-0" />
-                      )}
-                      <span>Không dễ đoán</span>
-                    </div>
+            </div>
+          ) : (
+            <>
+              {/* Display Name (Register only) */}
+              {mode === 'register' && (
+                <div>
+                  <label
+                    htmlFor="auth-input-name"
+                    className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
+                  >
+                    Họ và tên
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      disabled={isBusy}
+                      autoComplete="name"
+                      placeholder="VD: Nguyễn Minh Châu"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      id="auth-input-name"
+                    />
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Confirm Password (Register only) */}
-          {mode === 'register' && (
-            <div className="space-y-1">
-              <label
-                htmlFor="auth-input-confirm-password"
-                className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
-              >
-                Xác nhận mật khẩu
-              </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required
-                  disabled={isBusy}
-                  autoComplete="new-password"
-                  placeholder="Nhập lại mật khẩu"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
-                  id="auth-input-confirm-password"
-                />
-                <button
-                  type="button"
-                  disabled={isBusy}
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label={showConfirmPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer p-1 disabled:opacity-50"
+              {/* Email Address */}
+              <div>
+                <label
+                  htmlFor="auth-input-email"
+                  className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  Địa chỉ Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    disabled={isBusy}
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="auth-input-email"
+                  />
+                </div>
               </div>
 
-              {/* Password Match Status Indicator */}
-              {confirmPassword.length > 0 && (
-                <div className="pt-1">
-                  {password === confirmPassword ? (
-                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium animate-in fade-in">
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
-                      <span>Mật khẩu xác nhận trùng khớp</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-[11px] text-rose-500 font-medium animate-in fade-in">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>Mật khẩu xác nhận chưa khớp</span>
+              {/* Password */}
+              {mode !== 'forgot' && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <label
+                      htmlFor="auth-input-password"
+                      className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider"
+                    >
+                      Mật khẩu
+                    </label>
+                    {mode === 'login' && (
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => handleSwitchMode('forgot')}
+                        className="text-xs font-semibold text-[var(--color-primary)] hover:underline cursor-pointer disabled:opacity-50"
+                      >
+                        Quên mật khẩu?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      disabled={isBusy}
+                      autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                      placeholder={mode === 'register' ? 'Tối thiểu 8 ký tự' : 'Nhập mật khẩu của bạn'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                      id="auth-input-password"
+                    />
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer p-1 disabled:opacity-50"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Real-time Password Strength Meter UI (Register only) */}
+                  {mode === 'register' && password.length > 0 && (
+                    <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                      <div className="flex items-center gap-1.5" aria-hidden="true">
+                        {[1, 2, 3, 4].map((tier) => {
+                          const isFilled = passwordStrength.score >= tier;
+                          return (
+                            <div
+                              key={tier}
+                              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                                isFilled
+                                  ? passwordStrength.barColorClass
+                                  : 'bg-[var(--color-border)]'
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[var(--color-text-secondary)]">Độ mạnh mật khẩu:</span>
+                        <span className={`font-bold ${passwordStrength.colorClass}`}>
+                          {passwordStrength.label}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] pt-1 border-t border-[var(--color-border)]/50">
+                        <div
+                          className={`flex items-center gap-1.5 ${
+                            passwordStrength.criteria.minLength
+                              ? 'text-emerald-500 font-medium'
+                              : 'text-[var(--color-text-secondary)]'
+                          }`}
+                        >
+                          {passwordStrength.criteria.minLength ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span>Tối thiểu 8 ký tự</span>
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 ${
+                            passwordStrength.criteria.hasUpperCase &&
+                            passwordStrength.criteria.hasLowerCase
+                              ? 'text-emerald-500 font-medium'
+                              : 'text-[var(--color-text-secondary)]'
+                          }`}
+                        >
+                          {passwordStrength.criteria.hasUpperCase &&
+                          passwordStrength.criteria.hasLowerCase ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span>Chữ hoa & thường</span>
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 ${
+                            passwordStrength.criteria.hasDigit ||
+                            passwordStrength.criteria.hasSpecialChar
+                              ? 'text-emerald-500 font-medium'
+                              : 'text-[var(--color-text-secondary)]'
+                          }`}
+                        >
+                          {passwordStrength.criteria.hasDigit ||
+                          passwordStrength.criteria.hasSpecialChar ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span>Số / ký tự đặc biệt</span>
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 ${
+                            passwordStrength.criteria.notBlacklisted
+                              ? 'text-emerald-500 font-medium'
+                              : 'text-rose-500 font-medium'
+                          }`}
+                        >
+                          {passwordStrength.criteria.notBlacklisted ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <X className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span>Không dễ đoán</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
-            </div>
+
+              {/* Confirm Password (Register only) */}
+              {mode === 'register' && (
+                <div className="space-y-1">
+                  <label
+                    htmlFor="auth-input-confirm-password"
+                    className="block text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1"
+                  >
+                    Xác nhận mật khẩu
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-[var(--color-text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      disabled={isBusy}
+                      autoComplete="new-password"
+                      placeholder="Nhập lại mật khẩu"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                      id="auth-input-confirm-password"
+                    />
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer p-1 disabled:opacity-50"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Password Match Status Indicator */}
+                  {confirmPassword.length > 0 && (
+                    <div className="pt-1">
+                      {password === confirmPassword ? (
+                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium animate-in fade-in">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                          <span>Mật khẩu xác nhận trùng khớp</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] text-rose-500 font-medium animate-in fade-in">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Mật khẩu xác nhận chưa khớp</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {/* Submit Button */}
@@ -587,7 +834,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : mode === 'forgot' ? (
-              <span>Gửi liên kết khôi phục</span>
+              <span>Gửi mã xác thực về Email</span>
+            ) : mode === 'resetNewPassword' ? (
+              <span>Xác nhận & Cập nhật mật khẩu mới</span>
             ) : mode === 'register' ? (
               <>
                 <span>Đăng ký tài khoản</span>
@@ -602,9 +851,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </form>
 
-        {/* Back to login option if in forgot mode */}
-        {mode === 'forgot' && (
-          <div className="text-center pt-1">
+        {/* Back to login option if in forgot or reset mode */}
+        {(mode === 'forgot' || mode === 'resetNewPassword') && (
+          <div className="text-center pt-1 space-y-1.5">
+            {mode === 'resetNewPassword' && (
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleSwitchMode('forgot')}
+                className="block w-full text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] cursor-pointer disabled:opacity-50"
+              >
+                ← Chưa nhận được mã? Gửi lại yêu cầu
+              </button>
+            )}
             <button
               type="button"
               disabled={isBusy}
@@ -617,7 +876,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* Divider */}
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && mode !== 'resetNewPassword' && (
           <>
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-[var(--color-border)]" />

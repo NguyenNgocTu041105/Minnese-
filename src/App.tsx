@@ -285,8 +285,22 @@ export default function App() {
     }
     setShowVoiceCall(true);
   };
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [showAuthModal, setShowAuthModal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return Boolean(params.get('oobCode') || params.get('mode') === 'resetPassword');
+    }
+    return false;
+  });
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register' | 'forgot' | 'resetNewPassword'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('oobCode') || params.get('mode') === 'resetPassword') {
+        return 'resetNewPassword';
+      }
+    }
+    return 'login';
+  });
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedFlashcardDeckId, setSelectedFlashcardDeckId] = useState<string | null>(null);

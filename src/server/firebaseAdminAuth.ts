@@ -1,11 +1,19 @@
-import admin from 'firebase-admin';
+import {
+  getApps,
+  initializeApp,
+  cert,
+  applicationDefault,
+  type ServiceAccount,
+} from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const DEFAULT_ADMIN_EMAILS = ['babysharkkk123@gmail.com'];
 
 let initialized = false;
 let initAttempted = false;
 
-function parseServiceAccountFromEnv(): admin.ServiceAccount | null {
+function parseServiceAccountFromEnv(): ServiceAccount | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
   if (!raw) return null;
 
@@ -14,7 +22,7 @@ function parseServiceAccountFromEnv(): admin.ServiceAccount | null {
     const jsonText = raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf-8');
     const parsed = JSON.parse(jsonText);
     if (parsed && parsed.project_id && parsed.private_key && parsed.client_email) {
-      return parsed as admin.ServiceAccount;
+      return parsed as ServiceAccount;
     }
   } catch (err: any) {
     console.warn('[Firebase Admin Auth] Failed to parse FIREBASE_SERVICE_ACCOUNT:', err?.message || err);
@@ -24,18 +32,24 @@ function parseServiceAccountFromEnv(): admin.ServiceAccount | null {
 
 function ensureFirebaseAdminInitialized(): boolean {
   if (initialized) return true;
-  if (admin.apps.length > 0) {
-    initialized = true;
-    return true;
+  try {
+    const existingApps = getApps();
+    if (Array.isArray(existingApps) && existingApps.length > 0) {
+      initialized = true;
+      return true;
+    }
+  } catch {
+    // Ignore getApps check failure and attempt initialization
   }
+
   if (initAttempted) return false;
   initAttempted = true;
 
   const serviceAccount = parseServiceAccountFromEnv();
   if (serviceAccount) {
     try {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      initializeApp({
+        credential: cert(serviceAccount),
       });
       initialized = true;
       return true;
@@ -47,8 +61,8 @@ function ensureFirebaseAdminInitialized(): boolean {
 
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim()) {
     try {
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
+      initializeApp({
+        credential: applicationDefault(),
       });
       initialized = true;
       return true;
@@ -99,7 +113,7 @@ export async function verifyFirebaseAdminIdToken(
   }
 
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken, true);
+    const decoded = await getAuth().verifyIdToken(idToken, true);
     const email = (decoded.email || '').trim().toLowerCase();
     const uid = decoded.uid;
 
@@ -119,7 +133,7 @@ export async function verifyFirebaseAdminIdToken(
 
     // Check Firestore user profile role if not in static allowlist
     try {
-      const userSnap = await admin.firestore().collection('users').doc(uid).get();
+      const userSnap = await getFirestore().collection('users').doc(uid).get();
       const role = userSnap.exists ? String(userSnap.data()?.role || '').toLowerCase() : '';
       if (role === 'admin') {
         return { authorized: true, uid, email };

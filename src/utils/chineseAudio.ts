@@ -34,6 +34,50 @@ export interface VoiceSettings {
 
 const VOICE_SETTINGS_STORAGE_KEY = 'minnese_chinese_voice_settings_v2';
 
+export const EDGE_TTS_VOICES: VoiceOption[] = [
+  {
+    id: 'zh-CN-XiaoxiaoNeural',
+    name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình HSK',
+    lang: 'zh-CN',
+    gender: 'female',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👩 Giọng Nữ Chuẩn Giáo Trình Bắc Ngữ / HSK - Tự nhiên, truyền cảm, chuẩn phát thanh viên',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-XiaoyiNeural',
+    name: 'Hiểu Y (Xiaoyi) - Nữ Trẻ Trung, Tươi Vui',
+    lang: 'zh-CN',
+    gender: 'female',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👩 Giọng Nữ Trẻ Trung • Phát âm trong trẻo, sinh động',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-YunxiNeural',
+    name: 'Vân Hy (Yunxi) - Nam Tự Nhiên, Trầm Ấm',
+    lang: 'zh-CN',
+    gender: 'male',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👨 Giọng Nam Chuẩn • Trầm ấm, tròn vành rõ chữ',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-YunjianNeural',
+    name: 'Vân Kiện (Yunjian) - Nam Chuẩn Khảo Thí HSK',
+    lang: 'zh-CN',
+    gender: 'male',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👨 Giọng Nam Khảo Thí • Đĩnh đạc, phong thái bài thi khảo thí',
+    isNative: true,
+    isAIStudio: true,
+  },
+];
+
+
 export const GEMINI_AI_VOICES: VoiceOption[] = [
   {
     id: 'gemini-kore',
@@ -88,12 +132,12 @@ export const GEMINI_AI_VOICES: VoiceOption[] = [
 ];
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
-  voiceId: 'default', // Instant zero-delay native device voice
+  voiceId: 'zh-CN-XiaoxiaoNeural', // Default to Xiaoxiao Neural (Nữ Chuẩn Giáo Trình HSK)
   rate: 0.9,
   pitch: 1.0,
   volume: 1.0,
   autoPinyinTone: true,
-  preferNeuralAI: false, // Default to instant zero-delay playback (no network latency)
+  preferNeuralAI: false,
 };
 
 /**
@@ -167,10 +211,10 @@ export function getSavedVoiceSettings(): VoiceSettings {
       const parsed = JSON.parse(raw);
       // Auto-migrate old default 'gemini-kore' causing unwanted 2-4s delay on word audio clicks
       if (
-        (parsed.voiceId === 'gemini-kore' || parsed.voiceId === 'default') &&
+        (parsed.voiceId === 'gemini-kore' || parsed.voiceId === 'default' || !parsed.voiceId) &&
         !parsed.userExplicitlySelectedAiVoice
       ) {
-        parsed.voiceId = 'default';
+        parsed.voiceId = 'zh-CN-XiaoxiaoNeural';
         parsed.preferNeuralAI = false;
       }
       return { ...DEFAULT_VOICE_SETTINGS, ...parsed };
@@ -267,7 +311,7 @@ function categorizeVoice(voice: SpeechSynthesisVoice): VoiceOption {
 export function getAvailableChineseVoices(): Promise<VoiceOption[]> {
   return new Promise((resolve) => {
     // 1. Always start with high-quality Gemini Studio Neural AI voices
-    const options: VoiceOption[] = [...GEMINI_AI_VOICES];
+    const options: VoiceOption[] = [...EDGE_TTS_VOICES, ...GEMINI_AI_VOICES];
 
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       resolve(options);
@@ -323,6 +367,8 @@ export function getAvailableChineseVoices(): Promise<VoiceOption[]> {
   });
 }
 
+let activePutonghuaStreamCancel: (() => void) | null = null;
+
 /**
  * Stops any actively playing audio (both Web Audio API & Web Speech)
  */
@@ -330,6 +376,15 @@ export function stopChineseAudio(): void {
   if (dialogueAbortController) {
     dialogueAbortController.abort();
     dialogueAbortController = null;
+  }
+  if (activePutonghuaStreamCancel) {
+    const cancel = activePutonghuaStreamCancel;
+    activePutonghuaStreamCancel = null;
+    try {
+      cancel();
+    } catch {
+      // Ignore cleanup errors
+    }
   }
   clearKeepAliveTimer();
   if (activeHtmlAudio) {
@@ -572,7 +627,7 @@ export function rankVoice(
     if (n.includes('yunxi')) score += 60;
     else if (n.includes('yunjian') || n.includes('yunyang')) score += 50;
     else if (n.includes('male') || n.includes('danny') || n.includes('brian')) score += 20;
-    else if (n.includes('kangkang')) score -= 200; // Heavily penalize legacy robotic SAPI5
+    else if (n.includes('kangkang')) score -= 5; // Valid male SAPI5 fallback, always below Neural (+100)
 
     // Heavily penalize female voices when searching for male
     if (
@@ -590,7 +645,7 @@ export function rankVoice(
     if (n.includes('xiaoxiao')) score += 60;
     else if (n.includes('xiaoyi') || n.includes('tingting')) score += 50;
     else if (n.includes('female') || n.includes('google') || n.includes('meijia')) score += 20;
-    else if (n.includes('huihui') || n.includes('yaoyao')) score -= 200; // Heavily penalize legacy robotic SAPI5
+    else if (n.includes('huihui') || n.includes('yaoyao')) score -= 5; // Valid female SAPI5 fallback, always below Neural (+100)
 
     // Heavily penalize male voices when searching for female
     if (
@@ -607,7 +662,7 @@ export function rankVoice(
     if (n.includes('xiaoxiao') || n.includes('yunxi')) score += 60;
     else if (n.includes('yunjian') || n.includes('xiaoyi') || n.includes('tingting')) score += 50;
     else if (n.includes('google')) score += 30;
-    else if (n.includes('huihui') || n.includes('kangkang') || n.includes('yaoyao')) score -= 200;
+    else if (n.includes('huihui') || n.includes('kangkang') || n.includes('yaoyao')) score -= 5;
   }
 
   // Bonus for modern non-local web service voices (Edge Natural voices have localService === false)
@@ -761,50 +816,145 @@ const ttsAudioCache = new Map<string, HTMLAudioElement>();
  * High-Fidelity National Standard Putonghua Audio Stream (一级甲等普通话)
  * Plays studio-grade, pleasant, crystal-clear Mandarin audio across Grammar, Vocabulary, and Dictionary.
  */
-export async function playPutonghuaAudioStream(text: string, rate: number = 1.0): Promise<void> {
+export async function playPutonghuaAudioStream(
+  text: string,
+  rate: number = 1.0,
+  voice: string = 'zh-CN-XiaoxiaoNeural'
+): Promise<void> {
   stopChineseAudio();
 
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  const url = `/api/tts?text=${encodeURIComponent(trimmed)}`;
+  const url = `/api/tts?text=${encodeURIComponent(trimmed)}&voice=${encodeURIComponent(voice)}`;
+  const cacheKey = `${voice}:${trimmed}`;
 
   return new Promise((resolve, reject) => {
+    const cached = ttsAudioCache.get(cacheKey);
     let audio: HTMLAudioElement;
-    if (ttsAudioCache.has(trimmed)) {
-      audio = ttsAudioCache.get(trimmed)!;
-      audio.currentTime = 0;
+    if (cached && !cached.error) {
+      audio = cached;
+      try {
+        audio.currentTime = 0;
+      } catch {}
     } else {
+      if (cached) {
+        ttsAudioCache.delete(cacheKey);
+      }
       audio = new Audio(url);
       if (ttsAudioCache.size < 600) {
-        ttsAudioCache.set(trimmed, audio);
+        ttsAudioCache.set(cacheKey, audio);
       }
     }
 
     activeHtmlAudio = audio;
     audio.playbackRate = rate || 1.0;
 
-    const timer = setTimeout(() => {
-      audio.pause();
+    let settled = false;
+    let startupTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      ttsAudioCache.delete(cacheKey);
+      if (activeHtmlAudio === audio) {
+        activeHtmlAudio = null;
+      }
+      if (activePutonghuaStreamCancel === cancelPlayback) {
+        activePutonghuaStreamCancel = null;
+      }
+      cleanupHandlers();
+      try {
+        audio.pause();
+      } catch {}
       reject(new Error('TTS timeout'));
-    }, 3000);
+    }, 5000);
+
+    const clearStartupTimer = () => {
+      if (startupTimer) {
+        clearTimeout(startupTimer);
+        startupTimer = null;
+      }
+    };
+
+    const cleanupHandlers = () => {
+      audio.onplaying = null;
+      audio.oncanplay = null;
+      audio.onended = null;
+      audio.onerror = null;
+    };
+
+    const cancelPlayback = () => {
+      if (settled) return;
+      settled = true;
+      clearStartupTimer();
+      cleanupHandlers();
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+      if (activeHtmlAudio === audio) {
+        activeHtmlAudio = null;
+      }
+      resolve();
+    };
+
+    activePutonghuaStreamCancel = cancelPlayback;
+
+    // Clear buffering timeout once playback starts so longer sentences never abort mid-flight
+    audio.onplaying = () => {
+      clearStartupTimer();
+    };
+    audio.oncanplay = () => {
+      clearStartupTimer();
+    };
 
     audio.onended = () => {
-      clearTimeout(timer);
-      activeHtmlAudio = null;
+      if (settled) return;
+      settled = true;
+      clearStartupTimer();
+      cleanupHandlers();
+      if (activeHtmlAudio === audio) {
+        activeHtmlAudio = null;
+      }
+      if (activePutonghuaStreamCancel === cancelPlayback) {
+        activePutonghuaStreamCancel = null;
+      }
       resolve();
     };
 
     audio.onerror = (e) => {
-      clearTimeout(timer);
-      activeHtmlAudio = null;
+      if (settled) return;
+      settled = true;
+      clearStartupTimer();
+      cleanupHandlers();
+      ttsAudioCache.delete(cacheKey);
+      if (activeHtmlAudio === audio) {
+        activeHtmlAudio = null;
+      }
+      if (activePutonghuaStreamCancel === cancelPlayback) {
+        activePutonghuaStreamCancel = null;
+      }
       reject(e);
     };
 
     audio.play().catch((err) => {
-      clearTimeout(timer);
-      activeHtmlAudio = null;
-      reject(err);
+      if (settled) return;
+      settled = true;
+      clearStartupTimer();
+      cleanupHandlers();
+      if (err?.name !== 'AbortError') {
+        ttsAudioCache.delete(cacheKey);
+      }
+      if (activeHtmlAudio === audio) {
+        activeHtmlAudio = null;
+      }
+      if (activePutonghuaStreamCancel === cancelPlayback) {
+        activePutonghuaStreamCancel = null;
+      }
+      if (err?.name === 'AbortError') {
+        resolve();
+      } else {
+        reject(err);
+      }
     });
   });
 }
@@ -1007,7 +1157,11 @@ export async function playMultilingualVoice(
     // Default High-Fidelity National First-Class Putonghua Audio Stream (一级甲等普通话)
     // Plays studio-quality standard Putonghua across Vocabulary, Grammar, and Dictionary
     try {
-      await playPutonghuaAudioStream(cleanText, overrideRate);
+      const voiceToUse =
+        settings.voiceId && settings.voiceId !== 'default' && !settings.voiceId.startsWith('gemini-')
+          ? settings.voiceId
+          : 'zh-CN-XiaoxiaoNeural';
+      await playPutonghuaAudioStream(cleanText, overrideRate, voiceToUse);
       return;
     } catch {
       // Seamless fallback to browser speech synthesis if offline or network error

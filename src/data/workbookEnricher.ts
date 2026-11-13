@@ -288,58 +288,11 @@ export function enrichWorkbookLesson(
     }
   }
 
+  // Only authentic listening questions from workbook (empty for Lessons 1-3 as in official PDF)
   const enrichedListening = [...existingListening];
-  while (enrichedListening.length < 3 && existingListening.length < 3) {
-    const idx = enrichedListening.length;
-      const targetWord = vocab[idx % (vocab.length || 1)] || {
-        hanzi: titleChinese,
-        pinyin: titlePinyin,
-        vietnamese: titleVietnamese,
-        example: `${titleChinese}。`,
-        exampleTranslation: titleVietnamese,
-      };
-      const distractors = getDistractors(level, targetWord.hanzi, vocab, 2);
-
-      const dialogLine = texts[0]?.lines?.[idx % (texts[0]?.lines?.length || 1)];
-      const rawSpeaker = dialogLine?.speaker || '说话人';
-      const cleanSpeaker = rawSpeaker.replace(/\s*[\(（][^()（）]+[\)）]/g, '').trim() || '说话人';
-      const audioScript = dialogLine
-        ? `${cleanSpeaker}: ${dialogLine.hanzi}`
-        : targetWord.example || `${targetWord.hanzi}。`;
-
-      enrichedListening.push({
-        id: `enrich_l${level}_n${lessonNumber}_listen_${idx + 1}`,
-        part: 1,
-        questionNumber: idx + 1,
-        promptText: 'Nghe đoạn âm thanh chuẩn và chọn đáp án chính xác nhất:',
-        audioScript,
-        options: [
-          {
-            key: 'A',
-            textChinese: targetWord.hanzi,
-            textPinyin: targetWord.pinyin,
-            textVietnamese: targetWord.vietnamese,
-          },
-          {
-            key: 'B',
-            textChinese: distractors[0]?.hanzi || '没有',
-            textPinyin: distractors[0]?.pinyin || 'méiyǒu',
-            textVietnamese: distractors[0]?.vi || 'không có',
-          },
-          {
-            key: 'C',
-            textChinese: distractors[1]?.hanzi || '可以',
-            textPinyin: distractors[1]?.pinyin || 'kěyǐ',
-            textVietnamese: distractors[1]?.vi || 'có thể',
-          },
-        ],
-        correctKey: 'A',
-        explanation: `Nội dung nghe có từ then chốt "${targetWord.hanzi}" (${targetWord.pinyin}): ${targetWord.vietnamese}.`,
-      });
-    }
 
   // ==========================================
-  // 2. READING EXERCISES (THRESHOLD >= 3)
+  // 2. READING EXERCISES
   // ==========================================
   const rawReading: any[] = [
     ...(rawWbLesson?.readingExercises || []),
@@ -371,57 +324,8 @@ export function enrichWorkbookLesson(
     }
   }
 
+  // Only authentic reading questions from workbook (empty for Lessons 1-3 as in official PDF)
   const enrichedReading = [...existingReading];
-  while (enrichedReading.length < 3 && existingReading.length < 3) {
-    const idx = enrichedReading.length;
-    const targetWord = vocab[idx % (vocab.length || 1)] || {
-      hanzi: titleChinese,
-      pinyin: titlePinyin,
-      vietnamese: titleVietnamese,
-      example: `${titleChinese}。`,
-      exampleTranslation: titleVietnamese,
-    };
-    const distractors = getDistractors(level, targetWord.hanzi, vocab, 2);
-
-    let promptChinese = targetWord.example
-      ? targetWord.example.replace(new RegExp(targetWord.hanzi, 'g'), '（    ）')
-      : `请选出正确的词语：（    ）`;
-    if (!promptChinese.includes('（    ）')) {
-      promptChinese = `${promptChinese} （    ）`;
-    }
-
-    enrichedReading.push({
-      id: `enrich_l${level}_n${lessonNumber}_read_${idx + 1}`,
-      part: 2,
-      questionNumber: idx + 1,
-      promptChinese,
-      promptPinyin: targetWord.pinyin,
-      promptVietnamese: targetWord.exampleTranslation || `Điền từ thích hợp vào chỗ trống: ${targetWord.vietnamese}`,
-      subPrompt: 'Chọn từ vựng đúng để hoàn thành câu trên:',
-      options: [
-        {
-          key: 'A',
-          textChinese: targetWord.hanzi,
-          textPinyin: targetWord.pinyin,
-          textVietnamese: targetWord.vietnamese,
-        },
-        {
-          key: 'B',
-          textChinese: distractors[0]?.hanzi || '已经',
-          textPinyin: distractors[0]?.pinyin || 'yǐjīng',
-          textVietnamese: distractors[0]?.vi || 'đã',
-        },
-        {
-          key: 'C',
-          textChinese: distractors[1]?.hanzi || '非常',
-          textPinyin: distractors[1]?.pinyin || 'fēicháng',
-          textVietnamese: distractors[1]?.vi || 'vô cùng',
-        },
-      ],
-      correctKey: 'A',
-      explanation: `Từ cần điền là "${targetWord.hanzi}" (${targetWord.pinyin}): ${targetWord.vietnamese}, hoàn toàn phù hợp ngữ cảnh câu.`,
-    });
-  }
 
   // ==========================================
   // 3. LISTEN & READ DRILLS (THRESHOLD >= 2)

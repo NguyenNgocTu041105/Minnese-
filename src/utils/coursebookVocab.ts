@@ -3,22 +3,26 @@ import { DetailedTextbookLesson, NEW_HSK1_FULL_LESSONS } from '../data/newHsk1Bo
 import { NEW_HSK2_FULL_LESSONS } from '../data/newHsk2BookData';
 import { NEW_HSK3_FULL_LESSONS } from '../data/newHsk3BookData';
 import { NEW_HSK4_FULL_LESSONS } from '../data/newHsk4BookData';
+import { NEW_HSK5_FULL_LESSONS } from '../data/newHsk5BookData';
+import { NEW_HSK6_FULL_LESSONS } from '../data/newHsk6BookData';
 import { isCardDue, saveSRSCards } from './srs';
 
 /**
  * Lấy danh sách toàn bộ bài học theo cấp độ HSK (1, 2, 3, 4)
  */
-export function getLessonsForLevel(level: 1 | 2 | 3 | 4): DetailedTextbookLesson[] {
+export function getLessonsForLevel(level: 1 | 2 | 3 | 4 | 5 | 6): DetailedTextbookLesson[] {
   if (level === 1) return NEW_HSK1_FULL_LESSONS;
   if (level === 2) return NEW_HSK2_FULL_LESSONS;
   if (level === 3) return NEW_HSK3_FULL_LESSONS;
-  return NEW_HSK4_FULL_LESSONS;
+  if (level === 4) return NEW_HSK4_FULL_LESSONS;
+  if (level === 5) return NEW_HSK5_FULL_LESSONS;
+  return NEW_HSK6_FULL_LESSONS;
 }
 
 /**
  * Lấy tiến độ bài học của học viên từ localStorage
  */
-export function getLessonProgress(level: 1 | 2 | 3 | 4) {
+export function getLessonProgress(level: 1 | 2 | 3 | 4 | 5 | 6) {
   const lessons = getLessonsForLevel(level);
   const totalLessons = lessons.length || (level === 3 || level === 4 ? 10 : 15);
 
@@ -61,7 +65,7 @@ export function getLessonProgress(level: 1 | 2 | 3 | 4) {
 /**
  * Lấy danh sách từ vựng của một bài học cụ thể
  */
-export function getLessonVocabulary(level: 1 | 2 | 3 | 4, lessonNumber: number): WordItem[] {
+export function getLessonVocabulary(level: 1 | 2 | 3 | 4 | 5 | 6, lessonNumber: number): WordItem[] {
   const lessons = getLessonsForLevel(level);
   const lesson = lessons.find((l) => l.lessonNumber === lessonNumber);
   if (!lesson || !lesson.vocabulary) return [];
@@ -75,7 +79,7 @@ export function getLessonVocabulary(level: 1 | 2 | 3 | 4, lessonNumber: number):
 /**
  * Lấy toàn bộ từ vựng đã học trong giáo trình tính đến bài học cao nhất đã đạt tới (hoặc một bài cụ thể)
  */
-export function getLearnedVocabulary(level: 1 | 2 | 3 | 4, upToLessonNum?: number): WordItem[] {
+export function getLearnedVocabulary(level: 1 | 2 | 3 | 4 | 5 | 6, upToLessonNum?: number): WordItem[] {
   const lessons = getLessonsForLevel(level);
   const targetMax = upToLessonNum ?? getLessonProgress(level).maxReachedLessonNum;
 
@@ -101,7 +105,7 @@ export function getLearnedVocabulary(level: 1 | 2 | 3 | 4, upToLessonNum?: numbe
  * Tính toán danh sách thẻ và số lượng từ vựng cần ôn tập của học viên dựa trên bài học giáo trình đã học
  */
 export function getCoursebookDueStats(
-  level: 1 | 2 | 3 | 4,
+  level: 1 | 2 | 3 | 4 | 5 | 6,
   srsCards: Record<string, SRSCardState>,
   specificLessonNum?: number
 ) {
@@ -170,33 +174,5 @@ export function getCoursebookDueStats(
 /**
  * Đảm bảo các từ vựng trong bài học được kích hoạt vào SRS storage
  */
-export function ensureWordsInSRS(
-  words: WordItem[],
-  srsCards: Record<string, SRSCardState>
-): Record<string, SRSCardState> {
-  const today = new Date();
-  let hasChanges = false;
-  const nextCards = { ...srsCards };
-
-  words.forEach((w) => {
-    if (!nextCards[w.id]) {
-      hasChanges = true;
-      nextCards[w.id] = {
-        wordId: w.id,
-        repetition: 0,
-        interval: 0,
-        easinessFactor: 2.5,
-        lastReviewDate: today.toISOString(),
-        nextReviewDate: today.toISOString(), // Sẵn sàng để ôn ngay
-        history: [],
-        state: 'new',
-      };
-    }
-  });
-
-  if (hasChanges) {
-    saveSRSCards(nextCards);
-  }
-
-  return nextCards;
-}
+// ensureWordsInSRS moved to srs.ts to keep coursebook datasets out of root bundle
+export { ensureWordsInSRS } from './srs';

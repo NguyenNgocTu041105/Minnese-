@@ -379,3 +379,12 @@ export interface HSKStoryLesson {
   questions: HSKStoryQuestion[];
   createdAt?: string;
 }
+
+export type CoursebookTab = 'vocab' | 'text' | 'grammar' | 'exercises' | 'workbook' | 'culture';
+
+export interface CoursebookReturnOrigin {
+  source: 'coursebook';
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  lessonNumber: number;
+  tab: CoursebookTab;
+}

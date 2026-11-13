@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import {
   Volume2,
   Layers,
@@ -106,9 +107,9 @@ export const WordDetailModal: React.FC<WordDetailModalProps> = ({
   const fullWord = buildCompleteWordItem(word, contextSentence);
   const isSavedInSRS = Boolean(srsCards[fullWord.id] || srsCards[fullWord.hanzi]);
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6 md:p-8 overflow-y-auto animate-fade-in"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6 md:p-8 overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -269,4 +270,6 @@ export const WordDetailModal: React.FC<WordDetailModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

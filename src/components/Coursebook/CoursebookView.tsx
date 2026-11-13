@@ -12,7 +12,6 @@ import {
   GraduationCap,
   Award,
   Layers,
-  ChevronLeft,
   Flame,
   FileText,
   Lightbulb,
@@ -23,6 +22,9 @@ import {
   Loader2,
   Pause,
   Radio,
+  Mic,
+  PenTool,
+  Shuffle,
 } from 'lucide-react';
 import { NEW_HSK1_FULL_LESSONS, DetailedTextbookLesson, LessonText } from '../../data/newHsk1BookData';
 import { NEW_HSK2_FULL_LESSONS } from '../../data/newHsk2BookData';
@@ -40,20 +42,31 @@ import {
 } from '../../data/hsk1BubbleLayouts';
 import { LessonExercisesStudio } from './LessonExercisesStudio';
 import { WorkbookView } from './WorkbookView';
-import { playChineseAudio } from '../../utils/chineseAudio';
+import { playChineseAudio, stopChineseAudio } from '../../utils/chineseAudio';
 import { formatPartOfSpeechVietnamese } from '../../utils/radicalUtils';
-import { WordItem, UserProfile, SRSCardState } from '../../types';
+import { WordItem, UserProfile, SRSCardState, CoursebookTab, CoursebookReturnOrigin } from '../../types';
 import { joinClassByCode } from '../../lib/firebase';
 import { WordDetailModal } from '../Dictionary/WordDetailModal';
+import { PronunciationFlashcardsModal } from './PronunciationFlashcardsModal';
+import { VocabularyWhiteboardModal } from './VocabularyWhiteboardModal';
 import { logStudyActivity } from '../../utils/activityLogger';
 
 interface CoursebookViewProps {
   userProfile?: UserProfile;
   onSaveProfile?: (updated: Partial<UserProfile>) => void;
-  onStartFlashcards?: (words: WordItem[], lessonNumber?: number) => void;
+  onStartFlashcards?: (
+    words: WordItem[],
+    lessonNumber?: number,
+    level?: 1 | 2 | 3 | 4 | 5 | 6,
+    originTab?: CoursebookTab
+  ) => void;
   onOpenAiTutorWithTopic?: (topic: string) => void;
   srsCards?: Record<string, SRSCardState>;
   onAddWordToSRS?: (wordId: string) => void;
+  initialHskLevel?: 1 | 2 | 3 | 4 | 5 | 6;
+  initialLessonIndex?: number;
+  initialTab?: CoursebookTab;
+  onClearInitialCoursebookState?: () => void;
 }
 
 
@@ -948,16 +961,29 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
   onOpenAiTutorWithTopic,
   srsCards,
   onAddWordToSRS,
+  initialHskLevel,
+  initialLessonIndex,
+  initialTab,
+  onClearInitialCoursebookState,
 }) => {
   const isAdmin = userProfile?.role === 'admin' || userProfile?.email === 'babysharkkk123@gmail.com';
   const hasEnrolledClass = Boolean(userProfile?.class_code);
 
   const [selectedWordForDetail, setSelectedWordForDetail] = useState<WordItem | null>(null);
 
-  const [selectedHskLevel, setSelectedHskLevel] = useState<1 | 2 | 3 | 4 | 5 | 6>(
-    (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1
-  );
+  // Practice Modals (R3 & R4) & Randomization (R5)
+  const [isPronunciationModalOpen, setIsPronunciationModalOpen] = useState<boolean>(false);
+  const [isWhiteboardModalOpen, setIsWhiteboardModalOpen] = useState<boolean>(false);
+  const [isRandomizePractice, setIsRandomizePractice] = useState<boolean>(false);
+
+  const [selectedHskLevel, setSelectedHskLevel] = useState<1 | 2 | 3 | 4 | 5 | 6>(() => {
+    if (initialHskLevel) return initialHskLevel;
+    return (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1;
+  });
   const [selectedLessonIndex, setSelectedLessonIndex] = useState<number>(() => {
+    if (typeof initialLessonIndex === 'number' && initialLessonIndex >= 0) {
+      return initialLessonIndex;
+    }
     try {
       const lvl = (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1;
       const saved = localStorage.getItem(`minnie_current_lesson_hsk_${lvl}`);
@@ -970,13 +996,36 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
   });
   const [completedLessonNums, setCompletedLessonNums] = useState<number[]>(() => {
     try {
-      const lvl = (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1;
+      const lvl = initialHskLevel || (userProfile?.current_level as 1 | 2 | 3 | 4 | 5 | 6) || 1;
       const saved = localStorage.getItem(`minnie_completed_lessons_hsk_${lvl}`);
       if (saved) return JSON.parse(saved);
     } catch {}
     return [];
   });
-  const [activeTab, setActiveTab] = useState<'text' | 'grammar' | 'vocab' | 'exercises' | 'workbook' | 'culture'>('text');
+  const [activeTab, setActiveTab] = useState<CoursebookTab>(initialTab || 'text');
+
+  useEffect(() => {
+    let shouldClear = false;
+    if (initialTab) {
+      setActiveTab(initialTab);
+      shouldClear = true;
+    }
+    if (typeof initialLessonIndex === 'number' && initialLessonIndex >= 0) {
+      setSelectedLessonIndex(initialLessonIndex);
+      shouldClear = true;
+    }
+    if (initialHskLevel) {
+      setSelectedHskLevel(initialHskLevel);
+      try {
+        const savedCompleted = localStorage.getItem(`minnie_completed_lessons_hsk_${initialHskLevel}`);
+        setCompletedLessonNums(savedCompleted ? JSON.parse(savedCompleted) : []);
+      } catch {}
+      shouldClear = true;
+    }
+    if (shouldClear && onClearInitialCoursebookState) {
+      onClearInitialCoursebookState();
+    }
+  }, [initialTab, initialLessonIndex, initialHskLevel, onClearInitialCoursebookState]);
   const [playingLineId, setPlayingLineId] = useState<string | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [showSpeechBubbles, setShowSpeechBubbles] = useState<boolean>(true);
@@ -984,30 +1033,46 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
 
   const [activePlayingTextId, setActivePlayingTextId] = useState<string | null>(null);
   const coursebookAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playLineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
+      if (playLineTimerRef.current) {
+        clearTimeout(playLineTimerRef.current);
+        playLineTimerRef.current = null;
+      }
       if (coursebookAudioRef.current) {
         coursebookAudioRef.current.pause();
         coursebookAudioRef.current = null;
       }
+      stopChineseAudio();
     };
   }, []);
 
   useEffect(() => {
+    if (playLineTimerRef.current) {
+      clearTimeout(playLineTimerRef.current);
+      playLineTimerRef.current = null;
+    }
     if (coursebookAudioRef.current) {
       coursebookAudioRef.current.pause();
       coursebookAudioRef.current = null;
     }
+    stopChineseAudio();
     setActivePlayingTextId(null);
     setPlayingLineId(null);
   }, [selectedLessonIndex, selectedHskLevel, activeTab]);
 
   const stopAllCoursebookAudio = () => {
+    if (playLineTimerRef.current) {
+      clearTimeout(playLineTimerRef.current);
+      playLineTimerRef.current = null;
+    }
     if (coursebookAudioRef.current) {
       coursebookAudioRef.current.pause();
       coursebookAudioRef.current = null;
     }
+    stopChineseAudio();
     setActivePlayingTextId(null);
     setPlayingLineId(null);
   };
@@ -1247,11 +1312,26 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
     activeLessonsList[selectedLessonIndex] || activeLessonsList[0];
 
   const handlePlayAudio = (text: string, id?: string) => {
-    if (id) setPlayingLineId(id);
-    playChineseAudio(text);
+    if (!text || !text.trim()) return;
+    stopAllCoursebookAudio();
     if (id) {
-      setTimeout(() => setPlayingLineId(null), 2500);
+      setPlayingLineId(id);
+      playLineTimerRef.current = setTimeout(() => {
+        setPlayingLineId((curr) => (curr === id ? null : curr));
+        playLineTimerRef.current = null;
+      }, 3000);
     }
+    Promise.resolve(playChineseAudio(text))
+      .catch(() => {})
+      .finally(() => {
+        if (id) {
+          if (playLineTimerRef.current) {
+            clearTimeout(playLineTimerRef.current);
+            playLineTimerRef.current = null;
+          }
+          setPlayingLineId((curr) => (curr === id ? null : curr));
+        }
+      });
   };
 
   const handleSelectLesson = (idx: number) => {
@@ -1371,7 +1451,12 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                 type="button"
                 onClick={() => {
                   if (onStartFlashcards && currentLesson.vocabulary) {
-                    onStartFlashcards(currentLesson.vocabulary, currentLesson.lessonNumber);
+                    onStartFlashcards(
+                      currentLesson.vocabulary,
+                      currentLesson.lessonNumber,
+                      selectedHskLevel,
+                      activeTab || 'vocab'
+                    );
                   }
                 }}
                 className="px-4 py-2.5 rounded-xl bg-white text-rose-950 hover:bg-rose-50 text-xs font-bold shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
@@ -2013,6 +2098,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handlePlayAudio(ex.hanzi)}
+                          title="Nghe ví dụ ngữ pháp"
                           className="p-1.5 rounded-lg hover:bg-[var(--color-primary-light)] text-[var(--color-primary)] transition-colors cursor-pointer"
                         >
                           <Volume2 className="w-4 h-4" />
@@ -2035,20 +2121,74 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
           {/* TAB 3: VOCABULARY */}
           {activeTab === 'vocab' && (
             <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
                 <h3 className="text-base font-bold text-[var(--color-text-primary)]">
                   Bảng từ vựng bài {currentLesson.lessonNumber} ({currentLesson.vocabulary.length} từ)
                 </h3>
-                {onStartFlashcards && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Companion SRS Flashcards Review (R1 Compatibility) */}
+                  {onStartFlashcards && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onStartFlashcards(
+                          currentLesson.vocabulary,
+                          currentLesson.lessonNumber,
+                          selectedHskLevel,
+                          'vocab'
+                        )
+                      }
+                      className="order-4 px-3 py-1.5 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                      title="Luyện thẻ SRS toàn bài theo lộ trình học"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-rose-500" />
+                      <span className="hidden sm:inline">Thẻ SRS</span>
+                    </button>
+                  )}
+
+                  {/* Card Randomization Toggle (R5) */}
                   <button
                     type="button"
-                    onClick={() => onStartFlashcards(currentLesson.vocabulary, currentLesson.lessonNumber)}
-                    className="px-3.5 py-1.5 rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                    onClick={() => setIsRandomizePractice((prev) => !prev)}
+                    className={`order-1 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                      isRandomizePractice
+                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold shadow-xs'
+                        : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-secondary)]'
+                    }`}
+                    title={
+                      isRandomizePractice
+                        ? 'Đang bật xáo trộn ngẫu nhiên thứ tự thẻ (Bấm để tắt)'
+                        : 'Bật xáo trộn thứ tự từ vựng khi bắt đầu luyện tập'
+                    }
                   >
-                    <Layers className="w-4 h-4" />
-                    Luyện Flashcard toàn bài
+                    <Shuffle className={`w-3.5 h-3.5 ${isRandomizePractice ? 'text-amber-500' : ''}`} />
+                    <span>{isRandomizePractice ? 'Xáo trộn: Bật' : 'Xáo trộn'}</span>
                   </button>
-                )}
+
+                  {/* Pronunciation Flashcards Practice Mode (R3) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPronunciationModalOpen(true)}
+                    disabled={!currentLesson.vocabulary || currentLesson.vocabulary.length === 0}
+                    className="order-2 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="Luyện phát âm nhận diện giọng nói AI với hàng đợi lặp lại từ sai (R3)"
+                  >
+                    <Mic className="w-4 h-4 text-emerald-100" />
+                    <span>Luyện phát âm</span>
+                  </button>
+
+                  {/* Handwriting Whiteboard Practice Mode (R4) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsWhiteboardModalOpen(true)}
+                    disabled={!currentLesson.vocabulary || currentLesson.vocabulary.length === 0}
+                    className="order-3 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="Luyện viết chữ Hán nét tự do trên bảng vẽ (R4)"
+                  >
+                    <PenTool className="w-4 h-4 text-blue-100" />
+                    <span>Luyện viết chữ</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2115,6 +2255,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
           {/* TAB 4.5: WORKBOOK (SÁCH BÀI TẬP & ĐỀ THI THỬ) */}
           {activeTab === 'workbook' && (
             <WorkbookView
+              currentLesson={currentLesson}
               hskLevel={selectedHskLevel}
               currentLessonNumber={currentLesson.lessonNumber}
               onUpdateUserXp={(additionalXp) => {
@@ -2182,38 +2323,8 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
             </div>
           )}
 
-          {/* Bottom Completion & Lesson Navigation Bar */}
-          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                disabled={selectedLessonIndex <= 0}
-                onClick={() => handleSelectLesson(selectedLessonIndex - 1)}
-                className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold border border-[var(--color-border)] flex items-center justify-center gap-1.5 transition-all ${
-                  selectedLessonIndex <= 0
-                    ? 'opacity-40 cursor-not-allowed bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]'
-                    : 'bg-[var(--color-surface)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-pointer active:scale-95'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Bài trước</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={selectedLessonIndex >= activeLessonsList.length - 1}
-                onClick={() => handleSelectLesson(selectedLessonIndex + 1)}
-                className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold border border-[var(--color-border)] flex items-center justify-center gap-1.5 transition-all ${
-                  selectedLessonIndex >= activeLessonsList.length - 1
-                    ? 'opacity-40 cursor-not-allowed bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]'
-                    : 'bg-[var(--color-surface)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-pointer active:scale-95'
-                }`}
-              >
-                <span>Bài tiếp theo</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
+          {/* Bottom Completion Action Bar */}
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-5 shadow-sm flex items-center justify-center mt-8">
             {/* Mark as Completed Button */}
             <button
               type="button"
@@ -2242,6 +2353,28 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
         onClose={() => setSelectedWordForDetail(null)}
         srsCards={srsCards}
         onAddWordToSRS={onAddWordToSRS}
+      />
+
+      {/* R3 & R5: Pronunciation Flashcards Practice Modal */}
+      <PronunciationFlashcardsModal
+        isOpen={isPronunciationModalOpen}
+        onClose={() => setIsPronunciationModalOpen(false)}
+        words={currentLesson.vocabulary || []}
+        lessonTitle={`Bài ${currentLesson.lessonNumber}: ${currentLesson.titleHanzi} (${currentLesson.titleVietnamese})`}
+        lessonNumber={currentLesson.lessonNumber}
+        hskLevel={selectedHskLevel}
+        initialRandomize={isRandomizePractice}
+      />
+
+      {/* R4 & R5: Freehand Handwriting Whiteboard Canvas Modal */}
+      <VocabularyWhiteboardModal
+        isOpen={isWhiteboardModalOpen}
+        onClose={() => setIsWhiteboardModalOpen(false)}
+        words={currentLesson.vocabulary || []}
+        lessonTitle={`Bài ${currentLesson.lessonNumber}: ${currentLesson.titleHanzi} (${currentLesson.titleVietnamese})`}
+        lessonNumber={currentLesson.lessonNumber}
+        hskLevel={selectedHskLevel}
+        initialRandomize={isRandomizePractice}
       />
     </div>
   );

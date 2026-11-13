@@ -24,3 +24,7 @@ ORIGINAL_REQUEST.md
 *.bak
 *.bak_*
 
+scratch/
+public/audio/tts_cache/
+test*.mp3
+test.mp3

@@ -5,6 +5,9 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import { execFile } from 'child_process';
+import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { assertStagingDatabaseIsolation } from './src/server/dbPaths.js';
@@ -540,8 +543,12 @@ async function startServer() {
     skip: (req) => {
       const ip = req.ip || req.socket.remoteAddress || '';
       const isLoopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.includes('127.0.0.1');
-      const hasAdminAuth = Boolean(req.headers['x-qbank-token'] || req.headers['authorization']);
-      return isLoopback || hasAdminAuth || req.path.startsWith('/qbank/scheduler');
+      const adminSecret = process.env.ADMIN_API_SECRET?.trim();
+      const hasValidAdminToken = Boolean(
+        adminSecret &&
+        (req.headers['x-qbank-token'] === adminSecret || req.headers['authorization'] === ('Bearer ' + adminSecret))
+      );
+      return isLoopback || hasValidAdminToken || req.path.startsWith('/qbank/scheduler');
     },
     message: { success: false, error: 'Too many requests, please try again later.' },
   });
@@ -1944,51 +1951,209 @@ QUY TẮC BẮT BUỘC:
     }
   });
 
-  // High-Fidelity Standard Putonghua Audio Streaming Endpoint (一级甲等普通话)
+    // High-Fidelity Standard Putonghua Audio Streaming Endpoint with Microsoft Edge Neural Voices
   const putonghuaTtsCache = new Map<string, Buffer>();
   const MAX_PUTONGHUA_CACHE = 3000;
+  const ttsDiskCacheDir = path.join(process.cwd(), 'public', 'audio', 'tts_cache');
+  if (!fs.existsSync(ttsDiskCacheDir)) {
+    fs.mkdirSync(ttsDiskCacheDir, { recursive: true });
+  }
+
+  // Concurrency & Deduplication Safeguards to guarantee minimal CPU & RAM consumption
+  const activeTtsJobs = new Map<string, Promise<Buffer>>();
+  let activePythonTtsWorkers = 0;
+  const MAX_CONCURRENT_TTS_WORKERS = 4;
+  const ttsQueue: Array<() => void> = [];
+
+  function acquireTtsWorker(): Promise<() => void> {
+    return new Promise((resolve) => {
+      const proceed = () => {
+        activePythonTtsWorkers++;
+        resolve(() => {
+          activePythonTtsWorkers--;
+          const next = ttsQueue.shift();
+          if (next) next();
+        });
+      };
+
+      if (activePythonTtsWorkers < MAX_CONCURRENT_TTS_WORKERS) {
+        proceed();
+      } else {
+        ttsQueue.push(proceed);
+      }
+    });
+  }
+
+  const ALLOWED_EDGE_VOICES = new Set([
+    'zh-CN-XiaoxiaoNeural',
+    'zh-CN-XiaoyiNeural',
+    'zh-CN-YunxiNeural',
+    'zh-CN-YunjianNeural',
+    'zh-CN-YunyangNeural',
+    'zh-CN-YunxiaNeural',
+    'zh-CN-liaoning-XiaobeiNeural',
+    'zh-CN-shaanxi-XiaoniNeural',
+  ]);
+
+  app.get('/api/tts/voices', (_req: Request, res: Response) => {
+    res.json([
+      {
+        id: 'zh-CN-XiaoxiaoNeural',
+        name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình HSK',
+        gender: 'female',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nữ Chuẩn Giáo Trình BLCUP / HSK - Tự nhiên, truyền cảm, chuẩn phát thanh viên',
+        isDefault: true,
+      },
+      {
+        id: 'zh-CN-XiaoyiNeural',
+        name: 'Hiểu Y (Xiaoyi) - Nữ Trẻ Trung, Tươi Vui',
+        gender: 'female',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nữ Trẻ Trung, phát âm trong trẻo, sinh động',
+      },
+      {
+        id: 'zh-CN-YunxiNeural',
+        name: 'Vân Hy (Yunxi) - Nam Tự Nhiên, Trầm Ấm',
+        gender: 'male',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nam Chuẩn, trầm ấm, phát âm tròn vành rõ chữ',
+      },
+      {
+        id: 'zh-CN-YunjianNeural',
+        name: 'Vân Kiện (Yunjian) - Nam Chuẩn Phát Thanh HSK',
+        gender: 'male',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nam Đĩnh Đạc, phong thái phát thanh viên khảo thí',
+      },
+    ]);
+  });
 
   app.get('/api/tts', async (req: Request, res: Response) => {
-    const text = typeof req.query.text === 'string' ? req.query.text.trim() : '';
-    if (!text) {
+    const rawText = typeof req.query.text === 'string' ? req.query.text.trim() : '';
+    if (!rawText) {
       return res.status(400).json({ error: 'Text query parameter is required' });
     }
 
-    const cacheKey = text.slice(0, 250);
-    if (putonghuaTtsCache.has(cacheKey)) {
-      const cached = putonghuaTtsCache.get(cacheKey)!;
+    const requestedVoice = typeof req.query.voice === 'string' && req.query.voice.trim() ? req.query.voice.trim() : '';
+    let voice = 'zh-CN-XiaoxiaoNeural';
+    if (ALLOWED_EDGE_VOICES.has(requestedVoice)) {
+      voice = requestedVoice;
+    } else if (requestedVoice.includes('Xiaoyi') || requestedVoice === 'edge-xiaoyi') {
+      voice = 'zh-CN-XiaoyiNeural';
+    } else if (requestedVoice.includes('Yunxi') || requestedVoice === 'edge-yunxi') {
+      voice = 'zh-CN-YunxiNeural';
+    } else if (requestedVoice.includes('Yunjian') || requestedVoice === 'edge-yunjian') {
+      voice = 'zh-CN-YunjianNeural';
+    }
+
+    const textToSynth = rawText.slice(0, 1000);
+    const hash = crypto.createHash('md5').update(`${voice}:${textToSynth}`).digest('hex');
+
+    // 1. Check in-memory LRU cache
+    if (putonghuaTtsCache.has(hash)) {
+      const cached = putonghuaTtsCache.get(hash)!;
       res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
       return res.send(cached);
     }
 
-    try {
-      const googleTtsUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=' + encodeURIComponent(cacheKey);
-      const audioRes = await fetch(googleTtsUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Referer': 'https://translate.google.com/',
-        },
-      });
-
-      if (!audioRes.ok) {
-        return res.status(audioRes.status).json({ error: 'Failed to fetch audio from TTS upstream' });
-      }
-
-      const buffer = Buffer.from(await audioRes.arrayBuffer());
-      if (putonghuaTtsCache.size >= MAX_PUTONGHUA_CACHE) {
-        const firstKey = putonghuaTtsCache.keys().next().value;
-        if (firstKey) putonghuaTtsCache.delete(firstKey);
-      }
-      putonghuaTtsCache.set(cacheKey, buffer);
-
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.send(buffer);
-    } catch (err: any) {
-      console.warn('[TTS Server Error]', err?.message);
-      return res.status(500).json({ error: 'Internal TTS service error' });
+    // 2. Check persistent disk cache
+    const diskPath = path.join(ttsDiskCacheDir, `${hash}.mp3`);
+    if (fs.existsSync(diskPath)) {
+      try {
+        const diskBuffer = fs.readFileSync(diskPath);
+        if (putonghuaTtsCache.size < MAX_PUTONGHUA_CACHE) {
+          putonghuaTtsCache.set(hash, diskBuffer);
+        }
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return res.send(diskBuffer);
+      } catch {}
     }
+
+    // 3. Deduplicate in-flight requests (if 5 requests ask for the same word simultaneously, run Python only once)
+    let synthPromise = activeTtsJobs.get(hash);
+    if (!synthPromise) {
+      synthPromise = (async () => {
+        const releaseWorker = await acquireTtsWorker();
+        try {
+          const pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim() || process.env.PYTHON_PATH?.trim() || 'python';
+          const synthScript = path.join(process.cwd(), 'scripts', 'edge_tts_synth.py');
+
+          await new Promise<void>((resolve, reject) => {
+            execFile(
+              pythonExec,
+              [synthScript, textToSynth, diskPath, voice, '+0%'],
+              {
+                cwd: process.cwd(),
+                timeout: 15000,
+                env: {
+                  ...process.env,
+                  PYTHONIOENCODING: 'utf-8',
+                  PYTHONUTF8: '1',
+                },
+              },
+              (err) => {
+                if (err) reject(err);
+                else resolve();
+              }
+            );
+          });
+
+          if (fs.existsSync(diskPath)) {
+            const buffer = fs.readFileSync(diskPath);
+            if (putonghuaTtsCache.size >= MAX_PUTONGHUA_CACHE) {
+              const firstKey = putonghuaTtsCache.keys().next().value;
+              if (firstKey) putonghuaTtsCache.delete(firstKey);
+            }
+            putonghuaTtsCache.set(hash, buffer);
+            return buffer;
+          }
+          throw new Error('Synth output file not created');
+        } finally {
+          releaseWorker();
+          activeTtsJobs.delete(hash);
+        }
+      })();
+
+      activeTtsJobs.set(hash, synthPromise);
+    }
+
+    try {
+      const buffer = await synthPromise;
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      return res.send(buffer);
+    } catch (synthErr) {
+      activeTtsJobs.delete(hash);
+    }
+
+    // 4. Fallback to Google Translate TTS
+        try {
+          const googleTtsUrl =
+            'https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=' +
+            encodeURIComponent(textToSynth.slice(0, 200));
+          const audioRes = await fetch(googleTtsUrl, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+              Referer: 'https://translate.google.com/',
+            },
+          });
+
+          if (audioRes.ok) {
+            const buffer = Buffer.from(await audioRes.arrayBuffer());
+            putonghuaTtsCache.set(hash, buffer);
+            res.setHeader('Content-Type', 'audio/mpeg');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(buffer);
+          }
+        } catch (fbErr) {
+          console.warn('[TTS Fallback Error]', fbErr && fbErr.message);
+        }
+
+        return res.status(500).json({ error: 'TTS synthesis temporarily unavailable' });
   });
 
   // In-memory server-side cache & rate-limit cooldown for Gemini TTS
@@ -3458,10 +3623,11 @@ Return ONLY a JSON object matching this schema:
   });
 
   // Production bundle or pre-compiled distribution serving (eliminates Cloud Run 429 rate limiting on unbundled files)
+  const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
   const distCandidates = [
     path.join(process.cwd(), 'dist'),
-    __dirname,
-    path.join(__dirname, '..', 'dist'),
+    _dirname,
+    path.join(_dirname, '..', 'dist'),
     process.cwd(),
   ];
 

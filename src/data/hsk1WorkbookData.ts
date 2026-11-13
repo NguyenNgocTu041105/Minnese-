@@ -458,7 +458,51 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         ],
       },
     ],
-    hskMockListening: [
+        hanziSection: {
+      title: '汉字基本笔画（1）(Các nét cơ bản của chữ Hán 1)',
+      vietnameseTitle: '6 nét cơ bản: Ngang, Sổ, Phẩy, Mác, Chấm, Hất',
+      overview: 'Chữ Hán được cấu tạo từ các nét cơ bản. Nắm vững hướng viết và quy tắc đặt bút giúp viết chữ đẹp, đúng chuẩn và nhớ mặt chữ lâu dài.',
+      strokes: [
+        { shape: '一', name: '横', pinyin: 'héng', vietnameseName: 'Nét ngang', direction: 'Viết từ trái sang phải', exampleChar: '一, 二, 三, 十' },
+        { shape: '丨', name: '竖', pinyin: 'shù', vietnameseName: 'Nét sổ', direction: 'Viết từ trên xuống dưới', exampleChar: '十, 中, 工' },
+        { shape: '丿', name: '撇', pinyin: 'piě', vietnameseName: 'Nét phẩy', direction: 'Viết từ trên chếch sang trái', exampleChar: '八, 人, 大' },
+        { shape: '㇏', name: '捺', pinyin: 'nà', vietnameseName: 'Nét mác', direction: 'Viết từ trên chếch sang phải', exampleChar: '八, 人, 大, 天' },
+        { shape: '丶', name: '点', pinyin: 'diǎn', vietnameseName: 'Nét chấm', direction: 'Chấm nhẹ từ trên xuống phải', exampleChar: '六, 下, 小' },
+        { shape: '㇀', name: '提', pinyin: 'tí', vietnameseName: 'Nét hất', direction: 'Hất xiên từ dưới chếch lên phải', exampleChar: '我, 地, 冷' },
+      ],
+      copyWords: [
+        { word: '一', pinyin: 'yī', vietnamese: 'Một (Số đếm)' },
+        { word: '二', pinyin: 'èr', vietnamese: 'Hai (Số đếm)' },
+        { word: '三', pinyin: 'sān', vietnamese: 'Ba (Số đếm)' },
+        { word: '十', pinyin: 'shí', vietnamese: 'Mười' },
+        { word: '人', pinyin: 'rén', vietnamese: 'Người' },
+      ],
+    },
+    listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt biến điệu hai thanh 3 (35 + 214)',
+        instruction: 'Nghe âm thanh và chọn phiên âm phát âm đúng biến điệu:',
+        type: 'tone',
+        items: [
+          { id: 'l4-d1', audioText: 'nǐ hǎo', options: ['nǐ hǎo (ní hǎo)', 'nī hǎo', 'nì hǎo'], correctAnswer: 'nǐ hǎo (ní hǎo)', vietnamesePrompt: 'Xin chào' },
+          { id: 'l4-d2', audioText: 'kěyǐ', options: ['kěyǐ (ké yǐ)', 'kē yǐ', 'kè yǐ'], correctAnswer: 'kěyǐ (ké yǐ)', vietnamesePrompt: 'Có thể' },
+          { id: 'l4-d3', audioText: 'shuǐguǒ', options: ['shuǐguǒ (shuí guǒ)', 'shuī guǒ', 'shuì guǒ'], correctAnswer: 'shuǐguǒ (shuí guǒ)', vietnamesePrompt: 'Hoa quả' },
+          { id: 'l4-d4', audioText: 'shǒubiǎo', options: ['shǒubiǎo (shóu biǎo)', 'shōu biǎo', 'shòu biǎo'], correctAnswer: 'shǒubiǎo (shóu biǎo)', vietnamesePrompt: 'Đồng hồ đeo tay' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện âm tiết thanh nhẹ (轻声)',
+        instruction: 'Nghe và chọn từ có âm tiết thứ hai đọc thanh nhẹ:',
+        type: 'discrimination',
+        items: [
+          { id: 'l4-d5', audioText: 'māma', options: ['māma', 'māmā', 'màmà'], correctAnswer: 'māma', vietnamesePrompt: 'Mẹ' },
+          { id: 'l4-d6', audioText: 'bàba', options: ['bàba', 'bàbā', 'bábá'], correctAnswer: 'bàba', vietnamesePrompt: 'Bố' },
+          { id: 'l4-d7', audioText: 'yǐzi', options: ['yǐzi', 'yǐzī', 'yǐzǐ'], correctAnswer: 'yǐzi', vietnamesePrompt: 'Cái ghế' },
+          { id: 'l4-d8', audioText: 'piàoliang', options: ['piàoliang', 'piàoliáng', 'piāoliang'], correctAnswer: 'piàoliang', vietnamesePrompt: 'Xinh đẹp' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l04-l01",
         part: 1,
@@ -799,7 +843,49 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         ],
       },
     ],
-    hskMockListening: [
+        hanziSection: {
+      title: '汉字基本笔画（2）与折笔 (Các nét cơ bản 2 và Nét gập)',
+      vietnameseTitle: 'Nét gập: Ngang gập, Sổ gập, Sổ móc, Phẩy gập',
+      overview: 'Nét gập (折笔) là các nét chuyển hướng trong một lần hạ bút. Viết liền mạch không nhấc bút khi đổi hướng.',
+      strokes: [
+        { shape: '𠃍', name: '横折', pinyin: 'héngzhé', vietnameseName: 'Ngang gập', direction: 'Ngang rồi gập thẳng đứng xuống', exampleChar: '口, 日, 田, 四' },
+        { shape: '𠃊', name: '竖折', pinyin: 'shùzhé', vietnameseName: 'Sổ gập', direction: 'Sổ đứng rồi gập ngang sang phải', exampleChar: '山, 出, 区' },
+        { shape: '亅', name: '竖钩', pinyin: 'shùgōu', vietnameseName: 'Sổ móc', direction: 'Sổ đứng rồi móc nhọn lên phía trái', exampleChar: '小, 水, 你' },
+        { shape: '𠃋', name: '撇折', pinyin: 'piězhé', vietnameseName: 'Phẩy gập', direction: 'Phẩy xuống rồi gập hất lên chếch phải', exampleChar: '去, 云, 东' },
+      ],
+      copyWords: [
+        { word: '口', pinyin: 'kǒu', vietnamese: 'Miệng, lượng từ khẩu (người)' },
+        { word: '日', pinyin: 'rì', vietnamese: 'Mặt trời, ngày' },
+        { word: '月', pinyin: 'yuè', vietnamese: 'Mặt trăng, tháng' },
+        { word: '山', pinyin: 'shān', vietnamese: 'Núi' },
+        { word: '水', pinyin: 'shuǐ', vietnamese: 'Nước' },
+      ],
+    },
+    listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt biến điệu của "不" (bu)',
+        instruction: 'Nghe âm thanh và xác định thanh điệu biến điệu chuẩn của "不":',
+        type: 'discrimination',
+        items: [
+          { id: 'l5-d1', audioText: 'bú yào', options: ['bú yào (thanh 2 trước thanh 4)', 'bù yào', 'bū yào'], correctAnswer: 'bú yào (thanh 2 trước thanh 4)', vietnamesePrompt: 'Không muốn / Đừng' },
+          { id: 'l5-d2', audioText: 'bú kèqi', options: ['bú kèqi (thanh 2 trước thanh 4)', 'bù kèqi', 'bū kèqi'], correctAnswer: 'bú kèqi (thanh 2 trước thanh 4)', vietnamesePrompt: 'Không khách sáo' },
+          { id: 'l5-d3', audioText: 'bù hē', options: ['bù hē (giữ thanh 4 trước thanh 1)', 'bú hē', 'bǔ hē'], correctAnswer: 'bù hē (giữ thanh 4 trước thanh 1)', vietnamesePrompt: 'Không uống' },
+          { id: 'l5-d4', audioText: 'bù lěng', options: ['bù lěng (giữ thanh 4 trước thanh 3)', 'bú lěng', 'bǔ lěng'], correctAnswer: 'bù lěng (giữ thanh 4 trước thanh 3)', vietnamesePrompt: 'Không lạnh' },
+        ],
+      },
+      {
+        title: 'Nghe và phân biệt biến điệu của "一" (yi)',
+        instruction: 'Nghe âm thanh và xác định thanh điệu biến điệu chuẩn của "一":',
+        type: 'discrimination',
+        items: [
+          { id: 'l5-d5', audioText: 'yì tiān', options: ['yì tiān (thanh 4 trước thanh 1)', 'yí tiān', 'yī tiān'], correctAnswer: 'yì tiān (thanh 4 trước thanh 1)', vietnamesePrompt: 'Một ngày' },
+          { id: 'l5-d6', audioText: 'yí gè', options: ['yí gè (thanh 2 trước thanh 4)', 'yì gè', 'yī gè'], correctAnswer: 'yí gè (thanh 2 trước thanh 4)', vietnamesePrompt: 'Một cái' },
+          { id: 'l5-d7', audioText: 'yì qǐ', options: ['yì qǐ (thanh 4 trước thanh 3)', 'yí qǐ', 'yī qǐ'], correctAnswer: 'yì qǐ (thanh 4 trước thanh 3)', vietnamesePrompt: 'Cùng nhau' },
+          { id: 'l5-d8', audioText: 'yíxià', options: ['yíxià (thanh 2 trước thanh 4)', 'yìxià', 'yīxià'], correctAnswer: 'yíxià (thanh 2 trước thanh 4)', vietnamesePrompt: 'Một lát' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l05-l01",
         part: 1,
@@ -1129,7 +1215,50 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         ],
       },
     ],
-    hskMockListening: [
+        hanziSection: {
+      title: '汉字笔顺基本规则 (Quy tắc bút thuận cơ bản của chữ Hán)',
+      vietnameseTitle: '7 quy tắc bút thuận nền tảng: Trên trước dưới sau, Trái trước phải sau',
+      overview: 'Bút thuận là thứ tự viết các nét trong chữ Hán. Tuân thủ bút thuận giúp chữ cân đối, đẹp mắt và tốc độ viết nhanh hơn.',
+      strokeOrderRules: [
+        { ruleChinese: '先横后竖', ruleVietnamese: 'Ngang trước sổ sau', exampleChar: '十', pinyin: 'shí', meaning: 'Mười', strokeSequence: ['一', '十'] },
+        { ruleChinese: '先撇后捺', ruleVietnamese: 'Phẩy trước mác sau', exampleChar: '八', pinyin: 'bā', meaning: 'Tám', strokeSequence: ['丿', '八'] },
+        { ruleChinese: '从上到下', ruleVietnamese: 'Trên trước dưới sau', exampleChar: '二', pinyin: 'èr', meaning: 'Hai', strokeSequence: ['一', '二'] },
+        { ruleChinese: '从左到右', ruleVietnamese: 'Trái trước phải sau', exampleChar: '儿', pinyin: 'ér', meaning: 'Trẻ em, con', strokeSequence: ['丿', '儿'] },
+        { ruleChinese: '先外后里', ruleVietnamese: 'Ngoài trước trong sau', exampleChar: '月', pinyin: 'yuè', meaning: 'Tháng', strokeSequence: ['丿', '冂', '月'] },
+        { ruleChinese: '先外后里再封口', ruleVietnamese: 'Vào trước đóng sau', exampleChar: '日', pinyin: 'rì', meaning: 'Ngày', strokeSequence: ['丨', '𠃍', '一', '日'] },
+        { ruleChinese: '先中间后两边', ruleVietnamese: 'Giữa trước hai bên sau', exampleChar: '小', pinyin: 'xiǎo', meaning: 'Nhỏ', strokeSequence: ['亅', '八', '小'] },
+      ],
+      copyWords: [
+        { word: '多', pinyin: 'duō', vietnamese: 'Nhiều' },
+        { word: '少', pinyin: 'shǎo', vietnamese: 'Ít' },
+        { word: '几', pinyin: 'jǐ', vietnamese: 'Mấy' },
+        { word: '号', pinyin: 'hào', vietnamese: 'Số, ngày' },
+      ],
+    },
+    listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt âm uốn lưỡi (儿化音)',
+        instruction: 'Nghe âm thanh và chọn từ có phát âm uốn lưỡi "儿":',
+        type: 'discrimination',
+        items: [
+          { id: 'l6-d1', audioText: 'zhèr', options: ['zhèr (这儿 - ở đây)', 'zhè', 'zhēn'], correctAnswer: 'zhèr (这儿 - ở đây)', vietnamesePrompt: 'Ở đây, chỗ này' },
+          { id: 'l6-d2', audioText: 'nàr', options: ['nàr (那儿 - ở kia)', 'nà', 'nán'], correctAnswer: 'nàr (那儿 - ở kia)', vietnamesePrompt: 'Ở kia, chỗ đó' },
+          { id: 'l6-d3', audioText: 'miàntiáor', options: ['miàntiáor (面条儿)', 'miàntiáo', 'miànbāo'], correctAnswer: 'miàntiáor (面条儿)', vietnamesePrompt: 'Mì sợi' },
+          { id: 'l6-d4', audioText: 'yìdiǎnr', options: ['yìdiǎnr (一点儿)', 'yìdiǎn', 'yìtiān'], correctAnswer: 'yìdiǎnr (一点儿)', vietnamesePrompt: 'Một chút' },
+        ],
+      },
+      {
+        title: 'Nghe và phân biệt từ chỉ số điện thoại & liên lạc',
+        instruction: 'Nghe và chọn cụm từ liên quan đến thông tin liên lạc:',
+        type: 'dialogue_match',
+        items: [
+          { id: 'l6-d5', audioText: 'shǒujī hào', options: ['shǒujī hào (số di động)', 'fángjiān hào', 'shēngrì'], correctAnswer: 'shǒujī hào (số di động)', vietnamesePrompt: 'Số điện thoại di động' },
+          { id: 'l6-d6', audioText: 'dǎ diànhuà', options: ['dǎ diànhuà (gọi điện thoại)', 'kàn diànyǐng', 'qù chāoshì'], correctAnswer: 'dǎ diànhuà (gọi điện thoại)', vietnamesePrompt: 'Gọi điện thoại' },
+          { id: 'l6-d7', audioText: 'duōshao hào', options: ['duōshao hào (số bao nhiêu)', 'jǐ suì', 'nǎ guó'], correctAnswer: 'duōshao hào (số bao nhiêu)', vietnamesePrompt: 'Số bao nhiêu' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l06-l01",
         part: 1,
@@ -1458,7 +1587,30 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { typeChinese: '形声字 (Chữ hình thanh)', typeVietnamese: 'Gồm Hình bàng (nghĩa) + Thanh bàng (âm đọc)', exampleChar: '材 (Mộc 木 = gỗ; Tài 才 = gợi âm đọc cái tài)', explanation: 'Dựa vào bộ thủ đoán ý nghĩa, dựa vào thanh bàng đoán âm đọc.' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt các cặp thanh mẫu đối lập bật hơi vs không bật hơi',
+        instruction: 'Nghe âm thanh và chọn cặp âm tiết chính xác:',
+        type: 'initial',
+        items: [
+          { id: 'l7-d1', audioText: 'bái pái', options: ['bái pái (b - p)', 'pái bái', 'mái pái'], correctAnswer: 'bái pái (b - p)', vietnamesePrompt: 'Trắng - Phái' },
+          { id: 'l7-d2', audioText: 'dào tào', options: ['dào tào (d - t)', 'tào dào', 'lào tào'], correctAnswer: 'dào tào (d - t)', vietnamesePrompt: 'Đến - Bộ' },
+          { id: 'l7-d3', audioText: 'gū kū', options: ['gū kū (g - k)', 'kū gū', 'hū kū'], correctAnswer: 'gū kū (g - k)', vietnamesePrompt: 'Cô - Khóc' },
+          { id: 'l7-d4', audioText: 'zhāo chāo', options: ['zhāo chāo (zh - ch)', 'chāo zhāo', 'shāo chāo'], correctAnswer: 'zhāo chāo (zh - ch)', vietnamesePrompt: 'Chiêu - Siêu' },
+        ],
+      },
+      {
+        title: 'Nghe và chọn mốc thời gian giờ giấc chính xác',
+        instruction: 'Nghe và chọn giờ được phát âm:',
+        type: 'discrimination',
+        items: [
+          { id: 'l7-d5', audioText: 'liù diǎn bàn', options: ['6:30 (liù diǎn bàn)', '7:30', '6:00'], correctAnswer: '6:30 (liù diǎn bàn)', vietnamesePrompt: '6 rưỡi' },
+          { id: 'l7-d6', audioText: 'qī diǎn', options: ['7:00 (qī diǎn)', '8:00', '7:30'], correctAnswer: '7:00 (qī diǎn)', vietnamesePrompt: '7 giờ đúng' },
+          { id: 'l7-d7', audioText: 'xiàbān', options: ['xiàbān (tan làm)', 'shàngbān (đi làm)', 'xiàkè (tan học)'], correctAnswer: 'xiàbān (tan làm)', vietnamesePrompt: 'Tan làm' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l07-l01",
         part: 1,
@@ -1786,7 +1938,30 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '工作', pinyin: 'gōngzuò', vietnamese: 'Công việc / Làm việc' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt vận mẫu mũi trước (-n) và mũi sau (-ng)',
+        instruction: 'Nghe và chọn âm tiết có vận mẫu chính xác:',
+        type: 'final',
+        items: [
+          { id: 'l8-d1', audioText: 'fān fāng', options: ['fān fāng (-an vs -ang)', 'fāng fān', 'fēn fēng'], correctAnswer: 'fān fāng (-an vs -ang)', vietnamesePrompt: 'Phiên - Phương' },
+          { id: 'l8-d2', audioText: 'běn běng', options: ['běn běng (-en vs -eng)', 'běng běn', 'bǎn bǎng'], correctAnswer: 'běn běng (-en vs -eng)', vietnamesePrompt: 'Bản - Bảng' },
+          { id: 'l8-d3', audioText: 'xīn xīng', options: ['xīn xīng (-in vs -ing)', 'xīng xīn', 'xīn xiāng'], correctAnswer: 'xīn xīng (-in vs -ing)', vietnamesePrompt: 'Tân - Tinh' },
+          { id: 'l8-d4', audioText: 'shān shāng', options: ['shān shāng (-an vs -ang)', 'shāng shān', 'shēn shēng'], correctAnswer: 'shān shāng (-an vs -ang)', vietnamesePrompt: 'Sơn - Thương' },
+        ],
+      },
+      {
+        title: 'Nghe và xác định từ chỉ nơi chốn & nghề nghiệp',
+        instruction: 'Nghe và chọn từ vựng đúng ngữ cảnh:',
+        type: 'discrimination',
+        items: [
+          { id: 'l8-d5', audioText: 'yīyuàn', options: ['yīyuàn (bệnh viện)', 'yīshēng (bác sĩ)', 'xuéxiào (trường học)'], correctAnswer: 'yīyuàn (bệnh viện)', vietnamesePrompt: 'Bệnh viện' },
+          { id: 'l8-d6', audioText: 'yīshēng', options: ['yīshēng (bác sĩ)', 'lǎoshī (giáo viên)', 'gōngrén (công nhân)'], correctAnswer: 'yīshēng (bác sĩ)', vietnamesePrompt: 'Bác sĩ' },
+          { id: 'l8-d7', audioText: 'gōngzuò', options: ['gōngzuò (làm việc)', 'xuéxí (học tập)', 'xiūxi (nghỉ ngơi)'], correctAnswer: 'gōngzuò (làm việc)', vietnamesePrompt: 'Làm việc' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l08-l01",
         part: 1,
@@ -2122,7 +2297,30 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '打电话', pinyin: 'dǎ diànhuà', vietnamese: 'Gọi điện thoại' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt âm đầu lưỡi trước (z, c, s) và âm uốn lưỡi (zh, ch, sh, r)',
+        instruction: 'Nghe âm thanh và chọn cặp âm tiết chính xác:',
+        type: 'initial',
+        items: [
+          { id: 'l9-d1', audioText: 'zǎo zhǎo', options: ['zǎo zhǎo (z vs zh)', 'zhǎo zǎo', 'sǎo shǎo'], correctAnswer: 'zǎo zhǎo (z vs zh)', vietnamesePrompt: 'Sớm - Tìm' },
+          { id: 'l9-d2', audioText: 'cūn chūn', options: ['cūn chūn (c vs ch)', 'chūn cūn', 'sūn shūn'], correctAnswer: 'cūn chūn (c vs ch)', vietnamesePrompt: 'Thôn - Xuân' },
+          { id: 'l9-d3', audioText: 'sān shān', options: ['sān shān (s vs sh)', 'shān sān', 'zān zhān'], correctAnswer: 'sān shān (s vs sh)', vietnamesePrompt: 'Ba - Núi' },
+          { id: 'l9-d4', audioText: 'zì zhì', options: ['zì zhì (z vs zh)', 'zhì zì', 'cì chì'], correctAnswer: 'zì zhì (z vs zh)', vietnamesePrompt: 'Chữ - Chí' },
+        ],
+      },
+      {
+        title: 'Nghe và phân biệt từ chỉ địa điểm & học tập',
+        instruction: 'Nghe âm thanh và chọn cụm từ chỉ hoạt động học tập:',
+        type: 'dialogue_match',
+        items: [
+          { id: 'l9-d5', audioText: 'zài xuéxiào xuéxí', options: ['zài xuéxiào xuéxí (học ở trường)', 'zài jiā xiūxi', 'zài yīyuàn kàn bìng'], correctAnswer: 'zài xuéxiào xuéxí (học ở trường)', vietnamesePrompt: 'Học tập ở trường' },
+          { id: 'l9-d6', audioText: 'túshūguǎn', options: ['túshūguǎn (thư viện)', 'jiàoshì (lớp học)', 'shāngdiàn (cửa hàng)'], correctAnswer: 'túshūguǎn (thư viện)', vietnamesePrompt: 'Thư viện' },
+          { id: 'l9-d7', audioText: 'shàngwǔ', options: ['shàngwǔ (buổi sáng)', 'xiàwǔ (buổi chiều)', 'wǎnshang (buổi tối)'], correctAnswer: 'shàngwǔ (buổi sáng)', vietnamesePrompt: 'Buổi sáng' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l09-l01",
         part: 1,
@@ -2458,7 +2656,29 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '可以', pinyin: 'kěyǐ', vietnamese: 'Có thể' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt vận mẫu đơn u vs ü và vận mẫu kép uan vs üan',
+        instruction: 'Nghe và chọn âm tiết có nguyên âm đúng:',
+        type: 'final',
+        items: [
+          { id: 'l10-d1', audioText: 'lù lǜ', options: ['lù lǜ (u vs ü)', 'lǜ lù', 'nù nǜ'], correctAnswer: 'lù lǜ (u vs ü)', vietnamesePrompt: 'Lộ - Lục (đường vs xanh)' },
+          { id: 'l10-d2', audioText: 'nǔ nǚ', options: ['nǔ nǚ (u vs ü)', 'nǚ nǔ', 'lǔ lǚ'], correctAnswer: 'nǔ nǚ (u vs ü)', vietnamesePrompt: 'Nỗ - Nữ' },
+          { id: 'l10-d3', audioText: 'duān juān', options: ['duān juān (uan vs üan)', 'juān duān', 'tuān quān'], correctAnswer: 'duān juān (uan vs üan)', vietnamesePrompt: 'Đoan - Quyên' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện từ vựng mua sắm, giá cả',
+        instruction: 'Nghe và chọn từ chỉ tiền tệ, giá cả hoa quả:',
+        type: 'discrimination',
+        items: [
+          { id: 'l10-d4', audioText: 'píngguǒ', options: ['píngguǒ (quả táo)', 'shuǐguǒ (hoa quả)', 'xīguā (dưa hấu)'], correctAnswer: 'píngguǒ (quả táo)', vietnamesePrompt: 'Quả táo' },
+          { id: 'l10-d5', audioText: 'zhēn piányi', options: ['zhēn piányi (thật là rẻ)', 'tài guì le (đắt quá)', 'hěn hǎokàn'], correctAnswer: 'zhēn piányi (thật là rẻ)', vietnamesePrompt: 'Thật là rẻ' },
+          { id: 'l10-d6', audioText: 'duōshao qián', options: ['duōshao qián (bao nhiêu tiền)', 'duōshao rén', 'jǐ kuài'], correctAnswer: 'duōshao qián (bao nhiêu tiền)', vietnamesePrompt: 'Bao nhiêu tiền' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l10-l01",
         part: 1,
@@ -2796,7 +3016,29 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '中国', pinyin: 'Zhōngguó', vietnamese: 'Trung Quốc' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt câu hỏi chính phản (V-not-V)',
+        instruction: 'Nghe ngữ điệu và cấu trúc câu hỏi chính phản:',
+        type: 'dialogue_match',
+        items: [
+          { id: 'l11-d1', audioText: 'qù bu qù', options: ['qù bu qù (đi hay không đi)', 'qù ma', 'qù le'], correctAnswer: 'qù bu qù (đi hay không đi)', vietnamesePrompt: 'Đi không? / Đi hay không đi?' },
+          { id: 'l11-d2', audioText: 'hǎo bu hǎo', options: ['hǎo bu hǎo (được không)', 'hǎo ma', 'hěn hǎo'], correctAnswer: 'hǎo bu hǎo (được không)', vietnamesePrompt: 'Được không?' },
+          { id: 'l11-d3', audioText: 'yǒu méiyǒu', options: ['yǒu méiyǒu (có hay không có)', 'yǒu ma', 'méiyǒu'], correctAnswer: 'yǒu méiyǒu (có hay không có)', vietnamesePrompt: 'Có không?' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện hành động đang diễn ra (在/正在 + V)',
+        instruction: 'Nghe câu và chọn từ biểu thị hành động tiếp diễn:',
+        type: 'discrimination',
+        items: [
+          { id: 'l11-d4', audioText: 'zhèngzài kàn shū', options: ['zhèngzài kàn shū (đang đọc sách)', 'kànle shū', 'yào kàn shū'], correctAnswer: 'zhèngzài kàn shū (đang đọc sách)', vietnamesePrompt: 'Đang đọc sách' },
+          { id: 'l11-d5', audioText: 'dú dàxué ne', options: ['dú dàxué ne (đang học đại học)', 'dú zhōngxué', 'bú dú le'], correctAnswer: 'dú dàxué ne (đang học đại học)', vietnamesePrompt: 'Đang học đại học đấy' },
+          { id: 'l11-d6', audioText: 'zài chīfàn ne', options: ['zài chīfàn ne (đang ăn cơm)', 'chīfàn le', 'yào chīfàn'], correctAnswer: 'zài chīfàn ne (đang ăn cơm)', vietnamesePrompt: 'Đang ăn cơm đấy' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l11-l01",
         part: 1,
@@ -3132,7 +3374,30 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '多少', pinyin: 'duōshao', vietnamese: 'Bao nhiêu' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt biến điệu thanh điệu trong từ ghép hai âm tiết',
+        instruction: 'Nghe phát âm và chọn cấu trúc thanh điệu chuẩn:',
+        type: 'tone',
+        items: [
+          { id: 'l12-d1', audioText: 'jīntiān', options: ['jīntiān (thanh 1 + 1)', 'jīntiǎn', 'jìntiān'], correctAnswer: 'jīntiān (thanh 1 + 1)', vietnamesePrompt: 'Hôm nay' },
+          { id: 'l12-d2', audioText: 'zuótiān', options: ['zuótiān (thanh 2 + 1)', 'zuòtiān', 'zuǒtiān'], correctAnswer: 'zuótiān (thanh 2 + 1)', vietnamesePrompt: 'Hôm qua' },
+          { id: 'l12-d3', audioText: 'xiàxuě', options: ['xiàxuě (thanh 4 + 3)', 'xiāxuě', 'xiàxué'], correctAnswer: 'xiàxuě (thanh 4 + 3)', vietnamesePrompt: 'Tuyết rơi' },
+          { id: 'l12-d4', audioText: 'xiàyǔ', options: ['xiàyǔ (thanh 4 + 3)', 'xiāyǔ', 'xiàyù'], correctAnswer: 'xiàyǔ (thanh 4 + 3)', vietnamesePrompt: 'Mưa rơi' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện cấu trúc cảm thán "太……了"',
+        instruction: 'Nghe và chọn câu cảm thán đúng:',
+        type: 'discrimination',
+        items: [
+          { id: 'l12-d5', audioText: 'tài lěng le', options: ['tài lěng le (lạnh quá rồi)', 'tài rè le', 'bú lěng'], correctAnswer: 'tài lěng le (lạnh quá rồi)', vietnamesePrompt: 'Lạnh quá rồi' },
+          { id: 'l12-d6', audioText: 'tài rè le', options: ['tài rè le (nóng quá rồi)', 'tài lěng le', 'hěn rè'], correctAnswer: 'tài rè le (nóng quá rồi)', vietnamesePrompt: 'Nóng quá rồi' },
+          { id: 'l12-d7', audioText: 'tiānqì zhēn hǎo', options: ['tiānqì zhēn hǎo (thời tiết thật đẹp)', 'tiānqì bù hǎo', 'xiàxuě le'], correctAnswer: 'tiānqì zhēn hǎo (thời tiết thật đẹp)', vietnamesePrompt: 'Thời tiết thật đẹp' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l12-l01",
         part: 1,
@@ -3460,7 +3725,28 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '谢谢', pinyin: 'xièxie', vietnamese: 'Cảm ơn' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và nhận diện ngữ khí xin phép, đề nghị với 可以 và 一下',
+        instruction: 'Nghe ngữ điệu và chọn cấu trúc lịch sự tương ứng:',
+        type: 'dialogue_match',
+        items: [
+          { id: 'l13-d1', audioText: 'kěyǐ jìnlái ma', options: ['kěyǐ jìnlái ma (có thể vào không)', 'bú yào jìnlái', 'kěyǐ qù ma'], correctAnswer: 'kěyǐ jìnlái ma (có thể vào không)', vietnamesePrompt: 'Tôi có thể vào được không?' },
+          { id: 'l13-d2', audioText: 'děng yíxià', options: ['děng yíxià (đợi một lát)', 'kàn yíxià', 'xiūxi yíxià'], correctAnswer: 'děng yíxià (đợi một lát)', vietnamesePrompt: 'Đợi một chút' },
+          { id: 'l13-d3', audioText: 'kàn yíxià', options: ['kàn yíxià (xem qua một chút)', 'děng yíxià', 'shuō yíxià'], correctAnswer: 'kàn yíxià (xem qua một chút)', vietnamesePrompt: 'Xem một chút' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện câu mang hai tân ngữ (gěi + Ai + Cái gì)',
+        instruction: 'Nghe câu và chọn phát ngôn chuẩn:',
+        type: 'discrimination',
+        items: [
+          { id: 'l13-d4', audioText: 'qǐng gěi wǒ yì bēi chá', options: ['qǐng gěi wǒ yì bēi chá (cho tôi tách trà)', 'qǐng hē chá', 'gěi wǒ yì bēi shuǐ'], correctAnswer: 'qǐng gěi wǒ yì bēi chá (cho tôi tách trà)', vietnamesePrompt: 'Làm ơn cho tôi một tách trà' },
+          { id: 'l13-d5', audioText: 'sòng nǐ yí gè bēizi', options: ['sòng nǐ yí gè bēizi (tặng bạn chiếc cốc)', 'gěi nǐ bēizi', 'mǎi bēizi'], correctAnswer: 'sòng nǐ yí gè bēizi (tặng bạn chiếc cốc)', vietnamesePrompt: 'Tặng bạn một chiếc cốc' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l13-l01",
         part: 1,
@@ -3794,7 +4080,28 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '回家', pinyin: 'huíjiā', vietnamese: 'Về nhà' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và phân biệt trợ từ động thái 了 biểu thị hoàn thành',
+        instruction: 'Nghe và chọn câu có hành động đã hoàn tất:',
+        type: 'discrimination',
+        items: [
+          { id: 'l14-d1', audioText: 'kànle yí gè diànyǐng', options: ['kànle yí gè diànyǐng (đã xem 1 bộ phim)', 'kàn diànyǐng', 'yào kàn diànyǐng'], correctAnswer: 'kànle yí gè diànyǐng (đã xem 1 bộ phim)', vietnamesePrompt: 'Đã xem một bộ phim' },
+          { id: 'l14-d2', audioText: 'mǎile liǎng gè píngguǒ', options: ['mǎile liǎng gè píngguǒ (đã mua 2 quả táo)', 'mǎi píngguǒ', 'yào mǎi píngguǒ'], correctAnswer: 'mǎile liǎng gè píngguǒ (đã mua 2 quả táo)', vietnamesePrompt: 'Đã mua hai quả táo' },
+          { id: 'l14-d3', audioText: 'chīle zǎofàn', options: ['chīle zǎofàn (đã ăn sáng)', 'chī zǎofàn', 'méi chī zǎofàn'], correctAnswer: 'chīle zǎofàn (đã ăn sáng)', vietnamesePrompt: 'Đã ăn bữa sáng' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện phó từ phạm vi 都 (đều)',
+        instruction: 'Nghe câu và chọn nhận định đúng về từ "都":',
+        type: 'dialogue_match',
+        items: [
+          { id: 'l14-d4', audioText: 'wǒmen dōu qù', options: ['wǒmen dōu qù (chúng tôi đều đi)', 'wǒmen bú qù', 'tāmen qù'], correctAnswer: 'wǒmen dōu qù (chúng tôi đều đi)', vietnamesePrompt: 'Chúng tôi đều đi' },
+          { id: 'l14-d5', audioText: 'dōu hěn gāoxìng', options: ['dōu hěn gāoxìng (đều rất vui)', 'bù gāoxìng', 'yí gè rén gāoxìng'], correctAnswer: 'dōu hěn gāoxìng (đều rất vui)', vietnamesePrompt: 'Mọi người đều rất vui vẻ' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l14-l01",
         part: 1,
@@ -4127,7 +4434,28 @@ export const HSK1_WORKBOOK_LESSONS: WorkbookLesson[] = [
         { word: '姐姐', pinyin: 'jiějie', vietnamese: 'Chị gái' },
       ],
     },
-    hskMockListening: [
+        listenAndReadDrills: [
+      {
+        title: 'Nghe và nhận diện cấu trúc hẹn gặp (Thời gian / Địa điểm + 见)',
+        instruction: 'Nghe câu và chọn mốc hẹn gặp chính xác:',
+        type: 'discrimination',
+        items: [
+          { id: 'l15-d1', audioText: 'Dàxīng jīchǎng jiàn', options: ['Dàxīng jīchǎng jiàn (hẹn ở sân bay Đại Hưng)', 'Běijīng jiàn', 'xuéxiào jiàn'], correctAnswer: 'Dàxīng jīchǎng jiàn (hẹn ở sân bay Đại Hưng)', vietnamesePrompt: 'Hẹn gặp ở sân bay Đại Hưng!' },
+          { id: 'l15-d2', audioText: 'míngtiān jiàn', options: ['míngtiān jiàn (mai gặp)', 'hòutiān jiàn', 'xiàwǔ jiàn'], correctAnswer: 'míngtiān jiàn (mai gặp)', vietnamesePrompt: 'Hẹn ngày mai gặp!' },
+          { id: 'l15-d3', audioText: 'bújiàn búsàn', options: ['bújiàn búsàn (không gặp không về)', 'zàijiàn', 'míngtiān jiàn'], correctAnswer: 'bújiàn búsàn (không gặp không về)', vietnamesePrompt: 'Không gặp không về!' },
+        ],
+      },
+      {
+        title: 'Nghe và nhận diện câu phức đẳng lập “……，还/也……”',
+        instruction: 'Nghe và chọn câu liên kết hai phân câu song song:',
+        type: 'dialogue_match',
+        items: [
+          { id: 'l15-d4', audioText: 'wǒ qù, tā yě qù', options: ['wǒ qù, tā yě qù (tôi đi, anh ấy cũng đi)', 'wǒ qù, tā bú qù', 'tāmen dōu bú qù'], correctAnswer: 'wǒ qù, tā yě qù (tôi đi, anh ấy cũng đi)', vietnamesePrompt: 'Tôi đi, anh ấy cũng đi' },
+          { id: 'l15-d5', audioText: 'mǎile píngguǒ, hái mǎile chá', options: ['mǎile píngguǒ, hái mǎile chá (mua táo, còn mua trà)', 'zhǐ mǎile píngguǒ', 'méi mǎi chá'], correctAnswer: 'mǎile píngguǒ, hái mǎile chá (mua táo, còn mua trà)', vietnamesePrompt: 'Đã mua táo, còn mua cả trà nữa' },
+        ],
+      },
+    ],
+hskMockListening: [
       {
         id: "hsk1-l15-l01",
         part: 1,
@@ -4633,6 +4961,48 @@ export const HSK1_OFFICIAL_MOCK_EXAM: MockExamQuestion[] = [
     ],
     correctKey: 'B',
     explanation: 'Mời ngồi xuống (请坐) -> Tranh cái ghế B.',
+  },
+  {
+    id: 'mock-q13',
+    section: 'listening',
+    part: 3,
+    questionNumber: 13,
+    audioScript: 'Nán: Jīntiān tài rè le! Nǚ: Shì a, wǒmen kāi fēngshàn ba. (Nam: Hôm nay trời nóng quá! Nữ: Đúng vậy, chúng ta bật quạt lên đi.)',
+    options: [
+      { key: 'A', imageEmoji: '👨‍⚕️', textVietnamese: 'Bác sĩ' },
+      { key: 'E', imageEmoji: '🥵', textVietnamese: 'Người phụ nữ ngồi trước quạt vì trời quá nóng' },
+      { key: 'D', imageEmoji: '🎬', textVietnamese: 'Rạp chiếu phim' },
+    ],
+    correctKey: 'E',
+    explanation: 'Hội thoại nhắc đến thời tiết quá nóng và bật quạt (今天太热了) -> Tranh E.',
+  },
+  {
+    id: 'mock-q14',
+    section: 'listening',
+    part: 3,
+    questionNumber: 14,
+    audioScript: 'Nán: Wǒmen yìqǐ qù kàn diànyǐng ba. Nǚ: Hǎo a, wǒ yě hěn xiǎng qù. (Nam: Chúng mình cùng đi xem phim nhé. Nữ: Được thôi, tôi cũng rất muốn đi.)',
+    options: [
+      { key: 'B', imageEmoji: '🪑', textVietnamese: 'Ghế ngồi' },
+      { key: 'D', imageEmoji: '🎬', textVietnamese: 'Mọi người đang ngồi xem phim trong rạp chiếu phim' },
+      { key: 'F', imageEmoji: '😴', textVietnamese: 'Bé gái đang ngủ' },
+    ],
+    correctKey: 'D',
+    explanation: 'Hội thoại rủ nhau đi xem phim (去看电影) -> Tranh rạp chiếu phim D.',
+  },
+  {
+    id: 'mock-q15',
+    section: 'listening',
+    part: 3,
+    questionNumber: 15,
+    audioScript: 'Nán: Háizi zài nǎr ne? Nǚ: Tā zài chuáng shang shuìjiào ne. (Nam: Đứa bé đang ở đâu thế? Nữ: Cháu đang ngủ ở trên giường đấy.)',
+    options: [
+      { key: 'D', imageEmoji: '🎬', textVietnamese: 'Xem phim' },
+      { key: 'E', imageEmoji: '🥵', textVietnamese: 'Trời nóng' },
+      { key: 'F', imageEmoji: '😴', textVietnamese: 'Bé gái đang nằm ngủ say trên giường' },
+    ],
+    correctKey: 'F',
+    explanation: 'Hội thoại hỏi đứa trẻ và trả lời đang ngủ (在睡觉呢) -> Tranh em bé ngủ F.',
   },
 
   // Phần 4: 16-20 Nghe đoạn ngắn & câu hỏi chọn A-C

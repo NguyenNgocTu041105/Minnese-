@@ -330,6 +330,9 @@ function getQBankDb(): DatabaseSync | null {
       qbankDbInstance = new DatabaseSync(dbPath);
       try {
         qbankDbInstance.exec('PRAGMA journal_mode = WAL;');
+      qbankDbInstance.exec('PRAGMA synchronous = NORMAL;');
+      qbankDbInstance.exec('PRAGMA cache_size = -64000;');
+      qbankDbInstance.exec('PRAGMA temp_store = MEMORY;');
         qbankDbInstance.exec('PRAGMA busy_timeout = 5000;');
         qbankDbInstance.exec(`
           CREATE TABLE IF NOT EXISTS exam_sessions (

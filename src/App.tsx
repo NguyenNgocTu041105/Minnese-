@@ -1,8 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy, useRef, useCallback } from 'react';
 import { Navbar, NavTab } from './components/Navbar';
 import { DashboardView } from './components/Dashboard/DashboardView';
-import { SRSCardState, UserStats, UserProfile, AssignmentDoc, AssignmentSubmissionDoc, OnlineExamDoc, HSKLevel } from './types';
+import { SRSCardState, UserStats, UserProfile, AssignmentDoc, AssignmentSubmissionDoc, OnlineExamDoc, HSKLevel, CoursebookReturnOrigin, CoursebookTab } from './types';
 import { loadSRSCards, saveSRSCards } from './utils/srs';
+import { ensureWordsInSRS } from './utils/srs';
 import { evaluateRealtimeStreak, registerStudyActivityToday, getCalendarDayDiff } from './utils/streak';
 import {
   logoutUser,
@@ -290,6 +291,12 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedFlashcardDeckId, setSelectedFlashcardDeckId] = useState<string | null>(null);
   const [selectedFlashcardMode, setSelectedFlashcardMode] = useState<'due_only' | 'all'>('due_only');
+  const [flashcardReturnOrigin, setFlashcardReturnOrigin] = useState<CoursebookReturnOrigin | null>(null);
+  const [coursebookInitialState, setCoursebookInitialState] = useState<{
+    level: 1 | 2 | 3 | 4 | 5 | 6;
+    lessonIndex: number;
+    tab: CoursebookTab;
+  } | null>(null);
 
   // QBank Admin Gate State
   const [isQbankEnabled, setIsQbankEnabled] = useState<boolean>(() => {
@@ -735,22 +742,26 @@ export default function App() {
   };
 
   const handleAddWordToSRS = (wordId: string) => {
+    if (srsCards[wordId]) {
+      return;
+    }
     const today = new Date();
-    const updatedCards: Record<string, SRSCardState> = {
-      ...srsCards,
-      [wordId]: {
-        wordId,
-        repetition: 0,
-        interval: 1,
-        easinessFactor: 2.5,
-        lastReviewDate: today.toISOString(),
-        nextReviewDate: today.toISOString(),
-        history: [],
-        state: 'new',
-      },
+    const newCard: SRSCardState = {
+      wordId,
+      repetition: 0,
+      interval: 1,
+      easinessFactor: 2.5,
+      lastReviewDate: today.toISOString(),
+      nextReviewDate: today.toISOString(),
+      history: [],
+      state: 'new',
     };
-    setSrsCards(updatedCards);
-    saveSRSCards(updatedCards);
+    setSrsCards((prev) => {
+      if (prev[wordId]) return prev;
+      const updated = { ...prev, [wordId]: newCard };
+      saveSRSCards(updated);
+      return updated;
+    });
     handleUpdateStats({ xp: stats.xp + 10 });
   };
 
@@ -777,8 +788,7 @@ export default function App() {
 
   const isAuthorizedAdminOrTeacher =
     userProfile?.role === 'admin' ||
-    userProfile?.role === 'teacher' ||
-    userProfile?.email === 'babysharkkk123@gmail.com';
+    userProfile?.role === 'teacher';
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text-primary)] flex flex-col font-sans relative overflow-x-clip transition-colors selection:bg-[var(--color-primary)] selection:text-white">
@@ -788,7 +798,12 @@ export default function App() {
       {/* Top Application Navbar */}
       <Navbar
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={(tab) => {
+          if (tab === 'flashcards') {
+            setFlashcardReturnOrigin(null);
+          }
+          setActiveTab(tab);
+        }}
         stats={stats}
         userProfile={userProfile}
         isDarkMode={isDarkMode}
@@ -807,6 +822,7 @@ export default function App() {
           const m = mode || 'due_only';
           setSelectedFlashcardDeckId('deck-coursebook-progress');
           setSelectedFlashcardMode(m);
+          setFlashcardReturnOrigin(null);
           setActiveTab('flashcards');
           window.dispatchEvent(
             new CustomEvent('minnie_start_srs_review', {
@@ -862,19 +878,36 @@ export default function App() {
                 srsCards={srsCards}
                 onAddWordToSRS={handleAddWordToSRS}
                 onSaveProfile={handleSaveProfile}
-                onStartFlashcards={(words, lessonNumber) => {
-                  // Add words to SRS or navigate to flashcards
-                  words.forEach((w) => handleAddWordToSRS(w.id));
+                onStartFlashcards={(words, lessonNumber, level, originTab) => {
+                  // Batch-activate missing lesson words into SRS without resetting existing mastery or spamming XP
+                  const newlyAddedCount = words.filter((w) => !srsCards[w.id]).length;
+                  if (newlyAddedCount > 0) {
+                    const updatedCards = ensureWordsInSRS(words, srsCards);
+                    setSrsCards(updatedCards);
+                    handleUpdateStats({ xp: stats.xp + 10 });
+                  }
+                  const hskLevel = (level || userProfile.current_level || 1) as 1 | 2 | 3 | 4 | 5 | 6;
                   if (lessonNumber) {
-                    setSelectedFlashcardDeckId(`deck-lesson-${userProfile.current_level || 1}-${lessonNumber}`);
+                    setSelectedFlashcardDeckId(`deck-lesson-${hskLevel}-${lessonNumber}`);
+                    setFlashcardReturnOrigin({
+                      source: 'coursebook',
+                      level: hskLevel,
+                      lessonNumber,
+                      tab: originTab || 'vocab',
+                    });
                   } else {
                     setSelectedFlashcardDeckId('deck-coursebook-progress');
+                    setFlashcardReturnOrigin(null);
                   }
                   setActiveTab('flashcards');
                 }}
                 onOpenAiTutorWithTopic={() => {
                   setActiveTab('tutor');
                 }}
+                initialHskLevel={coursebookInitialState?.level}
+                initialLessonIndex={coursebookInitialState?.lessonIndex}
+                initialTab={coursebookInitialState?.tab}
+                onClearInitialCoursebookState={() => setCoursebookInitialState(null)}
               />
             </ViewTransition>
           )}
@@ -894,7 +927,22 @@ export default function App() {
                 initialDeckId={selectedFlashcardDeckId}
                 initialStudyMode={selectedFlashcardMode}
                 onClearInitialDeckId={() => setSelectedFlashcardDeckId(null)}
-                onNavigateToCoursebook={() => setActiveTab('coursebook')}
+                returnOrigin={flashcardReturnOrigin}
+                onReturnToOrigin={(origin) => {
+                  setSelectedFlashcardDeckId(null);
+                  setFlashcardReturnOrigin(null);
+                  setCoursebookInitialState({
+                    level: origin.level,
+                    lessonIndex: Math.max(0, origin.lessonNumber - 1),
+                    tab: origin.tab || 'vocab',
+                  });
+                  setActiveTab('coursebook');
+                }}
+                onNavigateToCoursebook={() => {
+                  setSelectedFlashcardDeckId(null);
+                  setFlashcardReturnOrigin(null);
+                  setActiveTab('coursebook');
+                }}
               />
             </ViewTransition>
           )}
@@ -1054,7 +1102,12 @@ export default function App() {
             <button
               key={item.id}
               type="button"
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if ((item.id as string) === 'flashcards') {
+                  setFlashcardReturnOrigin(null);
+                }
+                setActiveTab(item.id);
+              }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               className={`silk-btn relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 min-w-[52px] min-h-[48px] rounded-xl transition-all duration-200 cursor-pointer ${

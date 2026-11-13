@@ -102,6 +102,7 @@ export interface CandidateQuestion {
   passage?: string | null;
   audio_text?: string | null;
   transcript?: string | null;
+  audio_url?: string | null;
   audio_playback?: number;
   vocab_tags?: string[];
   tested_vocab?: string[];

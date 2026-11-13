@@ -1,30 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Sparkles,
   Volume2,
   CheckCircle2,
   HelpCircle,
   RotateCcw,
-  Layers,
-  ArrowRight,
-  Puzzle,
-  FileCheck2,
-  MessageSquare,
-  Search,
   Check,
   X,
-  Flame,
-  Award,
-  BookOpen,
-  Loader2,
-  Zap,
-  Sliders,
-  ChevronRight,
-  RefreshCw,
-  PlusCircle,
+  FileEdit,
 } from 'lucide-react';
 import { ExerciseItem, ExerciseType, DetailedTextbookLesson } from '../../data/newHsk1BookData';
 import { playChineseAudio } from '../../utils/chineseAudio';
+
+const getConsolidatedNotesKey = (level: number, lessonNum: number) =>
+  `minnese_exercise_notes_hsk${level}_l${lessonNum}`;
+
+const getDirectNoteKey = (exerciseId: string) =>
+  `minnese_note_${exerciseId}`;
+
+const checkQuestionCorrect = (ex: ExerciseItem, answer: string): boolean => {
+  if (!answer) return false;
+  const cleanUser = answer.replace(/\s+/g, '').toLowerCase();
+  const cleanCorrect = (ex.correctAnswer || '').replace(/\s+/g, '').toLowerCase();
+  if (!cleanCorrect) return false;
+  return cleanUser === cleanCorrect || cleanUser.includes(cleanCorrect) || cleanCorrect.includes(cleanUser);
+};
 
 interface LessonExercisesStudioProps {
   lesson: DetailedTextbookLesson;
@@ -37,37 +36,67 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
   hskLevel,
   onUpdateUserXp,
 }) => {
-  // Exercise collection state (combines built-in + AI generated)
-  const [exerciseList, setExerciseList] = useState<ExerciseItem[]>(() => {
-    return lesson.exercises || [];
-  });
+  const exerciseList = useMemo(() => lesson.exercises || [], [lesson.exercises]);
 
   // User responses
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [scrambleBuilt, setScrambleBuilt] = useState<Record<string, string[]>>({});
-  const [isChecked, setIsChecked] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [rewardedQuestionIds, setRewardedQuestionIds] = useState<Set<string>>(new Set());
 
-  // AI Generator Modal & State
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [aiQuestionCount, setAiQuestionCount] = useState<number>(10);
-  const [aiPracticeMode, setAiPracticeMode] = useState<string>('comprehensive');
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-  const [aiGenError, setAiGenError] = useState<string | null>(null);
-  const [aiGenSuccessNotice, setAiGenSuccessNotice] = useState<string | null>(null);
-  const [rewardClaimed, setRewardClaimed] = useState(false);
+  // Notes state with localStorage persistence
+  const [notes, setNotes] = useState<Record<string, string>>(() => {
+    if (typeof localStorage === 'undefined') return {};
+    try {
+      const consolidatedKey = getConsolidatedNotesKey(hskLevel, lesson.lessonNumber);
+      const saved = localStorage.getItem(consolidatedKey);
+      let initialNotes: Record<string, string> = {};
+      if (saved) {
+        initialNotes = JSON.parse(saved) || {};
+      }
+      (lesson.exercises || []).forEach((ex) => {
+        if (!initialNotes[ex.id]) {
+          const direct = localStorage.getItem(getDirectNoteKey(ex.id));
+          if (direct) {
+            initialNotes[ex.id] = direct;
+          }
+        }
+      });
+      return initialNotes;
+    } catch {
+      return {};
+    }
+  });
 
-  // When lesson changes, reset
-  React.useEffect(() => {
-    setExerciseList(lesson.exercises || []);
+  // When lesson changes, reset responses and load notes
+  useEffect(() => {
     setSelectedAnswers({});
     setScrambleBuilt({});
-    setIsChecked(false);
     setActiveFilter('all');
-    setRewardClaimed(false);
-    setAiGenSuccessNotice(null);
-  }, [lesson.lessonNumber, hskLevel]);
+    setRewardedQuestionIds(new Set());
+
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const consolidatedKey = getConsolidatedNotesKey(hskLevel, lesson.lessonNumber);
+      const saved = localStorage.getItem(consolidatedKey);
+      let loaded: Record<string, string> = {};
+      if (saved) {
+        loaded = JSON.parse(saved) || {};
+      }
+      (lesson.exercises || []).forEach((ex) => {
+        if (!loaded[ex.id]) {
+          const direct = localStorage.getItem(getDirectNoteKey(ex.id));
+          if (direct) {
+            loaded[ex.id] = direct;
+          }
+        }
+      });
+      setNotes(loaded);
+    } catch (e) {
+      console.warn('Failed to load exercise notes:', e);
+    }
+  }, [hskLevel, lesson.lessonNumber, lesson.exercises]);
 
   // Handle Play Audio
   const handlePlayAudio = async (text: string, id: string) => {
@@ -82,47 +111,89 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
     }
   };
 
-  // Handle Option Selection for Standard Multiple Choice / Fill blank / Translation / Dialogue / Error
+  // Handle Option Selection for Multiple Choice / Fill blank / Translation / Dialogue / Error Spotting
   const handleSelectOption = (exerciseId: string, opt: string) => {
-    if (isChecked) return; // Locked once checked
+    if (selectedAnswers[exerciseId]) return; // Locked once answered
+
     setSelectedAnswers((prev) => ({
       ...prev,
       [exerciseId]: opt,
     }));
+
+    const ex = exerciseList.find((e) => e.id === exerciseId);
+    if (!ex) return;
+
+    const isCorrect = checkQuestionCorrect(ex, opt);
+    if (isCorrect && !rewardedQuestionIds.has(exerciseId)) {
+      setRewardedQuestionIds((prev) => {
+        const next = new Set(prev);
+        next.add(exerciseId);
+        return next;
+      });
+      if (onUpdateUserXp) {
+        onUpdateUserXp(10);
+      }
+    }
   };
 
   // Handle Scramble Segment Click (add to assembled sentence)
-  const handleAddScrambleSegment = (exerciseId: string, segment: string, segmentIdx: number) => {
-    if (isChecked) return;
+  const handleAddScrambleSegment = (exerciseId: string, segment: string) => {
+    const ex = exerciseList.find((e) => e.id === exerciseId);
+    const totalSegments = ex?.scrambleSegments?.length || 0;
+
     setScrambleBuilt((prev) => {
       const current = prev[exerciseId] || [];
+      if (totalSegments > 0 && current.length >= totalSegments) {
+        return prev;
+      }
       const updated = [...current, segment];
-      // Also update selectedAnswers with joined string
-      setSelectedAnswers((ans) => ({
-        ...ans,
-        [exerciseId]: updated.join(''),
-      }));
+
+      // Instant evaluation when all scramble segments are placed
+      if (totalSegments > 0 && updated.length === totalSegments) {
+        const assembledText = updated.join('');
+        setSelectedAnswers((ans) => ({
+          ...ans,
+          [exerciseId]: assembledText,
+        }));
+
+        if (ex) {
+          const isCorrect = checkQuestionCorrect(ex, assembledText);
+          if (isCorrect && !rewardedQuestionIds.has(exerciseId)) {
+            setRewardedQuestionIds((rPrev) => {
+              const next = new Set(rPrev);
+              next.add(exerciseId);
+              return next;
+            });
+            if (onUpdateUserXp) {
+              onUpdateUserXp(10);
+            }
+          }
+        }
+      }
+
       return { ...prev, [exerciseId]: updated };
     });
   };
 
   // Handle Remove Scramble Segment
   const handleRemoveScrambleSegment = (exerciseId: string, itemIdx: number) => {
-    if (isChecked) return;
     setScrambleBuilt((prev) => {
       const current = prev[exerciseId] || [];
       const updated = current.filter((_, idx) => idx !== itemIdx);
-      setSelectedAnswers((ans) => ({
-        ...ans,
-        [exerciseId]: updated.join(''),
-      }));
+      setSelectedAnswers((ans) => {
+        if (ans[exerciseId]) {
+          const next = { ...ans };
+          delete next[exerciseId];
+          return next;
+        }
+        return ans;
+      });
       return { ...prev, [exerciseId]: updated };
     });
   };
 
   // Reset a scramble exercise
   const handleResetScramble = (exerciseId: string) => {
-    if (isChecked) return;
     setScrambleBuilt((prev) => ({ ...prev, [exerciseId]: [] }));
     setSelectedAnswers((prev) => {
       const next = { ...prev };
@@ -131,69 +202,48 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
     });
   };
 
-  // AI Generator Trigger
-  const handleGenerateAiExercises = async () => {
-    setIsGeneratingAi(true);
-    setAiGenError(null);
-    setAiGenSuccessNotice(null);
-
-    try {
-      const res = await fetch('/api/gemini/generate-lesson-exercises', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hskLevel,
-          lessonNumber: lesson.lessonNumber,
-          titleHanzi: lesson.titleHanzi,
-          titleVietnamese: lesson.titleVietnamese,
-          vocabulary: lesson.vocabulary,
-          grammarPoints: lesson.grammarPoints,
-          count: aiQuestionCount,
-          practiceMode: aiPracticeMode,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Máy chủ phản hồi mã ${res.status}`);
+  // Per-question reset
+  const handleResetQuestion = (exerciseId: string) => {
+    setSelectedAnswers((prev) => {
+      const next = { ...prev };
+      delete next[exerciseId];
+      return next;
+    });
+    setScrambleBuilt((prev) => {
+      if (prev[exerciseId]) {
+        return { ...prev, [exerciseId]: [] };
       }
+      return prev;
+    });
+  };
 
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('Hệ thống đang khởi động lại hoặc phản hồi chưa sẵn sàng. Vui lòng thử lại sau giây lát!');
+  // Reset all questions
+  const handleResetAll = () => {
+    setSelectedAnswers({});
+    setScrambleBuilt({});
+  };
+
+  // Update Note and sync to localStorage
+  const handleUpdateNote = (exerciseId: string, value: string) => {
+    setNotes((prev) => {
+      const next = { ...prev, [exerciseId]: value };
+      if (typeof localStorage !== 'undefined') {
+        try {
+          const consolidatedKey = getConsolidatedNotesKey(hskLevel, lesson.lessonNumber);
+          localStorage.setItem(consolidatedKey, JSON.stringify(next));
+
+          const directKey = getDirectNoteKey(exerciseId);
+          if (value.trim()) {
+            localStorage.setItem(directKey, value);
+          } else {
+            localStorage.removeItem(directKey);
+          }
+        } catch (err) {
+          console.warn('Failed to save note to localStorage:', err);
+        }
       }
-
-      const data = await res.json();
-      if (Array.isArray(data.exercises) && data.exercises.length > 0) {
-        const newItems: ExerciseItem[] = data.exercises.map((item: any, idx: number) => ({
-          id: item.id || `ai-ex-${Date.now()}-${idx}`,
-          type: item.type || 'multiple_choice',
-          question: item.question || 'Chọn đáp án đúng:',
-          hanziPrompt: item.hanziPrompt || '',
-          pinyinPrompt: item.pinyinPrompt || '',
-          vietnamesePrompt: item.vietnamesePrompt || '',
-          options: Array.isArray(item.options) && item.options.length > 0 ? item.options : ['A', 'B', 'C', 'D'],
-          scrambleSegments: Array.isArray(item.scrambleSegments) ? item.scrambleSegments : undefined,
-          correctAnswer: item.correctAnswer || item.options?.[0] || '',
-          explanation: item.explanation || 'Phân tích ngữ pháp chuẩn xác.',
-          grammarFocus: item.grammarFocus || 'Ngữ pháp bài học',
-          audioText: item.audioText || item.hanziPrompt || item.correctAnswer || '',
-        }));
-
-        setExerciseList(newItems);
-        setSelectedAnswers({});
-        setScrambleBuilt({});
-        setIsChecked(false);
-        setIsAiModalOpen(false);
-        setAiGenSuccessNotice(`Đã tạo thành công ${newItems.length} câu bài tập chất lượng cao theo bài học!`);
-      } else {
-        throw new Error('Không nhận được dữ liệu bài tập hợp lệ.');
-      }
-    } catch (err: any) {
-      console.error('AI Generator error:', err);
-      setAiGenError(err?.message || 'Không thể tạo bài tập vào lúc này. Vui lòng thử lại!');
-    } finally {
-      setIsGeneratingAi(false);
-    }
+      return next;
+    });
   };
 
   // Filtered exercises
@@ -208,14 +258,16 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
     let correct = 0;
 
     exerciseList.forEach((ex) => {
-      const userAns = selectedAnswers[ex.id]?.trim();
-      if (userAns) {
+      const isAnswered =
+        ex.type === 'sentence_scramble'
+          ? (scrambleBuilt[ex.id]?.length || 0) >= (ex.scrambleSegments?.length || 0) &&
+            (ex.scrambleSegments?.length || 0) > 0
+          : !!selectedAnswers[ex.id]?.trim();
+
+      if (isAnswered) {
         answered++;
-        // Compare normalized strings
-        const cleanUser = userAns.replace(/\s+/g, '').toLowerCase();
-        const cleanCorrect = ex.correctAnswer.replace(/\s+/g, '').toLowerCase();
-        // Also check if user selected an option starting with option letter or exact match
-        if (cleanUser === cleanCorrect || cleanUser.includes(cleanCorrect) || cleanCorrect.includes(cleanUser)) {
+        const userAns = selectedAnswers[ex.id] || '';
+        if (checkQuestionCorrect(ex, userAns)) {
           correct++;
         }
       }
@@ -223,24 +275,7 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
 
     const pct = exerciseList.length > 0 ? Math.round((correct / exerciseList.length) * 100) : 0;
     return { totalAnswered: answered, correctCount: correct, scorePercentage: pct };
-  }, [exerciseList, selectedAnswers]);
-
-  // Submit and Check
-  const handleCheckAnswers = () => {
-    setIsChecked(true);
-    if (!rewardClaimed && correctCount > 0 && onUpdateUserXp) {
-      onUpdateUserXp(correctCount * 10);
-      setRewardClaimed(true);
-    }
-  };
-
-  // Reset entire exercise set
-  const handleResetAll = () => {
-    setSelectedAnswers({});
-    setScrambleBuilt({});
-    setIsChecked(false);
-    setRewardClaimed(false);
-  };
+  }, [exerciseList, selectedAnswers, scrambleBuilt]);
 
   const getFilterTypeLabel = (type: string) => {
     switch (type) {
@@ -282,56 +317,26 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
           </p>
         </div>
 
-        {/* Action Buttons: AI Generator & Check Answers */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        {/* Live completion counter & Reset All */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="px-3.5 py-2 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-2 shadow-2xs">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <span>
+              Đã làm: {totalAnswered}/{exerciseList.length} • Đúng: {correctCount}
+            </span>
+          </div>
+
           <button
             type="button"
-            onClick={() => setIsAiModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+            onClick={handleResetAll}
+            disabled={totalAnswered === 0}
+            className="px-3.5 py-2 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-bg-secondary)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)] font-bold text-xs flex items-center gap-1.5 border border-[var(--color-border)] transition-all cursor-pointer shadow-2xs"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>✨ Sinh thêm bài tập AI</span>
+            <RotateCcw className="w-4 h-4" />
+            <span>Làm lại tất cả</span>
           </button>
-
-          {isChecked ? (
-            <button
-              type="button"
-              onClick={handleResetAll}
-              className="px-3.5 py-2 rounded-xl bg-[var(--color-bg-secondary)] hover:bg-[var(--color-border)] text-[var(--color-text-primary)] font-bold text-xs flex items-center gap-1.5 border border-[var(--color-border)] transition-all cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Làm lại
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleCheckAnswers}
-              disabled={totalAnswered === 0}
-              className="px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:opacity-50 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Kiểm tra đáp án ({totalAnswered}/{exerciseList.length})
-            </button>
-          )}
         </div>
       </div>
-
-      {/* Success Notification if generated */}
-      {aiGenSuccessNotice && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span className="font-medium">{aiGenSuccessNotice}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAiGenSuccessNotice(null)}
-            className="text-xs underline cursor-pointer"
-          >
-            Đóng
-          </button>
-        </div>
-      )}
 
       {/* Filter Tabs by Question Type */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
@@ -369,8 +374,8 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
         )}
       </div>
 
-      {/* Checked Result Banner */}
-      {isChecked && (
+      {/* Live Result Summary Banner */}
+      {totalAnswered > 0 && (
         <div className="p-4 rounded-2xl bg-linear-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-extrabold text-lg shadow-sm">
@@ -382,11 +387,11 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
                   {scorePercentage >= 80 ? 'Xuất sắc! 🎉' : scorePercentage >= 50 ? 'Khá tốt! 👍' : 'Cố gắng lên! 💪'}
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
-                  Đúng {correctCount} / {exerciseList.length} câu
+                  Đúng {correctCount} / {totalAnswered} câu đã làm
                 </span>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                Bạn đã nhận được <span className="font-bold text-amber-500">+{correctCount * 10} XP</span> kinh nghiệm ôn tập!
+                Bạn đã tích lũy được <span className="font-bold text-amber-500">+{rewardedQuestionIds.size * 10} XP</span> kinh nghiệm ôn tập!
               </p>
             </div>
           </div>
@@ -399,14 +404,6 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
             >
               Làm lại toàn bộ
             </button>
-            <button
-              type="button"
-              onClick={() => setIsAiModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Luyện thêm câu mới
-            </button>
           </div>
         </div>
       )}
@@ -415,17 +412,19 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
       <div className="space-y-5">
         {filteredExercises.map((ex, exIdx) => {
           const userAns = selectedAnswers[ex.id] || '';
-          const isCorrect = isChecked && (
-            userAns.replace(/\s+/g, '').toLowerCase() === ex.correctAnswer.replace(/\s+/g, '').toLowerCase() ||
-            userAns.trim().toLowerCase().includes(ex.correctAnswer.trim().toLowerCase()) ||
-            ex.correctAnswer.trim().toLowerCase().includes(userAns.trim().toLowerCase())
-          );
+          const isAnswered =
+            ex.type === 'sentence_scramble'
+              ? (scrambleBuilt[ex.id]?.length || 0) >= (ex.scrambleSegments?.length || 0) &&
+                (ex.scrambleSegments?.length || 0) > 0
+              : !!userAns;
+
+          const isCorrect = isAnswered && checkQuestionCorrect(ex, userAns);
 
           return (
             <div
               key={ex.id}
               className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-                isChecked
+                isAnswered
                   ? isCorrect
                     ? 'bg-emerald-500/5 border-emerald-500/30'
                     : 'bg-rose-500/5 border-rose-500/30'
@@ -493,18 +492,33 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
               {ex.type === 'sentence_scramble' && (
                 <div className="mt-4 space-y-3">
                   {/* Built sentence area */}
-                  <div className="min-h-12 p-3 rounded-xl bg-[var(--color-surface)] border-2 border-dashed border-[var(--color-primary)]/30 flex flex-wrap items-center gap-1.5">
+                  <div
+                    className={`min-h-12 p-3 rounded-xl bg-[var(--color-surface)] border-2 transition-all flex flex-wrap items-center gap-1.5 ${
+                      isAnswered
+                        ? isCorrect
+                          ? 'border-emerald-500 bg-emerald-500/5'
+                          : 'border-rose-500 bg-rose-500/5'
+                        : 'border-dashed border-[var(--color-primary)]/30'
+                    }`}
+                  >
                     {scrambleBuilt[ex.id] && scrambleBuilt[ex.id].length > 0 ? (
                       scrambleBuilt[ex.id].map((seg, sIdx) => (
                         <button
                           key={`${seg}-${sIdx}`}
                           type="button"
+                          disabled={isAnswered}
                           onClick={() => handleRemoveScrambleSegment(ex.id, sIdx)}
-                          className="px-3 py-1.5 rounded-lg bg-[var(--color-primary)] text-white text-xs font-bold font-chinese flex items-center gap-1 hover:bg-rose-500 transition-colors shadow-2xs cursor-pointer"
-                          title="Bấm để xóa từ này"
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold font-chinese flex items-center gap-1 transition-colors shadow-2xs ${
+                            isAnswered
+                              ? isCorrect
+                                ? 'bg-emerald-500 text-white cursor-default'
+                                : 'bg-rose-500 text-white cursor-default'
+                              : 'bg-[var(--color-primary)] text-white hover:bg-rose-500 cursor-pointer'
+                          }`}
+                          title={isAnswered ? undefined : 'Bấm để xóa từ này'}
                         >
                           <span>{seg}</span>
-                          <X className="w-3 h-3 opacity-80" />
+                          {!isAnswered && <X className="w-3 h-3 opacity-80" />}
                         </button>
                       ))
                     ) : (
@@ -518,7 +532,6 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
                   {ex.scrambleSegments && (
                     <div className="flex flex-wrap items-center gap-2">
                       {ex.scrambleSegments.map((seg, sIdx) => {
-                        // Count how many times this segment has been used
                         const usedCount = (scrambleBuilt[ex.id] || []).filter((s) => s === seg).length;
                         const totalAvailable = ex.scrambleSegments!.filter((s) => s === seg).length;
                         const isExhausted = usedCount >= totalAvailable;
@@ -527,12 +540,14 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
                           <button
                             key={`${seg}-${sIdx}`}
                             type="button"
-                            disabled={isExhausted || isChecked}
-                            onClick={() => handleAddScrambleSegment(ex.id, seg, sIdx)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-chinese border transition-all cursor-pointer ${
-                              isExhausted
+                            disabled={isExhausted || isAnswered}
+                            onClick={() => handleAddScrambleSegment(ex.id, seg)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-chinese border transition-all ${
+                              isAnswered
+                                ? 'opacity-40 bg-gray-100 dark:bg-gray-800 border-transparent cursor-not-allowed'
+                                : isExhausted
                                 ? 'opacity-30 bg-gray-200 dark:bg-gray-800 border-transparent cursor-not-allowed'
-                                : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-[var(--color-text-primary)] shadow-2xs'
+                                : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-[var(--color-text-primary)] shadow-2xs cursor-pointer'
                             }`}
                           >
                             {seg}
@@ -540,7 +555,7 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
                         );
                       })}
 
-                      {(scrambleBuilt[ex.id]?.length || 0) > 0 && !isChecked && (
+                      {(scrambleBuilt[ex.id]?.length || 0) > 0 && !isAnswered && (
                         <button
                           type="button"
                           onClick={() => handleResetScramble(ex.id)}
@@ -561,15 +576,19 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
                     const isOptionSelected = userAns === opt;
                     const isOptionCorrect = opt === ex.correctAnswer;
 
-                    let btnStyle = 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-primary)]';
+                    let btnStyle =
+                      'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50 text-[var(--color-text-primary)]';
 
-                    if (isChecked) {
-                      if (isOptionCorrect) {
-                        btnStyle = 'bg-emerald-500 text-white border-emerald-500 font-bold';
+                    if (isAnswered) {
+                      if (isOptionSelected && isOptionCorrect) {
+                        btnStyle = 'bg-emerald-500 text-white border-emerald-500 font-bold shadow-xs';
                       } else if (isOptionSelected && !isOptionCorrect) {
-                        btnStyle = 'bg-rose-500 text-white border-rose-500 font-bold';
+                        btnStyle = 'bg-rose-500 text-white border-rose-500 font-bold shadow-xs';
+                      } else if (isOptionCorrect) {
+                        btnStyle = 'bg-emerald-500 text-white border-emerald-500 font-bold pointer-events-none shadow-xs';
                       } else {
-                        btnStyle = 'opacity-50 bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)]';
+                        btnStyle =
+                          'opacity-50 pointer-events-none bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)]';
                       }
                     } else if (isOptionSelected) {
                       btnStyle = 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] font-bold shadow-xs';
@@ -580,198 +599,98 @@ export const LessonExercisesStudio: React.FC<LessonExercisesStudioProps> = ({
                         key={opt}
                         type="button"
                         onClick={() => handleSelectOption(ex.id, opt)}
-                        disabled={isChecked}
+                        disabled={isAnswered}
                         className={`p-3 rounded-xl text-xs text-left border transition-all flex items-center justify-between gap-2 cursor-pointer ${btnStyle}`}
                       >
                         <span className="leading-relaxed">{opt}</span>
-                        {isChecked && isOptionCorrect && <Check className="w-4 h-4 shrink-0" />}
-                        {isChecked && isOptionSelected && !isOptionCorrect && <X className="w-4 h-4 shrink-0" />}
+                        {isAnswered && isOptionCorrect && <Check className="w-4 h-4 shrink-0" />}
+                        {isAnswered && isOptionSelected && !isOptionCorrect && <X className="w-4 h-4 shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
               )}
 
-              {/* Checked Feedback & Detailed Explanation */}
-              {isChecked && (
+              {/* Instant Feedback & Detailed Explanation */}
+              {isAnswered && (
                 <div
-                  className={`mt-4 p-3.5 rounded-xl text-xs flex items-start gap-2.5 border ${
+                  className={`mt-4 p-4 rounded-xl text-xs space-y-2.5 border transition-all ${
                     isCorrect
                       ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/30'
                       : 'bg-rose-500/10 text-rose-800 dark:text-rose-200 border-rose-500/30'
                   }`}
                 >
-                  {isCorrect ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <HelpCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                  )}
-                  <div className="space-y-1 flex-1">
-                    <div className="font-bold flex items-center gap-2">
-                      <span>{isCorrect ? 'Chính xác! 🎉' : 'Chưa chính xác'}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isCorrect ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      ) : (
+                        <HelpCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                      )}
+                      <span className="font-bold text-xs sm:text-sm">
+                        {isCorrect ? 'Chính xác! 🎉' : 'Chưa chính xác!'}
+                      </span>
                       {!isCorrect && (
-                        <span className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] font-chinese font-bold border border-[var(--color-border)]">
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] font-chinese font-bold border border-[var(--color-border)] text-xs">
                           Đáp án đúng: {ex.correctAnswer}
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] leading-relaxed opacity-95">
-                      {ex.explanation}
+
+                    <button
+                      type="button"
+                      onClick={() => handleResetQuestion(ex.id)}
+                      className="px-2.5 py-1 rounded-lg bg-[var(--color-surface)] hover:bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                      title="Làm lại câu này"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Làm lại câu này</span>
+                    </button>
+                  </div>
+
+                  {ex.grammarFocus && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold text-xs border border-purple-500/20">
+                      <span>💡 Trọng điểm:</span>
+                      <span>{ex.grammarFocus}</span>
                     </div>
+                  )}
+
+                  <div className="text-xs leading-relaxed opacity-95 pt-0.5">
+                    {ex.explanation}
                   </div>
                 </div>
               )}
+
+              {/* Dedicated Question Note-Taking Section (R3) */}
+              <div className="mt-4 pt-3.5 border-t border-[var(--color-border)]/60">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <label
+                    htmlFor={`note-${ex.id}`}
+                    className="text-xs font-semibold text-[var(--color-text-secondary)] flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileEdit className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                    <span>Ghi chú cá nhân của bạn:</span>
+                  </label>
+                  {notes[ex.id] && notes[ex.id].trim().length > 0 && (
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                      <Check className="w-3 h-3" />
+                      <span>Đã lưu tự động</span>
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  id={`note-${ex.id}`}
+                  value={notes[ex.id] || ''}
+                  onChange={(e) => handleUpdateNote(ex.id, e.target.value)}
+                  placeholder="Ghi chép từ vựng mới, cấu trúc ngữ pháp cần lưu ý cho câu này..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)]/60 resize-y transition-all outline-hidden"
+                />
+              </div>
             </div>
           );
         })}
       </div>
-
-      {/* AI Generator Modal */}
-      {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-              <div className="flex items-center gap-2 text-amber-500">
-                <Sparkles className="w-5 h-5" />
-                <h4 className="text-base font-bold text-[var(--color-text-primary)]">
-                  Sinh thêm bài tập AI thông minh
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAiModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1.5">
-                  Bài học mục tiêu:
-                </label>
-                <div className="p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] font-semibold text-[var(--color-text-primary)] flex items-center justify-between">
-                  <span>
-                    HSK {hskLevel} • Bài {lesson.lessonNumber}: {lesson.titleHanzi} ({lesson.titleVietnamese})
-                  </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold">
-                    {lesson.vocabulary.length} từ vựng
-                  </span>
-                </div>
-              </div>
-
-              {/* Choose Question Count */}
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1.5">
-                  Số lượng câu hỏi muốn tạo:
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[5, 10, 15].map((cnt) => (
-                    <button
-                      key={cnt}
-                      type="button"
-                      onClick={() => setAiQuestionCount(cnt)}
-                      className={`py-2 rounded-xl font-bold border transition-all cursor-pointer ${
-                        aiQuestionCount === cnt
-                          ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-2xs'
-                          : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
-                      }`}
-                    >
-                      {cnt} câu hỏi
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Choose Practice Mode */}
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1.5">
-                  Định hướng rèn luyện & Dạng bài:
-                </label>
-                <div className="space-y-2">
-                  {[
-                    {
-                      id: 'comprehensive',
-                      title: '🌟 Tổng hợp đa dạng 6 dạng bài',
-                      desc: 'Bao gồm sắp xếp câu, điền từ, trắc nghiệm, ghép hội thoại, tìm lỗi sai và dịch mẫu câu.',
-                    },
-                    {
-                      id: 'sentence_scramble',
-                      title: '🧩 Chuyên sâu sắp xếp câu & Trật tự từ',
-                      desc: 'Tập trung rèn phản xạ ngữ pháp, vị trí trạng ngữ, bổ ngữ và trật tự câu tiếng Trung.',
-                    },
-                    {
-                      id: 'fill_blank',
-                      title: '✍️ Điền từ vào chỗ trống & Lượng từ/Phó từ',
-                      desc: 'Luyện chọn chính xác hư từ, liên từ và từ vựng trọng tâm theo ngữ cảnh.',
-                    },
-                    {
-                      id: 'real_world',
-                      title: '💬 Giao tiếp & Ứng dụng thực tế đời sống',
-                      desc: 'Mẫu câu khẩu ngữ, ứng dụng từ vựng bài học vào các tình huống thực tế.',
-                    },
-                  ].map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => setAiPracticeMode(mode.id)}
-                      className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                        aiPracticeMode === mode.id
-                          ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-text-primary)]'
-                          : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40 text-[var(--color-text-primary)]'
-                      }`}
-                    >
-                      <div className="font-bold flex items-center justify-between">
-                        <span>{mode.title}</span>
-                        {aiPracticeMode === mode.id && <Check className="w-4 h-4 text-[var(--color-primary)]" />}
-                      </div>
-                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
-                        {mode.desc}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {aiGenError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-medium">
-                  {aiGenError}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[var(--color-border)]">
-              <button
-                type="button"
-                onClick={() => setIsAiModalOpen(false)}
-                disabled={isGeneratingAi}
-                className="px-4 py-2 rounded-xl bg-[var(--color-bg-secondary)] hover:bg-[var(--color-border)] text-xs font-bold text-[var(--color-text-primary)] transition-all cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerateAiExercises}
-                disabled={isGeneratingAi}
-                className="px-5 py-2 rounded-xl bg-[var(--color-primary)] hover:opacity-95 text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-              >
-                {isGeneratingAi ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>AI đang biên soạn bài tập...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Tạo {aiQuestionCount} câu ngay</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

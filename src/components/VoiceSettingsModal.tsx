@@ -23,6 +23,7 @@ import {
   VoiceSettings,
   DEFAULT_VOICE_SETTINGS,
   GEMINI_AI_VOICES,
+  EDGE_TTS_VOICES,
 } from '../utils/chineseAudio';
 
 interface VoiceSettingsModalProps {
@@ -57,11 +58,11 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
   if (!isOpen) return null;
 
   const handleSelectVoice = (voiceId: string) => {
-    const isAi = voiceId.startsWith('gemini-');
+    const isGeminiAi = voiceId.startsWith('gemini-');
     const updated = saveVoiceSettings({
       voiceId,
-      preferNeuralAI: isAi,
-      userExplicitlySelectedAiVoice: isAi,
+      preferNeuralAI: isGeminiAi,
+      userExplicitlySelectedAiVoice: true,
     });
     setSettings(updated);
   };
@@ -201,7 +202,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
 
             <div className="space-y-2">
               {studioAIVoices.map((v) => {
-                const isSelected = settings.voiceId === v.id || (settings.voiceId === 'default' && v.id === 'gemini-kore');
+                const isSelected = settings.voiceId === v.id || (settings.voiceId === 'default' && v.id === 'zh-CN-XiaoxiaoNeural');
                 const isCurrentlyPlaying = isPlaying === v.id;
 
                 return (
@@ -230,6 +231,11 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
                           {isSelected && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-600 text-white">
                               Đang dùng
+                            </span>
+                          )}
+                          {v.id === 'zh-CN-XiaoxiaoNeural' && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              ⭐ Chuẩn Giáo Trình HSK
                             </span>
                           )}
                         </div>

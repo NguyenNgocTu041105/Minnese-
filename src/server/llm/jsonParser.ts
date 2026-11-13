@@ -61,6 +61,33 @@ export function stripMarkdownCodeBlocks(rawText: string): string {
 }
 
 /**
+ * Strips leading option label prefixes from an option string.
+ * Examples:
+ *   "A. 老师" -> "老师"
+ *   "Option A: 医生" -> "医生"
+ *   "选项A: 机场" -> "机场"
+ *   "A - 苹果" -> "苹果"
+ *   "A/ 喝水" -> "喝水"
+ *   "① 苹果" -> "苹果"
+ *   "1. 学习" -> "学习"
+ */
+export function stripOptionPrefix(opt: string): string {
+  if (!opt || typeof opt !== 'string') {
+    return '';
+  }
+  const trimmed = opt.trim();
+  const cleaned = trimmed
+    .replace(
+      /^(?:[-*•+]\s*)?(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?(?:[\(\[（]?([A-Fa-f\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ]|[1-6])[\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s]+|\([A-Fa-f0-9\uFF21-\uFF26]\)\s*|\[[A-Fa-f0-9\uFF21-\uFF26]\]\s*|（[A-Fa-f0-9\uFF21-\uFF26]）\s*)/i,
+      ''
+    )
+    .replace(/^[\-–—\/:：\.\uFF0E\uFF1A\s]+/, '')
+    .replace(/[\-–—\/:：\s]+$/, '')
+    .trim();
+  return cleaned || trimmed;
+}
+
+/**
  * Safely removes trailing commas before closing braces } or brackets ]
  * without corrupting commas inside double-quoted string literals.
  */
@@ -168,7 +195,7 @@ export function normalizeQuestionAliases(
     return null;
   }
 
-  const blankPattern = /(?:_{2,}|（\s*_*\s*）|\(\s*_*\s*\)|【\s*_*\s*】|\[\s*_*\s*\])/;
+  const blankPattern = /(?:\s*_{2,}\s*|（\s*_*\s*）|\(\s*_*\s*\)|【\s*_*\s*】|\[\s*_*\s*\])/;
 
   // Normalize part_type
   const rawPartType = raw.part_type || raw.partType;
@@ -202,10 +229,10 @@ export function normalizeQuestionAliases(
       }
     });
   } else if (Array.isArray(raw.options)) {
-    options = raw.options.map((opt: any) => String(opt ?? '').trim()).filter((s) => s.length > 0);
+    options = raw.options.map((opt: any) => stripOptionPrefix(String(opt ?? ''))).filter((s) => s.length > 0);
   } else if (raw.options && typeof raw.options === 'object') {
     // If options is an object like { A: '...', B: '...' }
-    options = Object.values(raw.options).map((opt: any) => String(opt ?? '').trim());
+    options = Object.values(raw.options).map((opt: any) => stripOptionPrefix(String(opt ?? ''))).filter((s) => s.length > 0);
   }
 
   // Normalize answer_idx
@@ -275,7 +302,7 @@ export function normalizeQuestionAliases(
   if (typeof rawProvidedPinyin === 'string' && rawProvidedPinyin.trim().length > 0) {
     pinyin = rawProvidedPinyin.trim();
   } else if (stem) {
-    const blankPatternForPinyin = /(?:_{2,}|（\s*_*\s*）|\(\s*_*\s*\)|【\s*_*\s*】|\[\s*_*\s*\])/;
+    const blankPatternForPinyin = /(?:\s*_{2,}\s*|（\s*_*\s*）|\(\s*_*\s*\)|【\s*_*\s*】|\[\s*_*\s*\])/;
     let targetStemForPinyin = stem;
     if (typeof raw.completed_stem === 'string' && raw.completed_stem.trim().length > 0) {
       targetStemForPinyin = raw.completed_stem.trim();
@@ -541,6 +568,10 @@ export function normalizeQuestionAliases(
     distractor_rationales: distractorRationales,
     naturalness_review: naturalnessReview,
     is_imported: Boolean(raw.is_imported || raw.imported),
+    audio_url: raw.audio_url || null,
+    passage: raw.passage || null,
+    audio_text: raw.audio_text || null,
+    transcript: raw.transcript || null,
     ...(strictStructured ? { __structuredShapeErrors: structuredShapeErrors } : {}),
   };
 }

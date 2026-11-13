@@ -163,3 +163,34 @@ export function getDeckSRSStats(wordIds: string[], cardsState: Record<string, SR
     masteredCount,
   };
 }
+
+export function ensureWordsInSRS(
+  words: WordItem[],
+  srsCards: Record<string, SRSCardState>
+): Record<string, SRSCardState> {
+  const today = new Date();
+  let hasChanges = false;
+  const nextCards = { ...srsCards };
+
+  words.forEach((w) => {
+    if (!nextCards[w.id]) {
+      hasChanges = true;
+      nextCards[w.id] = {
+        wordId: w.id,
+        repetition: 0,
+        interval: 0,
+        easinessFactor: 2.5,
+        lastReviewDate: today.toISOString(),
+        nextReviewDate: today.toISOString(),
+        history: [],
+        state: 'new',
+      };
+    }
+  });
+
+  if (hasChanges) {
+    saveSRSCards(nextCards);
+  }
+
+  return nextCards;
+}

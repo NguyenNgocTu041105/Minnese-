@@ -15,6 +15,8 @@ import {
   FileText,
   Sliders,
   ChevronDown,
+  ChevronUp,
+  GripVertical,
   Info,
   Layers,
   Send,
@@ -38,10 +40,12 @@ import {
   Download,
   Code,
   Volume2,
+  Camera,
 } from 'lucide-react';
 import { AIExamStudio } from './Admin/AIExamStudio';
 import { HSKIllustrationCanvas, resolveSceneKey } from './HSKIllustrationCanvas';
 import { ExportExamModal, downloadExportFile } from './Admin/ExportExamModal';
+import { GoldenPromptLibraryModal } from './Admin/GoldenPromptLibraryModal';
 import { HSKMockExam } from './HSKMockExam';
 import {
   buildExternalAiPrompt,
@@ -148,6 +152,79 @@ export function parseUtcDate(raw?: string | null): Date {
     return new Date(trimmed);
   }
   return new Date(trimmed.replace(' ', 'T') + 'Z');
+}
+
+/**
+ * Reorders an array of items from sourceIdx to destIdx.
+ * Returns a new array shallow-copy with the item repositioned.
+ */
+export function reorderArray<T>(items: T[], sourceIdx: number, destIdx: number): T[] {
+  if (
+    !Array.isArray(items) ||
+    sourceIdx < 0 ||
+    sourceIdx >= items.length ||
+    destIdx < 0 ||
+    destIdx >= items.length ||
+    sourceIdx === destIdx
+  ) {
+    return Array.isArray(items) ? [...items] : [];
+  }
+  const result = [...items];
+  const [removed] = result.splice(sourceIdx, 1);
+  result.splice(destIdx, 0, removed);
+  return result;
+}
+
+/**
+ * Reorders an options array from sourceIdx to destIdx while dynamically recalculating
+ * answer_idx so that the correct answer option remains strictly intact.
+ *
+ * Mathematical Invariant:
+ * const previousCorrectOption = currentOptions[currentAnswerIdx];
+ * const nextOptions = reorder(currentOptions, sourceIdx, destIdx);
+ * const nextAnswerIdx = nextOptions.indexOf(previousCorrectOption);
+ */
+export function reorderOptions(
+  options: string[],
+  answerIdx: number,
+  sourceIdx: number,
+  destIdx: number
+): { options: string[]; answer_idx: number } {
+  if (
+    !Array.isArray(options) ||
+    options.length <= 1 ||
+    sourceIdx < 0 ||
+    sourceIdx >= options.length ||
+    destIdx < 0 ||
+    destIdx >= options.length ||
+    sourceIdx === destIdx
+  ) {
+    return { options: Array.isArray(options) ? [...options] : [], answer_idx: answerIdx };
+  }
+
+  const nextOptions = reorderArray(options, sourceIdx, destIdx);
+
+  // Calculate next answer_idx via deterministic permutation mapping
+  let nextAnswerIdx = answerIdx;
+  if (answerIdx === sourceIdx) {
+    nextAnswerIdx = destIdx;
+  } else if (sourceIdx < destIdx && answerIdx > sourceIdx && answerIdx <= destIdx) {
+    nextAnswerIdx = answerIdx - 1;
+  } else if (sourceIdx > destIdx && answerIdx >= destIdx && answerIdx < sourceIdx) {
+    nextAnswerIdx = answerIdx + 1;
+  }
+
+  return {
+    options: nextOptions,
+    answer_idx: nextAnswerIdx,
+  };
+}
+
+/**
+ * Formats a 0-based question sequence index into the Vietnamese canonical label: Câu {idx + 1}
+ */
+export function formatSequenceNumber(index: number): string {
+  return `Câu ${index + 1}`;
 }
 
 export interface PartTypeDefinition {
@@ -541,6 +618,7 @@ export const QBankAdmin: React.FC = () => {
   const [selectedTtsVoice, setSelectedTtsVoice] = useState<string>('auto');
   const [withIntroChime, setWithIntroChime] = useState<boolean>(true);
   const [isPlayingWebSpeechId, setIsPlayingWebSpeechId] = useState<string | null>(null);
+  const [isAuditioningVoiceId, setIsAuditioningVoiceId] = useState<string | null>(null);
   const [expandedExplanationIds, setExpandedExplanationIds] = useState<Set<string>>(new Set());
 
   const toggleExplanation = (id: string) => {
@@ -553,20 +631,30 @@ export const QBankAdmin: React.FC = () => {
   };
   const isExplanationOpen = (id: string) => !expandedExplanationIds.has(id);
 
-  // Milestone M2: 3-mode Import Switcher & File Upload state
-  const [importMode, setImportMode] = useState<'file' | 'text' | 'prompt'>('file');
+  // Milestone M2 & M4: 4-mode Import Switcher & OCR Image Ingestion state
+  const [importMode, setImportMode] = useState<'file' | 'text' | 'prompt' | 'ocr'>('file');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileDragActive, setFileDragActive] = useState<boolean>(false);
   const [fileProcessingStep, setFileProcessingStep] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Milestone M4: OCR Image Ingestion pipeline state
+  const [ocrState, setOcrState] = useState<'idle' | 'reading' | 'ocr' | 'parsing' | 'done'>('idle');
+  const [ocrProgressMsg, setOcrProgressMsg] = useState<string>('');
+  const [ocrPreviewImage, setOcrPreviewImage] = useState<string | null>(null);
+  const [ocrExtractedText, setOcrExtractedText] = useState<string>('');
+  const [isOcrDragging, setIsOcrDragging] = useState<boolean>(false);
+  const ocrFileInputRef = useRef<HTMLInputElement>(null);
 
   // Milestone M2: Multi-format Exam Export modal state
   const [exportModalOpen, setExportModalOpen] = useState<boolean>(false);
   const [exportModalTitle, setExportModalTitle] = useState<string>('Xuất đề thi HSK');
   const [exportModalCount, setExportModalCount] = useState<number>(0);
   const [exportModalQuestionIds, setExportModalQuestionIds] = useState<string[] | undefined>(undefined);
+  const [exportModalQuestions, setExportModalQuestions] = useState<any[] | undefined>(undefined);
   const [exportModalFilterParams, setExportModalFilterParams] = useState<any | undefined>(undefined);
   const [exportModalDefaultTitle, setExportModalDefaultTitle] = useState<string>('De_Thi_HSK');
+  const [isGoldenPromptsOpen, setIsGoldenPromptsOpen] = useState<boolean>(false);
 
   // Milestone M4: 1-Click External AI Prompt Builder state
   const [promptTargetModel, setPromptTargetModel] = useState<ExternalAiModelTarget>('deepseek');
@@ -1774,6 +1862,92 @@ export const QBankAdmin: React.FC = () => {
   };
 
   /**
+   * Alias for handleSavePendingEdit as specified in M2 requirements
+   */
+  const handleSaveInlineEdit = handleSavePendingEdit;
+
+  /**
+   * Question reordering handlers (DnD and WCAG accessible Up/Down buttons)
+   */
+  const handleMoveQuestion = (qId: string, direction: 'up' | 'down') => {
+    setPendingQuestions((prev) => {
+      const filtered = filteredPendingQuestions;
+      const currentIdx = filtered.findIndex((q) => q.id === qId);
+      if (currentIdx === -1) return prev;
+      const targetFilteredIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+      if (targetFilteredIdx < 0 || targetFilteredIdx >= filtered.length) return prev;
+      const targetId = filtered[targetFilteredIdx].id;
+
+      const sourceIdx = prev.findIndex((q) => q.id === qId);
+      const destIdx = prev.findIndex((q) => q.id === targetId);
+      if (sourceIdx === -1 || destIdx === -1) return prev;
+      return reorderArray(prev, sourceIdx, destIdx);
+    });
+  };
+
+  const handleReorderQuestion = (sourceId: string, destId: string) => {
+    if (sourceId === destId) return;
+    setPendingQuestions((prev) => {
+      const sourceIdx = prev.findIndex((q) => q.id === sourceId);
+      const destIdx = prev.findIndex((q) => q.id === destId);
+      if (sourceIdx === -1 || destIdx === -1) return prev;
+      return reorderArray(prev, sourceIdx, destIdx);
+    });
+  };
+
+  /**
+   * Option reordering handlers for card view and inline edit mode
+   * Strictly maintains:
+   * const previousCorrectOption = currentOptions[currentAnswerIdx];
+   * const nextOptions = reorder(currentOptions, sourceIdx, destIdx);
+   * const nextAnswerIdx = nextOptions.indexOf(previousCorrectOption);
+   */
+  const handleReorderCardOptions = async (questionId: string, sourceIdx: number, destIdx: number) => {
+    let updatedQuestion: PendingQuestionItem | null = null;
+    setPendingQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id !== questionId) return q;
+        const res = reorderOptions(q.options, q.answer_idx, sourceIdx, destIdx);
+        updatedQuestion = {
+          ...q,
+          options: res.options,
+          answer_idx: res.answer_idx,
+        };
+        return updatedQuestion;
+      })
+    );
+
+    if (updatedQuestion) {
+      // Auto-persist option order to SQLite via PUT /api/qbank/pending/:id
+      await safeApiCall(`/api/qbank/pending/${questionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          options: (updatedQuestion as PendingQuestionItem).options,
+          answer_idx: (updatedQuestion as PendingQuestionItem).answer_idx,
+        }),
+      });
+    }
+  };
+
+  const handleReorderInlineOptions = (sourceIdx: number, destIdx: number) => {
+    const res = reorderOptions(editPendingOptions, editPendingAnswerIdx, sourceIdx, destIdx);
+    setEditPendingOptions(res.options);
+    setEditPendingAnswerIdx(res.answer_idx);
+  };
+
+  const handleSaveQuestionOrder = () => {
+    try {
+      const orderIds = pendingQuestions.map((q) => q.id);
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem('qbank_pending_order', JSON.stringify(orderIds));
+      }
+    } catch {}
+    setActionSuccessMsg(`Đã lưu thứ tự ${pendingQuestions.length} câu hỏi thành công.`);
+    setTimeout(() => setActionSuccessMsg(null), 3000);
+  };
+
+  /**
    * Handle AI Auto-Format (POST /api/qbank/ai-format)
    * Sử dụng mô hình Ollama qwen2.5:7b để phân tích văn bản thô đa định dạng thành JSON chuẩn
    */
@@ -1859,7 +2033,7 @@ export const QBankAdmin: React.FC = () => {
       audio_url?: string;
       duration_s?: number;
       error?: string;
-    }>('/api/qbank/tts-generate', {
+    }>('/api/qbank/tts/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2063,6 +2237,181 @@ export const QBankAdmin: React.FC = () => {
       setFileProcessingStep(null);
     }
   };
+
+  /**
+   * Milestone M4: Downsample image on client canvas to <= 2048px preserving aspect ratio
+   */
+  const downsampleImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh'));
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (typeof window === 'undefined' || typeof Image === 'undefined') {
+          resolve(result);
+          return;
+        }
+        const img = new Image();
+        img.onerror = () => resolve(result);
+        img.onload = () => {
+          try {
+            const maxDim = 2048;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(result);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, w, h);
+            const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+            resolve(canvas.toDataURL(mime, 0.9));
+          } catch {
+            resolve(result);
+          }
+        };
+        img.src = result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  /**
+   * Milestone M4: Handle OCR Image Processing & Ingestion
+   */
+  const processOcrImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setImportError('Vui lòng chọn hoặc dán tệp hình ảnh (.png, .jpeg, .webp).');
+      return;
+    }
+    setImportError(null);
+    setOcrExtractedText('');
+    setOcrState('reading');
+    setOcrProgressMsg('1. Đang tối ưu hình ảnh...');
+
+    try {
+      const dataUrl = await downsampleImage(file);
+      setOcrPreviewImage(dataUrl);
+
+      setOcrState('ocr');
+      setOcrProgressMsg('2. Đang nhận diện chữ Hán (OCR)...');
+
+      const res = await safeApiCall<any>('/api/qbank/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: dataUrl,
+          target_level: importLevel,
+          default_level: importLevel,
+          default_skill: importSkill,
+          default_part_type: importPartType,
+          default_topic: importTopic.trim() || undefined,
+          auto_parse: true,
+        }),
+      });
+
+      if (res.statusCode === 401 || res.statusCode === 403) {
+        promptTokenModal(() => processOcrImageFile(file));
+        setOcrState('idle');
+        return;
+      }
+
+      if (!res.success || !res.data) {
+        setOcrState('idle');
+        setImportError(res.error || 'Nhận diện hình ảnh thất bại. Hình ảnh có thể quá mờ hoặc thiếu chữ Hán.');
+        return;
+      }
+
+      setOcrState('parsing');
+      setOcrProgressMsg('3. Đang bóc tách câu hỏi & 6 cổng...');
+
+      setOcrExtractedText(res.data.text || res.data.extracted_text || '');
+      setImportResult(res.data);
+
+      const count = res.data.count ?? res.data.accepted_count ?? (res.data.questions?.length || 0);
+
+      setOcrState('done');
+      setOcrProgressMsg(`4. Đã nạp thành công ${count} câu hỏi vào hàng chờ!`);
+
+      if (count > 0) {
+        setActionSuccessMsg(`Đã nhận diện OCR và nạp thành công ${count} câu hỏi đạt chuẩn vào hàng chờ duyệt!`);
+        setTimeout(() => setActionSuccessMsg(null), 5000);
+        loadProgress();
+        loadPendingQuestions();
+        loadStats();
+      } else if (res.data.total_parsed === 0) {
+        setImportError('Đã nhận diện văn bản nhưng không tìm thấy cấu trúc câu hỏi (A, B, C, D hoặc Bảng đáp án). Bạn có thể xem văn bản nhận diện được bên dưới.');
+      }
+    } catch (err: any) {
+      setOcrState('idle');
+      setImportError(`Lỗi khi xử lý hình ảnh OCR: ${err.message || 'Lỗi không xác định'}`);
+    }
+  };
+
+  const handleOcrFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processOcrImageFile(e.target.files[0]);
+    }
+  };
+
+  const handleOcrDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOcrDragging(true);
+  };
+
+  const handleOcrDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOcrDragging(false);
+  };
+
+  const handleOcrDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOcrDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processOcrImageFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleOcrPaste = useCallback((e: React.ClipboardEvent | ClipboardEvent) => {
+    const items = (e as any).clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          processOcrImageFile(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  }, [importLevel, importSkill, importPartType, importTopic]);
+
+  useEffect(() => {
+    if (importMode !== 'ocr') return;
+    const globalPasteListener = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
+      handleOcrPaste(e);
+    };
+    window.addEventListener('paste', globalPasteListener);
+    return () => window.removeEventListener('paste', globalPasteListener);
+  }, [importMode, handleOcrPaste]);
 
   // Real-time client-side search filtering
   const filteredQuestions = useMemo(() => {
@@ -2345,7 +2694,47 @@ export const QBankAdmin: React.FC = () => {
   };
 
   /**
-   * Tạo âm thanh TTS qua edge-tts cho câu hỏi trong Kho câu hỏi chính (POST /api/qbank/tts-generate)
+   * Nghe thử phát âm mẫu của giọng đọc AI đã chọn (Voice Audition Preview)
+   */
+  const handleAuditionVoice = async (voiceId: string, questionId?: string) => {
+    if (typeof window === 'undefined') return;
+    const activeKey = questionId || voiceId;
+    setIsAuditioningVoiceId(activeKey);
+
+    if (withIntroChime) {
+      await playIntroChime();
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const sampleText = '你好，这是普通话发音测试。';
+      const utterance = new SpeechSynthesisUtterance(sampleText);
+      utterance.lang = 'zh-CN';
+      utterance.rate = 0.88;
+
+      const isFemale = /Xiao|Female|Nữ|Xiaoxiao|Xiaoyi|Xiaobei|Xiaoni/i.test(voiceId);
+      const isMale = /Yun|Male|Nam|Yunxi|Yunjian|Yunyang|Yunxia/i.test(voiceId);
+      utterance.pitch = isFemale ? 1.15 : isMale ? 0.88 : 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const voiceKey = voiceId.replace(/^zh-CN-/, '').replace(/Neural$/, '').toLowerCase();
+      const matchedVoice =
+        voices.find((v) => v.lang.startsWith('zh') && v.name.toLowerCase().includes(voiceKey)) ||
+        voices.find((v) => v.lang.startsWith('zh'));
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      utterance.onend = () => setIsAuditioningVoiceId(null);
+      utterance.onerror = () => setIsAuditioningVoiceId(null);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setIsAuditioningVoiceId(null);
+    }
+  };
+
+  /**
+   * Tạo âm thanh TTS qua edge-tts cho câu hỏi trong Kho câu hỏi chính (POST /api/qbank/tts/generate)
    */
   const handleGenerateTtsForQb = async (q: QbQuestionItem) => {
     if (!q.question_id) return;
@@ -2361,7 +2750,7 @@ export const QBankAdmin: React.FC = () => {
       audio_url?: string;
       duration_s?: number;
       error?: string;
-    }>('/api/qbank/tts-generate', {
+    }>('/api/qbank/tts/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2557,6 +2946,16 @@ export const QBankAdmin: React.FC = () => {
 
             {/* Quick Action Buttons */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <button
+                type="button"
+                data-testid="btn-open-golden-prompts"
+                onClick={() => setIsGoldenPromptsOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all cursor-pointer shadow-xs"
+                title="Mở Thư viện Prompt Chuẩn Vàng HSK 1-6"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>✨ Thư viện Prompt Chuẩn Vàng</span>
+              </button>
               <button
                 type="button"
                 onClick={() => promptTokenModal()}
@@ -3955,11 +4354,23 @@ export const QBankAdmin: React.FC = () => {
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <button
                   type="button"
+                  data-testid="btn-save-question-order"
+                  onClick={handleSaveQuestionOrder}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20 text-xs font-bold cursor-pointer shrink-0 transition-colors"
+                  title="Lưu thứ tự sắp xếp câu hỏi"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Lưu thứ tự ({filteredPendingQuestions.length})</span>
+                </button>
+
+                <button
+                  type="button"
                   data-testid="btn-export-duyet-de"
                   onClick={() => {
                     setExportModalTitle(`Xuất danh sách câu hỏi hàng chờ duyệt`);
                     setExportModalCount(filteredPendingQuestions.length);
                     setExportModalQuestionIds(filteredPendingQuestions.map((q) => q.id));
+                    setExportModalQuestions(filteredPendingQuestions);
                     setExportModalFilterParams(undefined);
                     setExportModalDefaultTitle(`HSK_Duyet_De_${new Date().toISOString().slice(0, 10)}`);
                     setExportModalOpen(true);
@@ -4112,7 +4523,7 @@ export const QBankAdmin: React.FC = () => {
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)]">
                   Đang hiện {filteredPendingQuestions.length} câu — kéo xuống để đọc đề, đáp án và lời giải.
                 </p>
-                {filteredPendingQuestions.map((q) => {
+                {filteredPendingQuestions.map((q, idx) => {
                   const isSelected = selectedPendingIds.has(q.id);
                   const isEditing = editingPendingId === q.id;
                   const themeTag = formatThemeTag(q.illustration_theme);
@@ -4121,15 +4532,89 @@ export const QBankAdmin: React.FC = () => {
                     <div
                       key={q.id}
                       data-testid={`pending-card-${q.id}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        try {
+                          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                          if (data?.type === 'question' && data.id && data.id !== q.id) {
+                            handleReorderQuestion(data.id, q.id);
+                          }
+                        } catch {}
+                      }}
                       className={`p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border shadow-xs space-y-4 transition-all ${
                         isSelected
                           ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/20'
                           : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
                       }`}
                     >
-                      {/* Card Header: Checkbox, Badges, ID */}
+                      {/* Card Header: Drag Handle, Sequence Number, Checkbox, Badges, ID */}
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)]/50 pb-3">
                         <div className="flex flex-wrap items-center gap-2">
+                          {/* Question Drag Handle */}
+                          <div
+                            draggable
+                            data-testid={`btn-drag-handle-question-${q.id}`}
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'question', id: q.id, index: idx }));
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              try {
+                                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                if (data?.type === 'question' && data.id && data.id !== q.id) {
+                                  handleReorderQuestion(data.id, q.id);
+                                }
+                              } catch {}
+                            }}
+                            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)]"
+                            title="Kéo thả để sắp xếp thứ tự câu hỏi"
+                          >
+                            <GripVertical className="w-4 h-4 cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)]" />
+                          </div>
+
+                          {/* Accessible Move Question Up/Down Buttons */}
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              data-testid={`btn-move-question-up-${q.id}`}
+                              disabled={idx === 0}
+                              onClick={() => handleMoveQuestion(q.id, 'up')}
+                              className="p-1 rounded-md text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Di chuyển câu hỏi lên trên"
+                              aria-label={`Di chuyển câu ${idx + 1} lên`}
+                            >
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              data-testid={`btn-move-question-down-${q.id}`}
+                              disabled={idx === filteredPendingQuestions.length - 1}
+                              onClick={() => handleMoveQuestion(q.id, 'down')}
+                              className="p-1 rounded-md text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                              title="Di chuyển câu hỏi xuống dưới"
+                              aria-label={`Di chuyển câu ${idx + 1} xuống`}
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Dynamic Sequence Number */}
+                          <span
+                            data-testid="card-sequence-number"
+                            className="font-bold text-xs px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                          >
+                            {formatSequenceNumber(idx)}
+                          </span>
+
                           <input
                             type="checkbox"
                             data-testid={`checkbox-pending-${q.id}`}
@@ -4303,26 +4788,84 @@ export const QBankAdmin: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Options inputs with radio buttons for answer_idx */}
+                          {/* Options inputs with drag handles and accessible move buttons */}
                           {editPendingOptions.length > 0 ? (
                             <div className="space-y-2">
-                              <label className="block text-xs font-bold text-[var(--color-text-primary)]">
-                                Các phương án lựa chọn (Chọn nút tròn để chỉ định đáp án đúng):
-                              </label>
+                              <div className="flex items-center justify-between">
+                                <label className="block text-xs font-bold text-[var(--color-text-primary)]">
+                                  Các phương án lựa chọn (Kéo thả hoặc bấm nút mũi tên để đổi thứ tự, chọn nút tròn để đặt đáp án đúng):
+                                </label>
+                                <span className="text-[11px] text-[var(--color-text-secondary)] italic">
+                                  Đáp án đúng tự động cập nhật theo vị trí mới
+                                </span>
+                              </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 {editPendingOptions.map((opt, optIdx) => {
                                   const isCorrect = editPendingAnswerIdx === optIdx;
-                                  const label = ['A', 'B', 'C', 'D'][optIdx] || String(optIdx + 1);
+                                  const label = ['A', 'B', 'C', 'D', 'E', 'F'][optIdx] || String(optIdx + 1);
 
                                   return (
                                     <div
                                       key={optIdx}
-                                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all ${
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'option-inline', index: optIdx }));
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        e.dataTransfer.dropEffect = 'move';
+                                      }}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        try {
+                                          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                          if (data?.type === 'option-inline' && typeof data.index === 'number' && data.index !== optIdx) {
+                                            handleReorderInlineOptions(data.index, optIdx);
+                                          }
+                                        } catch {}
+                                      }}
+                                      className={`flex items-center gap-2 p-2 rounded-xl border transition-all ${
                                         isCorrect
                                           ? 'border-emerald-500 bg-emerald-500/10'
                                           : 'border-[var(--color-border)] bg-[var(--color-surface)]'
                                       }`}
                                     >
+                                      {/* Option Drag Handle */}
+                                      <div
+                                        data-testid={`btn-drag-handle-option-${q.id}-${optIdx}`}
+                                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)] shrink-0"
+                                        title="Kéo thả để đổi thứ tự phương án"
+                                      >
+                                        <GripVertical className="w-4 h-4 cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)]" />
+                                      </div>
+
+                                      {/* Accessible Up/Down Buttons */}
+                                      <div className="flex flex-col gap-0.5 shrink-0">
+                                        <button
+                                          type="button"
+                                          data-testid={`btn-move-option-up-${q.id}-${optIdx}`}
+                                          disabled={optIdx === 0}
+                                          onClick={() => handleReorderInlineOptions(optIdx, optIdx - 1)}
+                                          className="text-gray-400 hover:text-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer p-0.5"
+                                          title="Di chuyển lên"
+                                          aria-label={`Di chuyển phương án ${label} lên trên`}
+                                        >
+                                          <ChevronUp className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          data-testid={`btn-move-option-down-${q.id}-${optIdx}`}
+                                          disabled={optIdx === editPendingOptions.length - 1}
+                                          onClick={() => handleReorderInlineOptions(optIdx, optIdx + 1)}
+                                          className="text-gray-400 hover:text-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer p-0.5"
+                                          title="Di chuyển xuống"
+                                          aria-label={`Di chuyển phương án ${label} xuống dưới`}
+                                        >
+                                          <ChevronDown className="w-3 h-3" />
+                                        </button>
+                                      </div>
+
                                       <input
                                         type="radio"
                                         data-testid={`radio-edit-answer-${optIdx}`}
@@ -4330,9 +4873,9 @@ export const QBankAdmin: React.FC = () => {
                                         name={`answer-radio-${q.id}`}
                                         checked={isCorrect}
                                         onChange={() => setEditPendingAnswerIdx(optIdx)}
-                                        className="w-4 h-4 text-emerald-600 focus:ring-0 cursor-pointer"
+                                        className="w-4 h-4 text-emerald-600 focus:ring-0 cursor-pointer shrink-0"
                                       />
-                                      <span className="font-bold text-xs text-[var(--color-text-secondary)]">
+                                      <span className="font-bold text-xs text-[var(--color-text-secondary)] shrink-0">
                                         {label}.
                                       </span>
                                       <input
@@ -4474,6 +5017,7 @@ export const QBankAdmin: React.FC = () => {
                                           value={selectedTtsVoice}
                                           onChange={(e) => setSelectedTtsVoice(e.target.value)}
                                           className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-background)] border border-indigo-500/30 text-[var(--color-text-primary)] font-medium focus:outline-hidden"
+                                          data-testid={`select-tts-voice-${q.id}`}
                                         >
                                           <option value="auto">✨ Tự động Nam/Nữ</option>
                                           <option value="zh-CN-XiaoxiaoNeural">👩 Hiểu Hiểu (Nữ HSK)</option>
@@ -4483,7 +5027,18 @@ export const QBankAdmin: React.FC = () => {
                                           <option value="zh-CN-YunyangNeural">📰 Vân Dương (Nam tin tức)</option>
                                           <option value="zh-CN-YunxiaNeural">👦 Vân Hạ (Nam học sinh)</option>
                                           <option value="zh-CN-liaoning-XiaobeiNeural">🌸 Tiểu Bối (Nữ Đông Bắc)</option>
+                                          <option value="zh-CN-shaanxi-XiaoniNeural">🏮 Tiểu Ni (Nữ Thiểm Tây)</option>
                                         </select>
+                                        <button
+                                          type="button"
+                                          data-testid={`btn-audition-voice-${q.id}`}
+                                          onClick={() => handleAuditionVoice(selectedTtsVoice, q.id)}
+                                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-500/10 border border-indigo-500/20 cursor-pointer"
+                                          title="Nghe thử mẫu giọng đọc đã chọn"
+                                        >
+                                          <Volume2 className={`w-3 h-3 ${isAuditioningVoiceId === q.id ? 'animate-bounce text-indigo-500' : ''}`} />
+                                          <span>{isAuditioningVoiceId === q.id ? 'Đang đọc...' : 'Thử giọng'}</span>
+                                        </button>
                                       </div>
 
                                       <div className="flex items-center gap-2">
@@ -4633,8 +5188,26 @@ export const QBankAdmin: React.FC = () => {
                                     return (
                                       <div
                                         key={optIdx}
+                                        draggable
                                         data-testid={isCorrect ? 'card-option-correct' : `card-option-${optIdx}`}
                                         data-option-index={optIdx}
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'option-card', questionId: q.id, index: optIdx }));
+                                          e.dataTransfer.effectAllowed = 'move';
+                                        }}
+                                        onDragOver={(e) => {
+                                          e.preventDefault();
+                                          e.dataTransfer.dropEffect = 'move';
+                                        }}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          try {
+                                            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                            if (data?.type === 'option-card' && data.questionId === q.id && typeof data.index === 'number' && data.index !== optIdx) {
+                                              handleReorderCardOptions(q.id, data.index, optIdx);
+                                            }
+                                          } catch {}
+                                        }}
                                         className={`p-3 rounded-2xl flex items-center justify-between text-xs sm:text-sm transition-all ${
                                           isCorrect
                                             ? 'border-2 border-emerald-500 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100 font-semibold shadow-xs'
@@ -4642,6 +5215,41 @@ export const QBankAdmin: React.FC = () => {
                                         }`}
                                       >
                                         <div className="flex items-center gap-2">
+                                          {/* Option Drag Handle */}
+                                          <div
+                                            data-testid={`btn-drag-handle-option-${q.id}-${optIdx}`}
+                                            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)] shrink-0"
+                                            title="Kéo thả để sắp xếp phương án"
+                                          >
+                                            <GripVertical className="w-4 h-4 cursor-grab active:cursor-grabbing text-[var(--color-text-secondary)]" />
+                                          </div>
+
+                                          {/* Accessible Option Up/Down Buttons */}
+                                          <div className="flex flex-col gap-0.5 shrink-0">
+                                            <button
+                                              type="button"
+                                              data-testid={`btn-move-option-up-${q.id}-${optIdx}`}
+                                              disabled={optIdx === 0}
+                                              onClick={() => handleReorderCardOptions(q.id, optIdx, optIdx - 1)}
+                                              className="text-gray-400 hover:text-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer p-0.5"
+                                              title="Di chuyển lên"
+                                              aria-label={`Di chuyển phương án ${label} lên trên`}
+                                            >
+                                              <ChevronUp className="w-3 h-3" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              data-testid={`btn-move-option-down-${q.id}-${optIdx}`}
+                                              disabled={optIdx === q.options.length - 1}
+                                              onClick={() => handleReorderCardOptions(q.id, optIdx, optIdx + 1)}
+                                              className="text-gray-400 hover:text-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer p-0.5"
+                                              title="Di chuyển xuống"
+                                              aria-label={`Di chuyển phương án ${label} xuống dưới`}
+                                            >
+                                              <ChevronDown className="w-3 h-3" />
+                                            </button>
+                                          </div>
+
                                           <span
                                             data-testid="card-option-letter"
                                             className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
@@ -4660,7 +5268,7 @@ export const QBankAdmin: React.FC = () => {
                                         {isCorrect && (
                                           <span
                                             data-testid="card-correct-badge"
-                                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md"
+                                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md shrink-0"
                                           >
                                             <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                                             <span>Đáp án đúng</span>
@@ -5514,6 +6122,20 @@ export const QBankAdmin: React.FC = () => {
                   <Sparkles className="w-4 h-4" />
                   <span>Tạo Prompt Mẫu 1-Click</span>
                 </button>
+
+                <button
+                  type="button"
+                  data-testid="tab-import-ocr"
+                  onClick={() => setImportMode('ocr')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    importMode === 'ocr'
+                      ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+                  }`}
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>📷 Quét Ảnh / OCR</span>
+                </button>
               </div>
 
               {/* Import Configuration Controls (shared across modes) */}
@@ -5763,9 +6385,17 @@ export const QBankAdmin: React.FC = () => {
                   )}
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-[var(--color-text-secondary)]">
                       <span className="font-semibold">Nội dung câu hỏi (JSON hoặc Văn bản thô):</span>
-                      <span>{importInputText.length} ký tự</span>
+                      <button
+                        type="button"
+                        data-testid="link-open-golden-prompts"
+                        onClick={() => setIsGoldenPromptsOpen(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Chưa có đề bài? Mở Thư viện Prompt Chuẩn Vàng để lấy prompt sinh câu hỏi cho ChatGPT / Claude / Gemini</span>
+                      </button>
                     </div>
                     <textarea
                       data-testid="textarea-import-input"
@@ -5959,7 +6589,144 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                     >
                       ← Mở Tab Dán Văn Bản Để Nhập Kết Quả Từ AI
                     </button>
+                    <button
+                      type="button"
+                      data-testid="btn-open-golden-prompts-prompt-tab"
+                      onClick={() => setIsGoldenPromptsOpen(true)}
+                      className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-500/20 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <span>✨ Thư viện Prompt Chuẩn Vàng (HSK 1–6)</span>
+                    </button>
                   </div>
+                </div>
+              )}
+
+              {/* MODE 4: OCR IMAGE INGESTION (M4 - R4) */}
+              {importMode === 'ocr' && (
+                <div
+                  className="space-y-4 p-5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]"
+                  data-testid="ocr-paste-zone"
+                  onPaste={handleOcrPaste}
+                  tabIndex={0}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-[var(--color-primary)]" />
+                        <span>📷 Quét Ảnh Đề Thi / Bài Tập & Bóc Tách OCR Thông Minh</span>
+                      </h3>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                        Tải lên, kéo thả hoặc dán ảnh chụp đề thi (Ctrl+V) từ sách bài tập hoặc tài liệu HSK để tự động nhận diện chữ Hán, Pinyin và bóc tách câu hỏi vào hàng chờ duyệt.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Hidden File Input */}
+                  <input
+                    ref={ocrFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    data-testid="input-ocr-file"
+                    onChange={handleOcrFileSelect}
+                    className="hidden"
+                  />
+
+                  {/* Drag-and-Drop Image Dropzone */}
+                  <div
+                    data-testid="ocr-dropzone"
+                    onDragOver={handleOcrDragOver}
+                    onDragLeave={handleOcrDragLeave}
+                    onDrop={handleOcrDrop}
+                    onClick={() => ocrFileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                      isOcrDragging
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]'
+                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 bg-[var(--color-surface)]'
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] mb-3 shadow-xs">
+                      <Camera className="w-7 h-7" />
+                    </div>
+                    <p className="text-sm font-bold text-[var(--color-text-primary)]">
+                      Kéo thả hình ảnh vào đây, hoặc <span className="text-[var(--color-primary)] underline">bấm để chọn ảnh</span>
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1.5 flex items-center gap-2">
+                      <span>Hỗ trợ PNG, JPEG, WebP</span>
+                      <span>•</span>
+                      <span>Hoặc nhấn <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-background)] border border-[var(--color-border)] font-mono text-[10px]">Ctrl + V</kbd> để dán ảnh trực tiếp</span>
+                    </p>
+                  </div>
+
+                  {/* 4-Step Progress Indicator */}
+                  {ocrState !== 'idle' && (
+                    <div className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-3">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-[var(--color-text-primary)] flex items-center gap-2">
+                          {ocrState === 'done' ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 animate-spin text-[var(--color-primary)]" />
+                          )}
+                          <span>{ocrProgressMsg}</span>
+                        </span>
+                        <span className="text-[var(--color-text-secondary)]">
+                          {ocrState === 'reading' && 'Bước 1/4'}
+                          {ocrState === 'ocr' && 'Bước 2/4'}
+                          {ocrState === 'parsing' && 'Bước 3/4'}
+                          {ocrState === 'done' && 'Bước 4/4'}
+                        </span>
+                      </div>
+
+                      {/* Visual progress bar steps */}
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className={`h-2 rounded-full transition-all ${
+                          ['reading', 'ocr', 'parsing', 'done'].includes(ocrState) ? 'bg-[var(--color-primary)]' : 'bg-gray-200 dark:bg-gray-700'
+                        }`} />
+                        <div className={`h-2 rounded-full transition-all ${
+                          ['ocr', 'parsing', 'done'].includes(ocrState) ? 'bg-[var(--color-primary)]' : 'bg-gray-200 dark:bg-gray-700'
+                        }`} />
+                        <div className={`h-2 rounded-full transition-all ${
+                          ['parsing', 'done'].includes(ocrState) ? 'bg-[var(--color-primary)]' : 'bg-gray-200 dark:bg-gray-700'
+                        }`} />
+                        <div className={`h-2 rounded-full transition-all ${
+                          ocrState === 'done' ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'
+                        }`} />
+                      </div>
+
+                      <div className="grid grid-cols-4 text-[10px] text-center text-[var(--color-text-secondary)] gap-1">
+                        <span className={ocrState === 'reading' ? 'font-bold text-[var(--color-primary)]' : ''}>1. Tối ưu ảnh</span>
+                        <span className={ocrState === 'ocr' ? 'font-bold text-[var(--color-primary)]' : ''}>2. OCR Chữ Hán</span>
+                        <span className={ocrState === 'parsing' ? 'font-bold text-[var(--color-primary)]' : ''}>3. Bóc tách 6 cổng</span>
+                        <span className={ocrState === 'done' ? 'font-bold text-emerald-500' : ''}>4. Nạp hàng chờ</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Image Preview & Extracted Text Preview */}
+                  {(ocrPreviewImage || ocrExtractedText) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                      {ocrPreviewImage && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Ảnh đang xử lý:</label>
+                          <div className="rounded-xl border border-[var(--color-border)] overflow-hidden max-h-56 bg-black/5 flex items-center justify-center p-2">
+                            <img src={ocrPreviewImage} alt="OCR Preview" className="max-h-52 object-contain rounded-lg" />
+                          </div>
+                        </div>
+                      )}
+                      {ocrExtractedText && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Văn bản bóc tách từ ảnh:</label>
+                          <textarea
+                            readOnly
+                            rows={8}
+                            value={ocrExtractedText}
+                            className="w-full p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-mono leading-relaxed text-[var(--color-text-primary)]"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -6652,6 +7419,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 value={selectedTtsVoice}
                                 onChange={(e) => setSelectedTtsVoice(e.target.value)}
                                 className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-background)] border border-indigo-500/30 text-[var(--color-text-primary)] font-medium focus:outline-hidden"
+                                data-testid={`select-qb-tts-voice-${q.question_id}`}
                               >
                                 <option value="auto">✨ Tự động phân vai Nam/Nữ (Đa dạng)</option>
                                 <option value="zh-CN-XiaoxiaoNeural">👩 Hiểu Hiểu (Nữ ấm áp - Chuẩn HSK)</option>
@@ -6661,7 +7429,18 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 <option value="zh-CN-YunyangNeural">📰 Vân Dương (Nam chuyên nghiệp - Tin tức)</option>
                                 <option value="zh-CN-YunxiaNeural">👦 Vân Hạ (Nam thiếu niên / Học sinh)</option>
                                 <option value="zh-CN-liaoning-XiaobeiNeural">🌸 Tiểu Bối (Nữ Đông Bắc)</option>
+                                <option value="zh-CN-shaanxi-XiaoniNeural">🏮 Tiểu Ni (Nữ Thiểm Tây)</option>
                               </select>
+                              <button
+                                type="button"
+                                data-testid={`btn-audition-qb-voice-${q.question_id}`}
+                                onClick={() => handleAuditionVoice(selectedTtsVoice, q.question_id)}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-500/10 border border-indigo-500/20 cursor-pointer"
+                                title="Nghe thử phát âm của giọng đọc đã chọn"
+                              >
+                                <Volume2 className={`w-3.5 h-3.5 ${isAuditioningVoiceId === q.question_id ? 'animate-bounce text-indigo-500' : ''}`} />
+                                <span>{isAuditioningVoiceId === q.question_id ? 'Đang đọc...' : 'Thử giọng'}</span>
+                              </button>
                             </div>
 
                             <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-text-secondary)] cursor-pointer select-none">
@@ -8317,6 +9096,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
               setExportModalTitle(`Xuất ${selectedPendingIds.size} câu hỏi đã chọn`);
               setExportModalCount(selectedPendingIds.size);
               setExportModalQuestionIds(Array.from(selectedPendingIds));
+              setExportModalQuestions(filteredPendingQuestions.filter((q) => selectedPendingIds.has(q.id)));
               setExportModalFilterParams(undefined);
               setExportModalDefaultTitle(`HSK_Bulk_Export_${new Date().toISOString().slice(0, 10)}`);
               setExportModalOpen(true);
@@ -8425,9 +9205,21 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
         title={exportModalTitle}
         count={exportModalCount}
         questionIds={exportModalQuestionIds}
+        questions={exportModalQuestions}
         filterParams={exportModalFilterParams}
         defaultExamTitle={exportModalDefaultTitle}
         onTokenExpired={() => promptTokenModal()}
+      />
+
+      {/* MODAL: GOLDEN PROMPT LIBRARY (R3) */}
+      <GoldenPromptLibraryModal
+        isOpen={isGoldenPromptsOpen}
+        onClose={() => setIsGoldenPromptsOpen(false)}
+        initialLevel={importLevel}
+        onApplyToEditor={(promptText) => {
+          setImportMode('text');
+          setImportInputText(promptText);
+        }}
       />
     </div>
   );

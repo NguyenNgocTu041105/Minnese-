@@ -1,5 +1,6 @@
 import { WordItem } from '../types';
 import { DetailedTextbookLesson } from './newHsk1BookData';
+import { HSK2_LESSON_EXERCISES } from './hsk2LessonExercises';
 
 export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
 // LESSON 1
@@ -115,73 +116,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       { id: "hsk2-l1-w14", hanzi: "意思", pinyin: "yìsi", hanViet: "ý tư", vietnamese: "ý, ý nghĩa", hskLevel: 2, radical: "心", strokeCount: 22, example: "不懂她的意思", exampleTranslation: "không hiểu ý của chị ấy", tags: ["Bài 1", "Danh từ"] },
       { id: "hsk2-l1-w15", hanzi: "北京烤鸭", pinyin: "Běijīng Kǎoyā", hanViet: "Bắc Kinh khảo áp", vietnamese: "Vịt quay Bắc Kinh", hskLevel: 2, radical: "鸟", strokeCount: 29, example: "请我们吃北京烤鸭", exampleTranslation: "mời chúng tôi ăn vịt quay Bắc Kinh", tags: ["Bài 1", "Món ăn"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l1-ex1",
-        type: "fill_blank",
-        question: "Chọn từ thích hợp điền vào câu phán đoán: '你们 ______ 是她的学生吧？'",
-        hanziPrompt: "你们 ______ 是她的学生吧？",
-        pinyinPrompt: "Nǐmen ______ shì tā de xuésheng ba?",
-        vietnamesePrompt: "Các em chính là học sinh của cô ấy đúng không?",
-        options: ["A. 就", "B. 也", "C. 还", "D. 都"],
-        correctAnswer: "A. 就",
-        explanation: "Phó từ '就' dùng trước vị ngữ để nhấn mạnh hoặc khẳng định chắc chắn: '你们就是……吧？'.",
-        grammarFocus: "Phó từ nhấn mạnh 就",
-        audioText: "你们就是她的学生吧？"
-      },
-      {
-        id: "hsk2-l1-ex2",
-        type: "dialogue_match",
-        question: "Chọn câu trả lời phù hợp trong câu kiêm ngữ: '喂，家月，你明天有时间吗？我想请你帮个忙。'",
-        hanziPrompt: "A: 喂，家月，你明天有时间吗？我想请你帮个忙。 — B: ______",
-        pinyinPrompt: "A: Wèi, Jiāyuè, nǐ míngtiān yǒu shíjiān ma? Wǒ xiǎng qǐng nǐ bāng gè máng. — B: ______",
-        vietnamesePrompt: "A: A lô, Gia Nguyệt, mai cậu có rảnh không? Mình muốn nhờ cậu giúp một việc. — B: Ngại quá, Thiên Trung, mình đã tới Bắc Kinh rồi.",
-        options: [
-          "不好意思，天中，我已经到北京了。",
-          "不用谢，我们是第一次来。",
-          "没关系，他是泰国人吧。",
-          "不客气，那是我的手机。"
-        ],
-        correctAnswer: "不好意思，天中，我已经到北京了。",
-        explanation: "Lời từ chối lịch sự bằng '不好意思' kèm lý do '我已经到北京了'.",
-        grammarFocus: "Giao tiếp lịch sự và phó từ 已经",
-        audioText: "不好意思，天中，我已经到北京了。"
-      },
-      {
-        id: "hsk2-l1-ex3",
-        type: "sentence_scramble",
-        question: "Sắp xếp các từ sau thành câu nhấn mạnh cấu trúc '是……的':",
-        hanziPrompt: "[ 我们 / 来旅游 / 是 / 的 / 。 ]",
-        vietnamesePrompt: "Chúng tôi đến đây là để đi du lịch.",
-        scrambleSegments: ["我们", "是", "来旅游", "的", "。"],
-        options: [
-          "我们是来旅游的。",
-          "我们来旅游的是。",
-          "是来旅游的我们。",
-          "我们的来旅游是。"
-        ],
-        correctAnswer: "我们是来旅游的。",
-        explanation: "Cấu trúc nhấn mạnh mục đích: Chủ ngữ + 是 + Cụm động từ mục đích (来旅游) + 的。",
-        grammarFocus: "Cấu trúc nhấn mạnh 是……的",
-        audioText: "我们是来旅游的。"
-      },
-      {
-        id: "hsk2-l1-ex4",
-        type: "translation",
-        question: "Dịch sang tiếng Trung sử dụng câu kiêm ngữ: 'Chị ấy đã mời chúng tôi ăn vịt quay Bắc Kinh.'",
-        vietnamesePrompt: "Chị ấy đã mời chúng tôi ăn vịt quay Bắc Kinh.",
-        options: [
-          "她请我们吃了北京烤鸭。",
-          "我们请她吃了北京烤鸭。",
-          "她叫我们买了北京烤鸭。",
-          "她让我们看北京烤鸭。"
-        ],
-        correctAnswer: "她请我们吃了北京烤鸭。",
-        explanation: "Cấu trúc kiêm ngữ với động từ '请' (mời): Chủ ngữ (她) + 请 + Tân ngữ kiêm Chủ ngữ 2 (我们) + Động từ 2 (吃了北京烤鸭).",
-        grammarFocus: "Câu kiêm ngữ với 请",
-        audioText: "她请我们吃了北京烤鸭。"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[1] || [],
   },
 
   // LESSON 2
@@ -297,64 +232,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       { id: "hsk2-l2-w16", hanzi: "过来", pinyin: "guòlái", hanViet: "quá lai", vietnamese: "qua đây, lại đây", hskLevel: 2, radical: "辶", strokeCount: 13, example: "再过来看个电影", exampleTranslation: "lại qua đây xem phim", tags: ["Bài 2", "Động từ"] },
       { id: "hsk2-l2-w17", hanzi: "北京大学", pinyin: "Běijīng Dàxué", hanViet: "Bắc Kinh Đại học", vietnamese: "Đại học Bắc Kinh", hskLevel: 2, radical: "大", strokeCount: 22, example: "去北京大学参观", exampleTranslation: "đến Đại học Bắc Kinh tham quan", tags: ["Bài 2", "Địa danh"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l2-ex1",
-        type: "fill_blank",
-        question: "Chọn liên từ thích hợp điền vào cấu trúc câu lựa chọn: '你想喝茶 ______ 喝咖啡？'",
-        hanziPrompt: "你想喝茶 ______ 喝咖啡？",
-        pinyinPrompt: "Nǐ xiǎng hē chá ______ hē kāfēi?",
-        vietnamesePrompt: "Bạn muốn uống trà hay là uống cà phê?",
-        options: ["A. 还是", "B. 或者", "C. 和", "D. 跟"],
-        correctAnswer: "A. 还是",
-        explanation: "Trong câu hỏi lựa chọn, ta dùng liên từ '还是' (hay là, hoặc là).",
-        grammarFocus: "Liên từ câu hỏi 还是",
-        audioText: "你想喝茶还是喝咖啡？"
-      },
-      {
-        id: "hsk2-l2-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu so sánh hơn đúng ngữ pháp với '比':",
-        options: [
-          "A. 这儿的烤鸭比学校旁边的更好吃。",
-          "B. 这儿的烤鸭比学校旁边的很更差。",
-          "C. 这儿的烤鸭很比学校旁边好吃。",
-          "D. 这儿的烤鸭比学校旁边非常好吃。"
-        ],
-        correctAnswer: "A. 这儿的烤鸭比学校旁边的更好吃。",
-        explanation: "Trong câu so sánh '比', trước tính từ có thể dùng '更' hoặc '还' để tăng mức độ so sánh, tuyệt đối không dùng phó từ mức độ như '很', '非常', '太'.",
-        grammarFocus: "Câu chữ 比 kết hợp 更"
-      },
-      {
-        id: "hsk2-l2-ex3",
-        type: "fill_blank",
-        question: "Chọn từ chỉ số lượng / thứ tự thích hợp: '这是我 ______ 来这家饭馆。' (lần đầu tiên)",
-        hanziPrompt: "这是我 ______ 来这家饭馆。",
-        pinyinPrompt: "Zhè shì wǒ ______ lái zhè jiā fànguǎn.",
-        vietnamesePrompt: "Đây là lần đầu tiên tôi đến nhà hàng này.",
-        options: ["A. 第一次", "B. 一次", "C. 第一", "D. 哪个"],
-        correctAnswer: "A. 第一次",
-        explanation: "Cụm '第 + Số từ + Lượng từ' biểu thị số thứ tự: 第一次 (lần thứ nhất, lần đầu tiên).",
-        grammarFocus: "Số thứ tự 第..."
-      },
-      {
-        id: "hsk2-l2-ex4",
-        type: "dialogue_match",
-        question: "Chọn câu gọi món phù hợp trong nhà hàng:",
-        hanziPrompt: "服务员: 两位想吃点儿什么？ — 顾客: ______",
-        pinyinPrompt: "Fúwùyuán: Liǎng wèi xiǎng chī diǎnr shénme? — Gùkè: ______",
-        vietnamesePrompt: "Phục vụ: Hai vị muốn dùng món gì ạ? — Khách hàng: Xin cho chúng tôi một con vịt quay Bắc Kinh.",
-        options: [
-          "请给我们来一只北京烤鸭。",
-          "我们明天上午就去买。",
-          "我不上去了，就在下面等。",
-          "他跑步跑得非常快。"
-        ],
-        correctAnswer: "请给我们来一只北京烤鸭。",
-        explanation: "'来……' trong khẩu ngữ gọi món nghĩa là 'cho chúng tôi món...'.",
-        grammarFocus: "Giao tiếp gọi món trong nhà hàng"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[2] || [],
   },
 
   // LESSON 3
@@ -458,61 +336,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       { id: "hsk2-l3-w15", hanzi: "累", pinyin: "lèi", hanViet: "luy", vietnamese: "mệt mỏi", hskLevel: 2, radical: "田", strokeCount: 11, example: "觉得很累", exampleTranslation: "cảm thấy rất mệt", tags: ["Bài 3", "Tính từ"] },
       { id: "hsk2-l3-w16", hanzi: "西安", pinyin: "Xī'ān", hanViet: "Tây An", vietnamese: "Tây An (cố đô lịch sử)", hskLevel: 2, radical: "西", strokeCount: 12, example: "去西安旅游", exampleTranslation: "đi du lịch Tây An", tags: ["Bài 3", "Địa danh"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l3-ex1",
-        type: "fill_blank",
-        question: "Chọn giới từ chỉ khoảng cách thích hợp: '我家 ______ 学校不太远。'",
-        hanziPrompt: "我家 ______ 学校不太远。",
-        pinyinPrompt: "Wǒ jiā ______ xuéxiào bú tài yuǎn.",
-        vietnamesePrompt: "Nhà tôi cách trường học không xa lắm.",
-        options: ["A. 离", "B. 从", "C. 到", "D. 往"],
-        correctAnswer: "A. 离",
-        explanation: "Cấu trúc biểu thị khoảng cách: 'A 离 B + Khoảng cách / 远 / 近'.",
-        grammarFocus: "Giới từ chỉ cự ly 离",
-        audioText: "我家离学校不太远。"
-      },
-      {
-        id: "hsk2-l3-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu tồn hiện biểu thị trạng thái đúng ngữ pháp:",
-        options: [
-          "A. 桌子上放着一台电脑。",
-          "B. 桌子上放在一台电脑。",
-          "C. 桌子上电脑放着了。",
-          "D. 放着桌子上一台电脑。"
-        ],
-        correctAnswer: "A. 桌子上放着一台电脑。",
-        explanation: "Cấu trúc câu tồn hiện biểu thị trạng thái: Nơi chốn + Động từ + 着 + Danh từ (tân ngữ vô định).",
-        grammarFocus: "Câu tồn hiện với trợ từ 着"
-      },
-      {
-        id: "hsk2-l3-ex3",
-        type: "fill_blank",
-        question: "Điền lượng từ phù hợp cho căn hộ / phòng: '这 ______ 房子挺好的，我很喜欢。'",
-        hanziPrompt: "这 ______ 房子挺好的，我很喜欢。",
-        pinyinPrompt: "Zhè ______ fángzi tǐng hǎo de, wǒ hěn xǐhuan.",
-        vietnamesePrompt: "Căn nhà này khá là tốt, tôi rất thích.",
-        options: ["A. 套", "B. 只", "C. 条", "D. 张"],
-        correctAnswer: "A. 套",
-        explanation: "Lượng từ cho căn hộ, nhà ở, bộ đồ là '套' (căn, bộ, căn hộ).",
-        grammarFocus: "Lượng từ 套"
-      },
-      {
-        id: "hsk2-l3-ex4",
-        type: "multiple_choice",
-        question: "Chọn câu hỏi dùng phó từ '挺……的':",
-        options: [
-          "A. 这个小区挺安静的，环境也很好。",
-          "B. 这个小区挺的不安静。",
-          "C. 挺很喜欢这个地方。",
-          "D. 这个地方环境挺。"
-        ],
-        correctAnswer: "A. 这个小区挺安静的，环境也很好。",
-        explanation: "Cấu trúc phó từ mức độ: '挺 + Tính từ / Cụm động từ tâm lý + 的' (khá là, rất).",
-        grammarFocus: "Phó từ mức độ 挺……的"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[3] || [],
   },
 
   // LESSON 4
@@ -624,64 +448,7 @@ export const NEW_HSK2_FULL_LESSONS: DetailedTextbookLesson[] = [
       { id: "hsk2-l4-w15", hanzi: "更", pinyin: "gèng", hanViet: "canh", vietnamese: "càng, hơn", hskLevel: 2, radical: "曰", strokeCount: 7, example: "更好看", exampleTranslation: "đẹp hơn", tags: ["Bài 4", "Phó từ"] },
       { id: "hsk2-l4-w16", hanzi: "颜色", pinyin: "yánsè", hanViet: "nhan sắc", vietnamese: "màu sắc", hskLevel: 2, radical: "色", strokeCount: 18, example: "颜色很多", exampleTranslation: "màu sắc rất nhiều", tags: ["Bài 4", "Danh từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l4-ex1",
-        type: "fill_blank",
-        question: "Điền trợ từ động thái biểu thị kinh nghiệm quá khứ: '妈妈，我们来 ______ 这家商场吗？'",
-        hanziPrompt: "妈妈，我们来 ______ 这家商场吗？",
-        pinyinPrompt: "Māma, wǒmen lái ______ zhè jiā shāngchǎng ma?",
-        vietnamesePrompt: "Mẹ ơi, mẹ con mình đã từng đến trung tâm thương mại này chưa ạ?",
-        options: ["A. 过", "B. 了", "C. 着", "D. 去"],
-        correctAnswer: "A. 过",
-        explanation: "Trợ từ động thái '过' đứng sau động từ biểu thị hành động từng xảy ra trong quá khứ.",
-        grammarFocus: "Trợ từ động thái 过",
-        audioText: "妈妈，我们来过这家商场吗？"
-      },
-      {
-        id: "hsk2-l4-ex2",
-        type: "multiple_choice",
-        question: "Chọn liên từ biểu thị quan hệ nhân quả phù hợp: '______ 我喜欢白色，______ 想买这条裤子。'",
-        options: [
-          "A. 因为……所以……",
-          "B. 虽然……但是……",
-          "C. 不但……而且……",
-          "D. 如果……就……"
-        ],
-        correctAnswer: "A. 因为……所以……",
-        explanation: "Cặp liên từ '因为……所以……' dùng để nối vế câu nguyên nhân và kết quả.",
-        grammarFocus: "Liên từ nhân quả 因为……所以……"
-      },
-      {
-        id: "hsk2-l4-ex3",
-        type: "fill_blank",
-        question: "Điền phó từ biểu thị mức độ cao hơn: '这条红色的裙子好看，那条绿色的 ______ 好看。'",
-        hanziPrompt: "这条红色的裙子好看，那条绿色的 ______ 好看。",
-        pinyinPrompt: "Zhè tiáo hóngsè de qúnzi hǎokàn, nà tiáo lǜsè de ______ hǎokàn.",
-        vietnamesePrompt: "Chiếc váy đỏ này đẹp, chiếc màu xanh kia càng đẹp hơn.",
-        options: ["A. 更", "B. 太", "C. 很", "D. 最"],
-        correctAnswer: "A. 更",
-        explanation: "Phó từ '更' đứng trước tính từ biểu thị mức độ tăng thêm trong so sánh ngầm.",
-        grammarFocus: "Phó từ so sánh 更"
-      },
-      {
-        id: "hsk2-l4-ex4",
-        type: "dialogue_match",
-        question: "Chọn câu trả lời phù hợp khi đi mua sắm quần áo:",
-        hanziPrompt: "服务员: 您好，请问您想看点儿什么？ — 顾客: ______",
-        pinyinPrompt: "Fúwùyuán: Nín hǎo, qǐngwèn nín xiǎng kàn diǎnr shénme? — Gùkè: ______",
-        vietnamesePrompt: "Nhân viên: Xin chào quý khách, quý khách muốn xem gì ạ? — Khách hàng: Tôi muốn thử chiếc cặp sách màu xanh kia một chút.",
-        options: [
-          "我想试一下那个绿色的书包。",
-          "我昨天下午就回国了。",
-          "今天天气是阴天。",
-          "这台电脑放着很多东西。"
-        ],
-        correctAnswer: "我想试一下那个绿色的书包。",
-        explanation: "Câu đàm thoại mua hàng tự nhiên: '我想试一下……' (Tôi muốn thử một chút...).",
-        grammarFocus: "Giao tiếp mua sắm và động từ 试"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[4] || [],
   },
   // LESSON 5
   {
@@ -798,63 +565,7 @@ vocabulary: [
       { id: "hsk2-l5-w17", hanzi: "走", pinyin: "zǒu", hanViet: "Tẩu", vietnamese: "đi bộ, rời đi", hskLevel: 2, radical: "走", strokeCount: 7, example: "走回酒店", exampleTranslation: "đi bộ về khách sạn", tags: ["Bài 5", "Động từ"] },
       { id: "hsk2-l5-w18", hanzi: "酒店", pinyin: "jiǔdiàn", hanViet: "Tửu Điếm", vietnamese: "khách sạn", hskLevel: 2, radical: "氵", strokeCount: 17, example: "住在酒店", exampleTranslation: "sống ở khách sạn", tags: ["Bài 5", "Địa điểm"] }
     ],
-exercises: [
-      {
-        id: "hsk2-l5-ex1",
-        type: "fill_blank",
-        question: "Chọn bổ ngữ xu hướng thích hợp khi người nói đang ở dưới tầng gọi bạn xuống: '家月，快 ______ 吧！'",
-        hanziPrompt: "家月，快 ______ 吧！",
-        pinyinPrompt: "Jiāyuè, kuài ______ ba!",
-        vietnamesePrompt: "Gia Nguyệt, mau xuống đây đi!",
-        options: ["A. 下来", "B. 上去", "C. 下去", "D. 出来"],
-        correctAnswer: "A. 下来",
-        explanation: "Khi người nói ở phía dưới gọi người ở trên tầng đi xuống phía mình, dùng bổ ngữ xu hướng '下来'.",
-        grammarFocus: "Bổ ngữ xu hướng đơn 下来"
-      },
-      {
-        id: "hsk2-l5-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu có vị trí tân ngữ nơi chốn đúng với bổ ngữ xu hướng:",
-        options: [
-          "A. 上课了，快进教室来吧。",
-          "B. 上课了，快进来教室吧。",
-          "C. 上课了，快教室进吧。",
-          "D. 上课了，快来进教室吧。"
-        ],
-        correctAnswer: "A. 上课了，快进教室来吧。",
-        explanation: "Khi tân ngữ là từ chỉ nơi chốn (教室), tân ngữ bắt buộc phải đặt trước '来/去': Động từ (进) + Nơi chốn (教室) + 来.",
-        grammarFocus: "Vị trí tân ngữ nơi chốn trong bổ ngữ xu hướng"
-      },
-      {
-        id: "hsk2-l5-ex3",
-        type: "fill_blank",
-        question: "Điền phó từ biểu thị nhấn mạnh thời gian muộn trong cấu trúc '都……了': '______ 十点了，你怎么还不起床？'",
-        hanziPrompt: "______ 十点了，你怎么还不起床？",
-        pinyinPrompt: "______ shí diǎn le, nǐ zěnme hái bù qǐchuáng?",
-        vietnamesePrompt: "Đã mười giờ rồi, sao con còn chưa thức dậy?",
-        options: ["A. 都", "B. 也", "C. 还", "D. 就"],
-        correctAnswer: "A. 都",
-        explanation: "Cấu trúc cố định '都……了' dùng để nhấn mạnh thời gian đã muộn hoặc số lượng đã nhiều.",
-        grammarFocus: "Cấu trúc cố định 都……了"
-      },
-      {
-        id: "hsk2-l5-ex4",
-        type: "dialogue_match",
-        question: "Chọn câu đáp lại lời mời vào nhà lịch sự:",
-        hanziPrompt: "主人: 快请进，外面冷，快坐！ — 客人: ______",
-        pinyinPrompt: "Zhǔrén: Kuài qǐng jìn, wàimiàn lěng, kuài zuò! — Kèrén: ______",
-        vietnamesePrompt: "Chủ nhà: Mau mời vào, ngoài trời lạnh, mau ngồi đi! — Khách: Cháu chào hai bác ạ, đây là chút quà chúng cháu biếu hai bác.",
-        options: [
-          "叔叔阿姨好，这是给您带的一点儿礼物。",
-          "我明天上午就去买画笔。",
-          "他在操场上踢足球呢。",
-          "我们一共买了三个书包。"
-        ],
-        correctAnswer: "叔叔阿姨好，这是给您带的一点儿礼物。",
-        explanation: "Lời đáp lịch sự khi đến nhà người lớn làm khách.",
-        grammarFocus: "Giao tiếp văn hóa làm khách Trung Quốc"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[5] || [],
   },
   // LESSON 6
   {
@@ -988,63 +699,7 @@ vocabulary: [
       { id: "hsk2-l6-w13", hanzi: "床", pinyin: "chuáng", hanViet: "Sàng", vietnamese: "cái giường", hskLevel: 2, radical: "广", strokeCount: 7, example: "上床睡觉", exampleTranslation: "lên giường đi ngủ", tags: ["Bài 6", "Đồ dùng"] },
       { id: "hsk2-l6-w14", hanzi: "舒服", pinyin: "shūfu", hanViet: "Thư Phục", vietnamese: "thoải mái, dễ chịu", hskLevel: 2, radical: "舌", strokeCount: 14, example: "睡得很舒服", exampleTranslation: "ngủ rất thoải mái", tags: ["Bài 6", "Tính từ"] }
     ],
-exercises: [
-      {
-        id: "hsk2-l6-ex1",
-        type: "fill_blank",
-        question: "Chọn hình thức trùng điệp tính từ thích hợp: '中国人过生日喜欢吃 ______ 的面条儿。'",
-        hanziPrompt: "中国人过生日喜欢吃 ______ 的面条儿。",
-        pinyinPrompt: "Zhōngguórén guò shēngrì xǐhuan chī ______ de miàntiáor.",
-        vietnamesePrompt: "Người Trung Quốc đón sinh nhật thích ăn những sợi mì dài thật dài.",
-        options: ["A. 长长", "B. 慢慢", "C. 高高", "D. 大大"],
-        correctAnswer: "A. 长长",
-        explanation: "Tính từ trùng điệp '长长' (dài thướt tha, dài miên man) dùng bổ nghĩa cho '面条儿' ngụ ý sống lâu trăm tuổi.",
-        grammarFocus: "Trùng điệp tính từ AA"
-      },
-      {
-        id: "hsk2-l6-ex2",
-        type: "fill_blank",
-        question: "Chọn trợ từ kết cấu thích hợp đứng trước động từ trong câu: '小雪高兴 ______ 笑了。'",
-        hanziPrompt: "小雪高兴 ______ 笑了。",
-        pinyinPrompt: "Xiǎoxuě gāoxìng ______ xiào le.",
-        vietnamesePrompt: "Tiểu Tuyết cười một cách vui vẻ.",
-        options: ["A. 地", "B. 的", "C. 得", "D. 着"],
-        correctAnswer: "A. 地",
-        explanation: "Cấu trúc: 'Trạng ngữ (高兴) + 地 + Động từ (笑)'. Dùng trợ từ kết cấu '地'.",
-        grammarFocus: "Trợ từ kết cấu 地"
-      },
-      {
-        id: "hsk2-l6-ex3",
-        type: "multiple_choice",
-        question: "Chọn câu dùng đoản ngữ liệt kê '什么的' đúng ngữ pháp:",
-        options: [
-          "A. 桌子上有苹果、西瓜、蛋糕什么的。",
-          "B. 桌子上有苹果什么的西瓜。",
-          "C. 什么的桌子上有蛋糕苹果。",
-          "D. 苹果西瓜什么的在有桌子上。"
-        ],
-        correctAnswer: "A. 桌子上有苹果、西瓜、蛋糕什么的。",
-        explanation: "'什么的' đặt ở cuối chuỗi liệt kê mang nghĩa 'vân vân, những thứ như thế'.",
-        grammarFocus: "Cụm từ liệt kê 什么的"
-      },
-      {
-        id: "hsk2-l6-ex4",
-        type: "dialogue_match",
-        question: "Chọn lời chúc mừng sinh nhật phù hợp:",
-        hanziPrompt: "朋友: 祝你生日快乐，这是送给你的礼物！ — 寿星: ______",
-        pinyinPrompt: "Péngyou: Zhù nǐ shēngrì kuàilè, zhè shì sòng gěi nǐ de lǐwù! — Shòuxīng: ______",
-        vietnamesePrompt: "Bạn bè: Chúc bạn sinh nhật vui vẻ, đây là món quà tặng bạn nè! — Nhân vật chính: Cảm ơn bạn nhiều nhé, tôi có thể mở ra xem ngay được không?",
-        options: [
-          "太谢谢你了，我可以打开看看吗？",
-          "我们明天下午去机场接人。",
-          "我不上去了，在楼下等你。",
-          "昨天下午从北京回来的。"
-        ],
-        correctAnswer: "太谢谢你了，我可以打开看看吗？",
-        explanation: "Lời đáp lịch sự và hào hứng khi đón nhận quà sinh nhật từ bạn bè.",
-        grammarFocus: "Văn hóa ứng xử nhận quà"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[6] || [],
   },
   // LESSON 7
   {
@@ -1165,63 +820,7 @@ vocabulary: [
       { id: "hsk2-l7-w14", hanzi: "爱好", pinyin: "àihào", hanViet: "Ái Hảo", vietnamese: "sở thích", hskLevel: 2, radical: "爫", strokeCount: 16, example: "有什么爱好", exampleTranslation: "có sở thích gì", tags: ["Bài 7", "Danh từ"] },
       { id: "hsk2-l7-w15", hanzi: "开始", pinyin: "kāishǐ", hanViet: "Khai Thủy", vietnamese: "bắt đầu", hskLevel: 2, radical: "开", strokeCount: 12, example: "从八岁开始", exampleTranslation: "bắt đầu từ năm tám tuổi", tags: ["Bài 7", "Động từ"] }
     ],
-exercises: [
-      {
-        id: "hsk2-l7-ex1",
-        type: "fill_blank",
-        question: "Chọn trợ từ kết cấu thích hợp trong bổ ngữ trạng thái: '他篮球打 ______ 很好。'",
-        hanziPrompt: "他篮球打 ______ 很好。",
-        pinyinPrompt: "Tā lánqiú dǎ ______ hěn hǎo.",
-        vietnamesePrompt: "Cậu ấy chơi bóng rổ rất cừ.",
-        options: ["A. 得", "B. 的", "C. 地", "D. 了"],
-        correctAnswer: "A. 得",
-        explanation: "Cấu trúc bổ ngữ trạng thái: 'Động từ + 得 + Tính từ'.",
-        grammarFocus: "Bổ ngữ trạng thái với trợ từ 得"
-      },
-      {
-        id: "hsk2-l7-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu dùng cấu trúc '一……就……' đúng ngữ pháp:",
-        options: [
-          "A. 他一下课就往外跑去打篮球。",
-          "B. 他下课一下就跑去打篮球。",
-          "C. 他就一往下课跑去打篮球。",
-          "D. 他下课就一往外跑打篮球。"
-        ],
-        correctAnswer: "A. 他一下课就往外跑去打篮球。",
-        explanation: "Cấu trúc câu phức rút gọn: 'Chủ ngữ + 一 + Động tác 1 + 就 + Động tác 2'.",
-        grammarFocus: "Câu phức rút gọn 一……就……"
-      },
-      {
-        id: "hsk2-l7-ex3",
-        type: "fill_blank",
-        question: "Chọn giới từ chỉ phương hướng thích hợp: '下课了，大家不要 ______ 外跑。'",
-        hanziPrompt: "下课了，大家不要 ______ 外跑。",
-        pinyinPrompt: "Xiàkè le, dàjiā bú yào ______ wài pǎo.",
-        vietnamesePrompt: "Tan học rồi, mọi người đừng chạy ra bên ngoài nhé.",
-        options: ["A. 往", "B. 从", "C. 离", "D. 比"],
-        correctAnswer: "A. 往",
-        explanation: "Giới từ '往' kết hợp từ chỉ phương vị/nơi chốn biểu thị phương hướng của động tác: 往外跑 (chạy ra ngoài).",
-        grammarFocus: "Giới từ phương hướng 往"
-      },
-      {
-        id: "hsk2-l7-ex4",
-        type: "dialogue_match",
-        question: "Chọn câu hỏi sở thích thể thao phù hợp:",
-        hanziPrompt: "A: 你平时有什么爱好？ — B: ______",
-        pinyinPrompt: "A: Nǐ píngshí yǒu shénme àihào? — B: ______",
-        vietnamesePrompt: "A: Bình thường bạn có sở thích gì không? — B: Mình rất thích thể thao, hễ cuối tuần là đi bơi cùng bạn bè.",
-        options: [
-          "我特别喜欢运动，一到周末就跟朋友去游泳。",
-          "我们十点前就能到王老师家了。",
-          "这件衣服颜色太红了，不太适合我。",
-          "请给我们来两杯热奶茶。"
-        ],
-        correctAnswer: "我特别喜欢运动，一到周末就跟朋友去游泳。",
-        explanation: "Câu trả lời đúng chủ đề sở thích và vận dụng chuẩn ngữ pháp '一……就……'.",
-        grammarFocus: "Đàm thoại về sở thích thể thao"
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[7] || [],
   },
 
 
@@ -1334,32 +933,7 @@ exercises: [
       { id: "hsk2-l8-w13", hanzi: "丈夫", pinyin: "zhàngfu", hanViet: "trượng phu", vietnamese: "người chồng", hskLevel: 2, radical: "一", strokeCount: 8, example: "爱她的丈夫", exampleTranslation: "yêu thương chồng cô ấy", tags: ["Bài 8", "Danh từ"] },
       { id: "hsk2-l8-w14", hanzi: "饭馆", pinyin: "fànguǎn", hanViet: "phạn quán", vietnamese: "quán ăn, nhà hàng", hskLevel: 2, radical: "饣", strokeCount: 18, example: "去饭馆吃饭", exampleTranslation: "đến nhà hàng dùng bữa", tags: ["Bài 8", "Danh từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l8-ex1",
-        type: "multiple_choice",
-        question: "Chọn từ thích hợp: '这件衣服 ______ 那件衣服贵得多。'",
-        options: ["A. 比", "B. 和", "C. 跟", "D. 也"],
-        correctAnswer: "A. 比",
-        explanation: "Cấu trúc so sánh hơn: A + 比 + B + Tính từ (贵得多)."
-      },
-      {
-        id: "hsk2-l8-ex2",
-        type: "multiple_choice",
-        question: "Chọn cặp liên từ thích hợp: '______ 他很忙，______ 还是来参加了我的生日会。'",
-        options: ["A. 虽然……但是……", "B. 因为……所以……", "C. 不但……而且……", "D. 如果……就……"],
-        correctAnswer: "A. 虽然……但是……",
-        explanation: "Câu biểu thị quan hệ chuyển ngoặt (nhượng bộ đối lập): 虽然 (tuy) ... 但是 (nhưng)."
-      },
-      {
-        id: "hsk2-l8-ex3",
-        type: "fill_blank",
-        question: "Hoàn thành câu: '网上买票比在电影院买 ______ (rẻ hơn).' (Điền chữ Hán)",
-        options: ["便宜", "贵", "多", "少"],
-        correctAnswer: "便宜",
-        explanation: "便宜 (piányi) mang nghĩa 'rẻ'."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[8] || [],
   },
 
   // LESSON 9
@@ -1471,37 +1045,7 @@ exercises: [
       { id: "hsk2-l9-w12", hanzi: "走路", pinyin: "zǒulù", hanViet: "tẩu lộ", vietnamese: "đi bộ", hskLevel: 2, radical: "走", strokeCount: 20, example: "走路回家", exampleTranslation: "đi bộ về nhà", tags: ["Bài 9", "Động từ"] },
       { id: "hsk2-l9-w13", hanzi: "周", pinyin: "zhōu", hanViet: "chu", vietnamese: "tuần (lễ)", hskLevel: 2, radical: "冂", strokeCount: 8, example: "这周 / 下周", exampleTranslation: "tuần này / tuần sau", tags: ["Bài 9", "Danh từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l9-ex1",
-        type: "multiple_choice",
-        question: "Chọn từ điền vào chỗ trống: '我家 ______ 公司很近，我每天都走路去上班。'",
-        options: ["A. 离", "B. 比", "C. 从", "D. 往"],
-        correctAnswer: "A. 离",
-        explanation: "Cấu trúc biểu thị khoảng cách không gian: A + 离 + B + 近 / 远."
-      },
-      {
-        id: "hsk2-l9-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu có ý nghĩa tương đương: '今天没有昨天热。'",
-        options: [
-          "A. 昨天比今天热。",
-          "B. 今天比昨天热。",
-          "C. 昨天没有今天热。",
-          "D. 今天和昨天一样热。"
-        ],
-        correctAnswer: "A. 昨天比今天热。",
-        explanation: "'A 没有 B + Tính từ' tương đương với 'B 比 A + Tính từ'. 'Hôm nay không nóng bằng hôm qua' = 'Hôm qua nóng hơn hôm nay'."
-      },
-      {
-        id: "hsk2-l9-ex3",
-        type: "fill_blank",
-        question: "Điền từ: '走半个多 ______ 就到了。' (Điền chữ Hán chỉ đơn vị thời gian 'tiếng đồng hồ')",
-        options: ["小时", "分钟", "天", "年"],
-        correctAnswer: "小时",
-        explanation: "半个多小时: hơn nửa tiếng đồng hồ."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[9] || [],
   },
 
   // LESSON 10
@@ -1616,37 +1160,7 @@ exercises: [
       { id: "hsk2-l10-w13", hanzi: "快要", pinyin: "kuàiyào", hanViet: "khoái yếu", vietnamese: "sắp sửa", hskLevel: 2, radical: "心", strokeCount: 16, example: "快要开始了", exampleTranslation: "sắp bắt đầu rồi", tags: ["Bài 10", "Phó từ"] },
       { id: "hsk2-l10-w14", hanzi: "笑", pinyin: "xiào", hanViet: "tiếu", vietnamese: "cười", hskLevel: 2, radical: "竹", strokeCount: 10, example: "笑了", exampleTranslation: "cười rồi", tags: ["Bài 10", "Động từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l10-ex1",
-        type: "multiple_choice",
-        question: "Chọn từ điền vào câu nghi vấn lựa chọn: '你想今天去 ______ 明天去？'",
-        options: ["A. 还是", "B. 或者", "C. 但是", "D. 虽然"],
-        correctAnswer: "A. 还是",
-        explanation: "Trong câu hỏi lựa chọn 'A hay là B', dùng '还是' (háishi). ('或者' chỉ dùng trong câu trần thuật)."
-      },
-      {
-        id: "hsk2-l10-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu đúng biểu thị hành động sắp xảy ra khi có thời gian xác định '明天':",
-        options: [
-          "A. 我们明天就要开学了。",
-          "B. 我们明天快要开学了。",
-          "C. 我们明天快开学了。",
-          "D. 我们明天要开学。"
-        ],
-        correctAnswer: "A. 我们明天就要开学了。",
-        explanation: "Khi có mốc thời gian cụ thể (như '明天'), chỉ được dùng '就要……了', không dùng '快要……了' hay '快……了'."
-      },
-      {
-        id: "hsk2-l10-ex3",
-        type: "fill_blank",
-        question: "Điền từ: '这些词我已经看过了，意思也都 ______ (hiểu) 了。' (Điền chữ Hán)",
-        options: ["懂", "看", "想", "做"],
-        correctAnswer: "懂",
-        explanation: "懂 (dǒng) nghĩa là hiểu."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[10] || [],
   },
 
   // LESSON 11
@@ -1760,32 +1274,7 @@ exercises: [
       { id: "hsk2-l11-w12", hanzi: "最", pinyin: "zuì", hanViet: "tối", vietnamese: "nhất", hskLevel: 2, radical: "日", strokeCount: 12, example: "最好 / 最多", exampleTranslation: "tốt nhất / nhiều nhất", tags: ["Bài 11", "Phó từ"] },
       { id: "hsk2-l11-w13", hanzi: "药店", pinyin: "yàodiàn", hanViet: "dược điếm", vietnamese: "hiệu thuốc, tiệm thuốc", hskLevel: 2, radical: "艹", strokeCount: 17, example: "去药店买药", exampleTranslation: "đến hiệu thuốc mua thuốc", tags: ["Bài 11", "Danh từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l11-ex1",
-        type: "multiple_choice",
-        question: "Chọn trợ từ thích hợp biểu thị trạng thái tiếp diễn: '外面正下 ______ 雪呢，你多穿点儿衣服。'",
-        options: ["A. 着", "B. 了", "C. 过", "D. 的"],
-        correctAnswer: "A. 着",
-        explanation: "'下着雪' biểu thị tuyết đang tiếp tục rơi (trợ từ động thái '着')."
-      },
-      {
-        id: "hsk2-l11-ex2",
-        type: "multiple_choice",
-        question: "Điền từ: '在我们家，妈妈做饭做得 ______ 好吃。'",
-        options: ["A. 最", "B. 太", "C. 真", "D. 都"],
-        correctAnswer: "A. 最",
-        explanation: "Phó từ chỉ mức độ cao nhất trong phạm vi ('在我们家'): 最 (nhất)."
-      },
-      {
-        id: "hsk2-l11-ex3",
-        type: "fill_blank",
-        question: "Điền từ: '李文，快请 ______ (vào)！' (Điền chữ Hán)",
-        options: ["进", "出", "回", "去"],
-        correctAnswer: "进",
-        explanation: "请进 (qǐng jìn): mời vào."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[11] || [],
   },
 
   // LESSON 12
@@ -1894,37 +1383,7 @@ exercises: [
       { id: "hsk2-l12-w10", hanzi: "小时候", pinyin: "xiǎoshíhou", hanViet: "Tiểu Thời Hậu", vietnamese: "hồi nhỏ, khi còn bé", hskLevel: 2, radical: "小", strokeCount: 13, example: "小时候在南方长大", exampleTranslation: "hồi nhỏ lớn lên ở miền Nam", tags: ["Bài 12", "Danh từ thời gian"] },
       { id: "hsk2-l12-w11", hanzi: "站", pinyin: "zhàn", hanViet: "Trạm", vietnamese: "trạm, ga, bến (xe buýt, tàu điện)", hskLevel: 2, radical: "立", strokeCount: 10, example: "坐两站地铁", exampleTranslation: "đi hai ga tàu điện ngầm", tags: ["Bài 12", "Lượng từ / Danh từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l12-ex1",
-        type: "multiple_choice",
-        question: "Chọn từ điền vào chỗ trống để biểu thị mức độ chênh lệch rất lớn: '哈尔滨比三亚冷 ______。'",
-        options: ["A. 多了", "B. 很多", "C. 太了", "D. 非常"],
-        correctAnswer: "A. 多了",
-        explanation: "Trong câu so sánh '比', để diễn tả sự chênh lệch nhiều, dùng '多了' hoặc '得多' ở cuối tính từ (không dùng '很多' hay '非常')."
-      },
-      {
-        id: "hsk2-l12-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu có cấu trúc so sánh đúng ngữ pháp:",
-        options: [
-          "A. 他跑得比我快。",
-          "B. 他跑步比我快得跑。",
-          "C. 他跑得比我很客气。",
-          "D. 他跑步跑得很比我快。"
-        ],
-        correctAnswer: "A. 他跑得比我快。",
-        explanation: "Cấu trúc so sánh kèm bổ ngữ trạng thái: Chủ ngữ + (Động từ + Tân ngữ) + Động từ + 得 + 比 B + Tính từ."
-      },
-      {
-        id: "hsk2-l12-ex3",
-        type: "fill_blank",
-        question: "Điền từ: '我坐 ______ (tàu điện ngầm) 去学校。' (Điền chữ Hán)",
-        options: ["地铁", "飞机", "出租车", "公共汽车"],
-        correctAnswer: "地铁",
-        explanation: "地铁 (dìtiě): tàu điện ngầm."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[12] || [],
   },
 
   // LESSON 13
@@ -2039,45 +1498,7 @@ exercises: [
       { id: "hsk2-l13-w12", hanzi: "告诉", pinyin: "gàosu", hanViet: "cáo tố", vietnamese: "bảo cho biết, nói cho", hskLevel: 2, radical: "口", strokeCount: 7, example: "告诉我", exampleTranslation: "nói cho tôi biết", tags: ["Bài 13", "Động từ"] },
       { id: "hsk2-l13-w13", hanzi: "班", pinyin: "bān", hanViet: "ban", vietnamese: "lớp học, ca làm việc", hskLevel: 2, radical: "王", strokeCount: 10, example: "我们班", exampleTranslation: "lớp chúng tôi", tags: ["Bài 13", "Danh từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l13-ex1",
-        type: "multiple_choice",
-        question: "Chọn từ/cụm từ thích hợp điền vào chỗ trống để chỉ sự chênh lệch cụ thể: '今天的词比昨天 ______。'",
-        options: ["A. 多了十个", "B. 很多", "C. 非常多", "D. 很有意思"],
-        correctAnswer: "A. 多了十个",
-        explanation: "Trong câu so sánh biểu thị mức độ chênh lệch cụ thể, cấu trúc là: A + 比 + B + Tính từ + Cụm số lượng (多了十个)."
-      },
-      {
-        id: "hsk2-l13-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu có cấu trúc câu hai tân ngữ (双宾语句) đúng ngữ pháp:",
-        options: [
-          "A. 安妮送给我一个新本子。",
-          "B. 安妮一个新本子送给我。",
-          "C. 安妮送给一个新本子我。",
-          "D. 安妮我送给一个新本子。"
-        ],
-        correctAnswer: "A. 安妮送给我一个新本子。",
-        explanation: "Cấu trúc hai tân ngữ chuẩn: Chủ ngữ + Động từ (送给) + Tân ngữ 1 chỉ người (我) + Tân ngữ 2 chỉ vật (一个新本子)."
-      },
-      {
-        id: "hsk2-l13-ex3",
-        type: "multiple_choice",
-        question: "Điền vào chỗ trống để diễn tả sự chênh lệch nhỏ: '这个本子比那个 ______。'",
-        options: ["A. 贵一点儿", "B. 贵很", "C. 很贵", "D. 贵太了"],
-        correctAnswer: "A. 贵一点儿",
-        explanation: "Cấu trúc biểu thị mức độ chênh lệch nhỏ: A + 比 + B + Tính từ + 一点儿 / 一些."
-      },
-      {
-        id: "hsk2-l13-ex4",
-        type: "fill_blank",
-        question: "Điền từ thích hợp: '洗手间的“间”字里面是 ______，不是“口”。' (Điền chữ Hán)",
-        options: ["日", "月", "木", "田"],
-        correctAnswer: "日",
-        explanation: "Chữ 间 (gian) gồm bộ môn 门 và chữ nhật 日 ở bên trong. Nếu bên trong là chữ khẩu 口 thì sẽ là chữ 问 (vấn/hỏi)."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[13] || [],
   },
 
   // LESSON 14
@@ -2188,50 +1609,7 @@ exercises: [
       { id: "hsk2-l14-w11", hanzi: "眼睛", pinyin: "yǎnjing", hanViet: "nhãn tình", vietnamese: "mắt, đôi mắt", hskLevel: 2, radical: "目", strokeCount: 11, example: "大眼睛", exampleTranslation: "đôi mắt to", tags: ["Bài 14", "Danh từ"] },
       { id: "hsk2-l14-w12", hanzi: "跳舞", pinyin: "tiàowǔ", hanViet: "khiêu vũ", vietnamese: "khiêu vũ, nhảy múa", hskLevel: 2, radical: "足", strokeCount: 13, example: "唱歌跳舞", exampleTranslation: "ca hát nhảy múa", tags: ["Bài 14", "Động từ"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l14-ex1",
-        type: "multiple_choice",
-        question: "Chọn câu có cấu trúc câu tồn hiện (存现句) đúng ngữ pháp:",
-        options: [
-          "A. 楼下站着一个人。",
-          "B. 楼下一个人站着呢。",
-          "C. 一个人在楼下站。",
-          "D. 站着一个人在楼下。"
-        ],
-        correctAnswer: "A. 楼下站着一个人。",
-        explanation: "Cấu trúc câu tồn hiện: Nơi chốn (楼下) + Động từ + 着 (站着) + Người/vật tồn tại (一个人)."
-      },
-      {
-        id: "hsk2-l14-ex2",
-        type: "multiple_choice",
-        question: "Chọn câu cảm thán đúng khi sử dụng phó từ chỉ mức độ '多':",
-        options: [
-          "A. 你一个人在这儿多没意思啊！",
-          "B. 你一个人在这儿很大没意思啊！",
-          "C. 你一个人在这儿多非常有意思！",
-          "D. 你一个人在这儿太没意思多！"
-        ],
-        correctAnswer: "A. 你一个人在这儿多没意思啊！",
-        explanation: "Cấu trúc câu cảm thán: 多 + Tính từ/Cụm tính từ + (啊)!"
-      },
-      {
-        id: "hsk2-l14-ex3",
-        type: "multiple_choice",
-        question: "Điền bổ ngữ xu hướng kép đúng: '孩子们都走出教室 ______ 了。'",
-        options: ["A. 去", "B. 跑", "C. 走", "D. 来去"],
-        correctAnswer: "A. 去",
-        explanation: "Khi động từ mang tân ngữ nơi chốn (教室), tân ngữ phải đứng giữa động từ xu hướng kép: 出 + 教室 + 去."
-      },
-      {
-        id: "hsk2-l14-ex4",
-        type: "fill_blank",
-        question: "Điền từ thích hợp: '我男朋友 ______ 杨，叫杨同乐。' (Điền chữ Hán chỉ mang họ)",
-        options: ["姓", "叫", "是", "名"],
-        correctAnswer: "姓",
-        explanation: "姓 (xìng): mang họ (ví dụ: 姓杨 - họ Dương)."
-      }
-    ]
+    exercises: HSK2_LESSON_EXERCISES[14] || [],
   },
 
   // LESSON 15
@@ -2336,50 +1714,7 @@ exercises: [
       { id: "hsk2-l15-w11", hanzi: "鸟", pinyin: "niǎo", hanViet: "điểu", vietnamese: "con chim", hskLevel: 2, radical: "鸟", strokeCount: 5, example: "小鸟", exampleTranslation: "chú chim nhỏ", tags: ["Bài 15", "Danh từ"] },
       { id: "hsk2-l15-w12", hanzi: "颐和园", pinyin: "Yíhé Yuán", hanViet: "Di Hòa Viên", vietnamese: "Di Hòa Viên (Cung điện Mùa Hè ở Bắc Kinh)", hskLevel: 2, radical: "页", strokeCount: 13, example: "逛颐和园", exampleTranslation: "dạo chơi Di Hòa Viên", tags: ["Bài 15", "Địa danh"] }
     ],
-    exercises: [
-      {
-        id: "hsk2-l15-ex1",
-        type: "multiple_choice",
-        question: "Chọn trật tự đúng của tân ngữ chỉ sự vật với bổ ngữ động lượng:",
-        options: [
-          "A. 我想再吃一次烤鸭。",
-          "B. 我想再吃烤鸭一次。",
-          "C. 我想一次吃再烤鸭。",
-          "D. 烤鸭我想再吃一次。"
-        ],
-        correctAnswer: "A. 我想再吃一次烤鸭。",
-        explanation: "Khi tân ngữ là danh từ chỉ sự vật thông thường (烤鸭), tân ngữ thường đứng sau bổ ngữ động lượng (吃一次烤鸭)."
-      },
-      {
-        id: "hsk2-l15-ex2",
-        type: "multiple_choice",
-        question: "Chọn trật tự đúng của tân ngữ là đại từ với bổ ngữ động lượng:",
-        options: [
-          "A. 安妮来过这儿两次。",
-          "B. 安妮来过两次这儿。",
-          "C. 安妮两次来过这儿。",
-          "D. 这儿安妮两次来过。"
-        ],
-        correctAnswer: "A. 安妮来过这儿两次。",
-        explanation: "Khi tân ngữ là đại từ (这儿, 他, 我), tân ngữ bắt buộc đứng trước bổ ngữ động lượng (来过这儿两次, 找他一次)."
-      },
-      {
-        id: "hsk2-l15-ex3",
-        type: "multiple_choice",
-        question: "Điền từ thích hợp vào câu chữ '有' biểu thị đạt đến thời gian nhất định: '李文，你 ______ 一年没回国了吧？'",
-        options: ["A. 有", "B. 在", "C. 是", "D. 会"],
-        correctAnswer: "A. 有",
-        explanation: "Cấu trúc '有 + Cụm số lượng' dùng để biểu thị đạt tới một khoảng thời gian nhất định (有一年没回国了)."
-      },
-      {
-        id: "hsk2-l15-ex4",
-        type: "fill_blank",
-        question: "Điền từ thích hợp: '考试就要开始了，请大家写上 ______ (họ tên)。' (Điền chữ Hán)",
-        options: ["姓名", "名字", "同学", "老师"],
-        correctAnswer: "姓名",
-        explanation: "姓名 (xìngmíng): họ và tên."
-      }
-    ],
+    exercises: HSK2_LESSON_EXERCISES[15] || [],
     cultureBonus: {
       title: "🎉 祝贺完成新 HSK 2 全部 15 课！ (Chúc mừng hoàn thành toàn bộ 15 bài HSK 2!)",
       summary: "Bạn đã xuất sắc chinh phục trọn vẹn 15 bài học chuẩn giáo trình Bắc Ngữ BLCUP!",

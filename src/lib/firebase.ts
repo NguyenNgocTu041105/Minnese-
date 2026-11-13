@@ -318,24 +318,49 @@ export function getAuthErrorMessage(error: any): string {
     case 'auth/email-already-in-use':
       return 'Email này đã được đăng ký tài khoản. Vui lòng đăng nhập hoặc sử dụng tính năng quên mật khẩu.';
     case 'auth/invalid-email':
-      return 'Địa chỉ email không đúng định dạng.';
+      return 'Địa chỉ email không đúng định dạng. Vui lòng kiểm tra lại.';
     case 'auth/weak-password':
-      return 'Mật khẩu quá yếu. Vui lòng nhập tối thiểu 6 ký tự.';
+      return 'Mật khẩu quá yếu. Vui lòng chọn mật khẩu tối thiểu 8 ký tự và kết hợp chữ hoa, chữ thường cùng chữ số.';
     case 'auth/user-not-found':
-      return 'Không tìm thấy tài khoản với email này. Vui lòng đăng ký tài khoản mới.';
+      return 'Không tìm thấy tài khoản với email này. Vui lòng kiểm tra lại hoặc đăng ký tài khoản mới.';
     case 'auth/wrong-password':
+      return 'Mật khẩu không chính xác. Vui lòng thử lại hoặc chọn Quên mật khẩu.';
     case 'auth/invalid-credential':
-      return 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
+      return 'Thông tin đăng nhập (email hoặc mật khẩu) không chính xác. Vui lòng kiểm tra lại.';
+    case 'auth/user-disabled':
+      return 'Tài khoản này đã bị tạm khóa. Vui lòng liên hệ ban quản trị để được hỗ trợ.';
     case 'auth/too-many-requests':
-      return 'Quá nhiều lần thử không thành công. Vui lòng thử lại sau ít phút.';
+      return 'Bạn đã thực hiện quá nhiều lần thử không thành công. Hệ thống tạm khóa thao tác, vui lòng thử lại sau ít phút.';
     case 'auth/network-request-failed':
-      return 'Lỗi kết nối mạng. Vui lòng kiểm tra lại đường truyền Internet.';
+      return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng Internet của bạn.';
     case 'auth/popup-closed-by-user':
-      return 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.';
+      return 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất xác thực.';
+    case 'auth/cancelled-popup-request':
+      return 'Yêu cầu mở cửa sổ đăng nhập đã bị hủy do có thao tác mới.';
+    case 'auth/popup-blocked':
+      return 'Trình duyệt đã chặn cửa sổ đăng nhập pop-up. Vui lòng cho phép mở pop-up và thử lại.';
+    case 'auth/unauthorized-domain':
+      return 'Tên miền hiện tại chưa được cấp phép trong cấu hình xác thực của hệ thống.';
     case 'auth/operation-not-allowed':
-      return 'Phương thức đăng nhập Email/Password chưa được kích hoạt trong Firebase Console (Authentication -> Sign-in method).';
-    default:
-      return error?.message || 'Có lỗi xảy ra trong quá trình xác thực.';
+      return 'Hệ thống đăng nhập bằng Email tạm thời đang bảo trì cấu hình. Vui lòng thử lại sau hoặc tiếp tục với Google.';
+    case 'auth/configuration-not-found':
+      return 'Cấu hình xác thực hệ thống chưa sẵn sàng. Vui lòng liên hệ ban quản trị.';
+    case 'auth/requires-recent-login':
+      return 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục thao tác này.';
+    case 'auth/account-exists-with-different-credential':
+      return 'Email này đã liên kết với một phương thức đăng nhập khác. Vui lòng đăng nhập bằng phương thức tương ứng.';
+    case 'auth/credential-already-in-use':
+      return 'Thông tin xác thực này đã được liên kết với một tài khoản khác.';
+    case 'auth/internal-error':
+      return 'Đã xảy ra lỗi nội bộ từ hệ thống xác thực. Vui lòng thử lại sau.';
+    default: {
+      const rawMsg = String(error?.message || '');
+      // Strip technical prefixes like "Firebase: Error (auth/...)"
+      if (rawMsg.includes('Firebase:') || rawMsg.includes('auth/')) {
+        return 'Đã xảy ra lỗi trong quá trình xác thực. Vui lòng kiểm tra lại thông tin và thử lại.';
+      }
+      return rawMsg || 'Có lỗi xảy ra trong quá trình xác thực.';
+    }
   }
 }
 
@@ -1274,14 +1299,13 @@ export async function loginWithDirectSession(
   displayName?: string
 ): Promise<UserProfile> {
   const cleanEmail = email.trim().toLowerCase();
-  const isAdmin = isUserAdmin(cleanEmail);
   const uid = `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
   const profile: UserProfile = {
     id: uid,
     email: cleanEmail,
-    displayName: displayName || (cleanEmail === 'babysharkkk123@gmail.com' ? 'Admin BabyShark' : cleanEmail.split('@')[0]),
-    role: isAdmin ? 'admin' : 'user',
+    displayName: displayName || cleanEmail.split('@')[0],
+    role: 'user', // Direct/fallback sessions strictly receive standard user role without elevation
     current_level: 1,
     words_per_day: 15,
     streak_count: 5,

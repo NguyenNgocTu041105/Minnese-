@@ -57,6 +57,24 @@ export default defineConfig(() => {
             if (id.includes('node_modules/lucide-react')) {
               return 'lucide';
             }
+            if (id.includes('data/newHsk1') || id.includes('data/hsk1WorkbookData')) {
+              return 'hsk1-data';
+            }
+            if (id.includes('data/newHsk2') || id.includes('data/hsk2WorkbookData')) {
+              return 'hsk2-data';
+            }
+            if (id.includes('data/newHsk3') || id.includes('data/hsk3WorkbookData')) {
+              return 'hsk3-data';
+            }
+            if (id.includes('data/newHsk') || id.includes('WorkbookData')) {
+              return 'hsk-advanced-data';
+            }
+            if (id.includes('node_modules/hanzi-writer')) {
+              return 'hanzi-writer';
+            }
+            if (id.includes('node_modules/pinyin-pro')) {
+              return 'pinyin-pro';
+            }
           },
         },
       },

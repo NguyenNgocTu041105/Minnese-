@@ -21,7 +21,7 @@ import {
   Frown,
   Smile,
 } from 'lucide-react';
-import { WordItem, SRSCardState, Deck, UserStats, HSKLevel, UserProfile } from '../../types';
+import { WordItem, SRSCardState, Deck, UserStats, HSKLevel, UserProfile, CoursebookReturnOrigin } from '../../types';
 import { INITIAL_DECKS } from '../../data/hskVocabulary';
 import { logStudyActivity } from '../../utils/activityLogger';
 import { getAllVocabulary } from '../../utils/vocabStorage';
@@ -49,6 +49,8 @@ interface FlashcardsViewProps {
   initialStudyMode?: 'due_only' | 'all';
   onClearInitialDeckId?: () => void;
   onNavigateToCoursebook?: () => void;
+  returnOrigin?: CoursebookReturnOrigin | null;
+  onReturnToOrigin?: (origin: CoursebookReturnOrigin) => void;
 }
 
 export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
@@ -61,6 +63,8 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   initialStudyMode,
   onClearInitialDeckId,
   onNavigateToCoursebook,
+  returnOrigin,
+  onReturnToOrigin,
 }) => {
   const [decks, setDecks] = useState<Deck[]>(INITIAL_DECKS);
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
@@ -72,7 +76,8 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [sessionReviewedCount, setSessionReviewedCount] = useState(0);
 
-  const userLevel = (userProfile?.current_level as 1 | 2 | 3 | 4) || 1;
+  const rawUserLevel = Number(userProfile?.current_level) || 1;
+  const userLevel = (rawUserLevel >= 1 && rawUserLevel <= 4 ? rawUserLevel : 1) as 1 | 2 | 3 | 4;
   const [selectedViewLevel, setSelectedViewLevel] = useState<1 | 2 | 3 | 4>(userLevel);
   const [activeTabMode, setActiveTabMode] = useState<'coursebook' | 'custom'>('coursebook');
   const [lessonPage, setLessonPage] = useState(1);
@@ -134,7 +139,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
 
     if (selectedDeckId.startsWith('deck-lesson-')) {
       const parts = selectedDeckId.split('-');
-      const lvl = (parseInt(parts[2], 10) || selectedViewLevel) as 1 | 2 | 3;
+      const lvl = (parseInt(parts[2], 10) || selectedViewLevel) as 1 | 2 | 3 | 4 | 5 | 6;
       const lNum = parseInt(parts[3], 10);
       const words = getLessonVocabulary(lvl, lNum);
       const lessonObj = getLessonsForLevel(lvl).find((l) => l.lessonNumber === lNum);
@@ -182,7 +187,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
       targetWords = getLearnedVocabulary(selectedViewLevel, coursebookProgress.maxReachedLessonNum);
     } else if (deckId.startsWith('deck-lesson-')) {
       const parts = deckId.split('-');
-      const lvl = (parseInt(parts[2], 10) || selectedViewLevel) as 1 | 2 | 3;
+      const lvl = (parseInt(parts[2], 10) || selectedViewLevel) as 1 | 2 | 3 | 4 | 5 | 6;
       const lNum = parseInt(parts[3], 10);
       targetWords = getLessonVocabulary(lvl, lNum);
     } else {
@@ -213,6 +218,19 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
       }
     }
   }, [initialDeckId, initialStudyMode]);
+
+  const handleExitStudy = () => {
+    if (returnOrigin && onReturnToOrigin) {
+      onReturnToOrigin(returnOrigin);
+    } else if (returnOrigin && onNavigateToCoursebook) {
+      onNavigateToCoursebook();
+    } else {
+      setSelectedDeckId(null);
+      if (onClearInitialDeckId) {
+        onClearInitialDeckId();
+      }
+    }
+  };
 
   const handleStartDeckRef = useRef(handleStartDeck);
   handleStartDeckRef.current = handleStartDeck;
@@ -841,14 +859,15 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
           <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => {
-                setSelectedDeckId(null);
-                if (onClearInitialDeckId) onClearInitialDeckId();
-              }}
+              onClick={handleExitStudy}
               className="flex items-center gap-2 text-xs font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Quay lại danh sách bài học</span>
+              <span>
+                {returnOrigin?.source === 'coursebook'
+                  ? `Quay lại bài học (Bài ${returnOrigin.lessonNumber})`
+                  : 'Quay lại danh sách bài học'}
+              </span>
             </button>
 
             <div className="flex items-center gap-3">
@@ -882,10 +901,10 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
               <div className="flex justify-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedDeckId(null)}
+                  onClick={handleExitStudy}
                   className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all cursor-pointer"
                 >
-                  Trở về danh sách bộ thẻ
+                  {returnOrigin?.source === 'coursebook' ? 'Quay lại bài học' : 'Trở về danh sách bộ thẻ'}
                 </button>
               </div>
             </div>

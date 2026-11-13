@@ -102,14 +102,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
   >('classes');
 
   // Identify current Admin/Teacher
-  const currentAdminEmail = (currentAdmin?.email || 'babysharkkk123@gmail.com').toLowerCase();
-  const currentAdminName = currentAdmin?.displayName || currentAdmin?.email?.split('@')[0] || 'Quản trị viên';
-  const currentAdminId = currentAdmin?.id || 'admin-root';
+  const currentAdminEmail = (currentAdmin?.email || '').toLowerCase().trim();
+  const currentAdminName = currentAdmin?.displayName || (currentAdminEmail ? currentAdminEmail.split('@')[0] : 'Quản trị viên');
+  const currentAdminId = currentAdmin?.id || '';
 
-  const isAuthorized =
-    currentAdmin?.role === 'admin' ||
-    currentAdmin?.role === 'teacher' ||
-    currentAdminEmail === 'babysharkkk123@gmail.com';
+  const isAuthorized = Boolean(
+    currentAdmin &&
+    (currentAdmin.role === 'admin' || currentAdmin.role === 'teacher')
+  );
 
   if (!isAuthorized) {
     return (
@@ -119,7 +119,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
         </div>
         <h2 className="text-xl font-bold text-[var(--color-text-primary)] font-serif">Quyền Truy Cập Bị Giới Hạn</h2>
         <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-          Khu vực Quản trị chỉ dành riêng cho Giáo viên và Ban Quản trị Minnese. Tài khoản học viên của bạn ({currentAdmin?.email}) không có quyền truy cập trang này.
+          Khu vực Quản trị chỉ dành riêng cho Giáo viên và Ban Quản trị Minnese. Tài khoản học viên của bạn ({currentAdmin?.email || 'Chưa xác thực'}) không có quyền truy cập trang này.
         </p>
       </div>
     );

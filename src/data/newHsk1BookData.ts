@@ -1,3 +1,4 @@
+import { HSK1_LESSON_EXERCISES } from './hsk1LessonExercises';
 import { WordItem } from '../types';
 
 export interface DialogueLine {
@@ -191,24 +192,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l1-w12", "hanzi": "再见", "pinyin": "zàijiàn", "hanViet": "tái kiến", "vietnamese": "tạm biệt, hẹn gặp lại", "hskLevel": 1, "radical": "冂", "strokeCount": 10, "example": "王老师，再见！", "exampleTranslation": "Chào cô Vương, hẹn gặp lại ạ!", "tags": ["Bài 1", "Giao tiếp"]},
       {"id": "hsk1-l1-w13", "hanzi": "王老师", "pinyin": "Wáng lǎoshī", "hanViet": "vương lão sư", "vietnamese": "thầy/cô Vương", "hskLevel": 1, "radical": "王", "strokeCount": 16, "example": "王老师是我们的中文老师。", "exampleTranslation": "Cô Vương là giáo viên tiếng Trung của chúng tôi.", "tags": ["Bài 1", "Danh từ riêng"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l1-ex1",
-        type: "multiple_choice",
-        question: "Khi chào thầy cô giáo hoặc người lớn tuổi hơn mình một cách tôn kính, nên nói thế nào?",
-        options: ["A. 你好！", "B. 您好！", "C. 你们好！", "D. 大家好！"],
-        correctAnswer: "B. 您好！",
-        explanation: "Dùng '您好！' (nín hǎo) để thể hiện sự kính trọng, lịch sự với người trên, thầy cô giáo."
-      },
-      {
-        id: "hsk1-l1-ex2",
-        type: "multiple_choice",
-        question: "Khi người khác nói '谢谢你！' (Cảm ơn bạn!), bạn nên đáp lại như thế nào?",
-        options: ["A. 再见！", "B. 不客气！", "C. 你好！", "D. 对不起！"],
-        correctAnswer: "B. 不客气！",
-        explanation: "Khi được cảm ơn ('谢谢'), ta đáp lại bằng '不客气！' (Đừng khách sáo / Không có chi)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[1] || [],
   },
   // ==========================================================================
   // LESSON 2: 我叫李文 (Tôi tên là Lý Văn)
@@ -319,25 +303,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l2-w14", "hanzi": "我", "pinyin": "wǒ", "hanViet": "ngã", "vietnamese": "tôi, mình, tớ", "hskLevel": 1, "radical": "戈", "strokeCount": 7, "example": "我叫李文。", "exampleTranslation": "Tôi tên là Lý Văn.", "tags": ["Bài 2", "Đại từ"]},
       {"id": "hsk1-l2-w15", "hanzi": "也", "pinyin": "yě", "hanViet": "dã", "vietnamese": "cũng (phó từ biểu thị sự tương đồng)", "hskLevel": 1, "radical": "乙", "strokeCount": 3, "example": "我爸爸也在医院工作。", "exampleTranslation": "Bố tôi cũng làm việc ở bệnh viện.", "tags": ["Bài 2", "Phó từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l2-ex1",
-        type: "sentence_scramble",
-        question: "Sắp xếp các từ sau thành câu hoàn chỉnh giới thiệu tên:",
-        scrambleSegments: ["李文", "叫", "我"],
-        options: ["我叫李文", "李文叫我", "叫我李文"],
-        correctAnswer: "我叫李文",
-        explanation: "Trật tự câu giới thiệu tên: Chủ ngữ (我) + Động từ (叫) + Tên riêng (李文)."
-      },
-      {
-        id: "hsk1-l2-ex2",
-        type: "multiple_choice",
-        question: "Khi vô tình va vào ai đó, bạn nói '对不起！', người kia sẽ đáp lại:",
-        options: ["A. 不客气", "B. 没关系", "C. 谢谢", "D. 再见"],
-        correctAnswer: "B. 没关系",
-        explanation: "Đáp lại lời xin lỗi '对不起' là '没关系' (Không sao đâu)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[2] || [],
   },
   // ==========================================================================
   // LESSON 3: 我是中国人 (Tôi là người Trung Quốc)
@@ -473,24 +439,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l3-w21", "hanzi": "中国", "pinyin": "Zhōngguó", "hanViet": "trung quốc", "vietnamese": "nước Trung Quốc", "hskLevel": 1, "radical": "丨", "strokeCount": 12, "example": "我是中国人。", "exampleTranslation": "Mình là người Trung Quốc.", "tags": ["Bài 3", "Danh từ riêng"]},
       {"id": "hsk1-l3-w22", "hanzi": "中文", "pinyin": "Zhōngwén", "hanViet": "trung văn", "vietnamese": "tiếng Trung, văn học tiếng Trung", "hskLevel": 1, "radical": "丨", "strokeCount": 8, "example": "李文是我的中文老师。", "exampleTranslation": "Lý Văn là giáo viên tiếng Trung của tôi.", "tags": ["Bài 3", "Danh từ riêng"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l3-ex1",
-        type: "multiple_choice",
-        question: "Chuyển câu '他是中国人。' thành câu hỏi Có/Không bằng cách thêm từ nào vào cuối câu?",
-        options: ["A. 呢", "B. 吗", "C. 吧", "D. 的"],
-        correctAnswer: "B. 吗",
-        explanation: "Thêm '吗' vào cuối câu khẳng định để tạo câu hỏi nghi vấn đúng sai: 他是中国人吗？"
-      },
-      {
-        id: "hsk1-l3-ex2",
-        type: "fill_blank",
-        question: "Điền trợ từ thích hợp vào chỗ trống: 这是我___中文老师。",
-        options: ["A. 的", "B. 吗", "C. 呢", "D. 个"],
-        correctAnswer: "A. 的",
-        explanation: "Dùng trợ từ kết cấu '的' biểu thị quan hệ sở hữu/xác định: 我的中文老师."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[3] || [],
   },
   // ==========================================================================
   // LESSON 4: 我有两个孩子 (Tôi có hai đứa con)
@@ -659,24 +608,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l4-w34", "hanzi": "一", "pinyin": "yī", "hanViet": "nhất", "vietnamese": "số 1", "hskLevel": 1, "radical": "一", "strokeCount": 1, "example": "一个星期。", "exampleTranslation": "Một tuần.", "tags": ["Bài 4", "Số từ"]},
       {"id": "hsk1-l4-w35", "hanzi": "有", "pinyin": "yǒu", "hanViet": "hữu", "vietnamese": "có, tồn tại", "hskLevel": 1, "radical": "月", "strokeCount": 6, "example": "我有两个孩子。", "exampleTranslation": "Tôi có hai đứa con.", "tags": ["Bài 4", "Động từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l4-ex1",
-        type: "multiple_choice",
-        question: "Điền từ thích hợp vào chỗ trống để nói 'Tôi có hai người con': 我有___个孩子。",
-        options: ["A. 二", "B. 两", "C. 几", "D. 多少"],
-        correctAnswer: "B. 两",
-        explanation: "Đứng trước lượng từ '个' để chỉ số lượng 2, bắt buộc dùng '两' (liǎng gè)."
-      },
-      {
-        id: "hsk1-l4-ex2",
-        type: "multiple_choice",
-        question: "Câu phủ định của '我有哥哥。' (Tôi có anh trai) là:",
-        options: ["A. 我不有哥哥。", "B. 我没有哥哥。", "C. 我不哥哥。", "D. 我没哥哥有。"],
-        correctAnswer: "B. 我没有哥哥。",
-        explanation: "Phủ định của '有' bắt buộc là '没有' (méiyǒu)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[4] || [],
   },
   // ==========================================================================
   // LESSON 5: 今天我休息 (Hôm nay tôi nghỉ ngơi)
@@ -819,24 +751,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l5-w21", "hanzi": "做", "pinyin": "zuò", "hanViet": "tác", "vietnamese": "làm, nấu", "hskLevel": 1, "radical": "亻", "strokeCount": 11, "example": "你会做饭吗？", "exampleTranslation": "Bạn biết nấu ăn không?", "tags": ["Bài 5", "Động từ"]},
       {"id": "hsk1-l5-w22", "hanzi": "做饭", "pinyin": "zuò fàn", "hanViet": "tác phạn", "vietnamese": "nấu cơm, nấu ăn", "hskLevel": 1, "radical": "亻", "strokeCount": 18, "example": "妈妈在厨房做饭呢。", "exampleTranslation": "Mẹ đang nấu cơm trong bếp.", "tags": ["Bài 5", "Động từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l5-ex1",
-        type: "multiple_choice",
-        question: "Hỏi 'Hôm nay thứ mấy?', ta nói:",
-        options: ["A. 今天几号？", "B. 今天星期几？", "C. 今天几月？", "D. 今天多少号？"],
-        correctAnswer: "B. 今天星期几？",
-        explanation: "Hỏi thứ trong tuần dùng '星期几' (xīngqī jǐ). Còn '几号' dùng hỏi ngày trong tháng."
-      },
-      {
-        id: "hsk1-l5-ex2",
-        type: "fill_blank",
-        question: "Điền từ phủ định thích hợp: 我___会做饭。(Tôi không biết nấu ăn)",
-        options: ["A. 没", "B. 不", "C. 别", "D. 无"],
-        correctAnswer: "B. 不",
-        explanation: "Phủ định của động từ năng nguyện '会' luôn là '不会' (bú huì)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[5] || [],
   },
   // ==========================================================================
   // LESSON 6: 你的手机号是多少？ (Số điện thoại của bạn là bao nhiêu?)
@@ -971,25 +886,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l6-w22", "hanzi": "坐", "pinyin": "zuò", "hanViet": "tọa", "vietnamese": "ngồi, đi (tàu, xe, máy bay)", "hskLevel": 1, "radical": "土", "strokeCount": 7, "example": "我们坐出租车去吧。", "exampleTranslation": "Chúng ta đi xe taxi đi nhé.", "tags": ["Bài 6", "Động từ"]},
       {"id": "hsk1-l6-w23", "hanzi": "西安饭店", "pinyin": "Xī'ān Fàndiàn", "hanViet": "tây an phạn điếm", "vietnamese": "khách sạn/nhà hàng Tây An", "hskLevel": 1, "radical": "覀", "strokeCount": 27, "example": "我们坐出租车去西安饭店。", "exampleTranslation": "Chúng tôi đi taxi đến khách sạn Tây An.", "tags": ["Bài 6", "Danh từ riêng"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l6-ex1",
-        type: "multiple_choice",
-        question: "Hỏi số điện thoại của người khác, ta nói:",
-        options: ["A. 你的手机号是几？", "B. 你的手机号是多少？", "C. 你的手机号怎么？", "D. 你的手机号哪儿？"],
-        correctAnswer: "B. 你的手机号是多少？",
-        explanation: "Hỏi dãy số dài (như số điện thoại, số phòng lớn) dùng '是多少？' (shì duōshao)."
-      },
-      {
-        id: "hsk1-l6-ex2",
-        type: "sentence_scramble",
-        question: "Sắp xếp câu liên động sau: 去 / 买东西 / 超市 / 我",
-        scrambleSegments: ["我", "去超市", "买东西"],
-        options: ["我去超市买东西", "我买东西去超市", "超市我去买东西"],
-        correctAnswer: "我去超市买东西",
-        explanation: "Cấu trúc câu liên động: Chủ ngữ (我) + Đến địa điểm (去超市) + Làm gì (买东西)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[6] || [],
   },
   // ==========================================================================
   // LESSON 7: 我晚上六点半下班 (Buổi tối 6 rưỡi tôi tan làm)
@@ -1151,24 +1048,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l7-w26", "hanzi": "在", "pinyin": "zài", "hanViet": "tại", "vietnamese": "ở, tại, đang (giới từ / phó từ)", "hskLevel": 1, "radical": "土", "strokeCount": 6, "example": "我明天上午在学校学习。", "exampleTranslation": "Sáng mai tôi học ở trường.", "tags": ["Bài 7", "Giới từ / Phó từ"]},
       {"id": "hsk1-l7-w27", "hanzi": "早上", "pinyin": "zǎoshang", "hanViet": "tảo thượng", "vietnamese": "buổi sáng sớm", "hskLevel": 1, "radical": "日", "strokeCount": 9, "example": "我早上七点起床。", "exampleTranslation": "Buổi sáng tôi thức dậy lúc 7 giờ.", "tags": ["Bài 7", "Danh từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l7-ex1",
-        type: "multiple_choice",
-        question: "Diễn đạt '6 giờ 30 phút tối' trong tiếng Trung chuẩn là:",
-        options: ["A. 六点半晚上", "B. 晚上六点半", "C. 半六点晚上", "D. 晚上半六点"],
-        correctAnswer: "B. 晚上六点半",
-        explanation: "Quy tắc thời gian lớn trước, nhỏ sau: Buổi (晚上) + Giờ (六点) + Phút/Rưỡi (半)."
-      },
-      {
-        id: "hsk1-l7-ex2",
-        type: "fill_blank",
-        question: "Điền trợ từ thích hợp vào câu rủ bạn bè: 我们去看电影___！",
-        options: ["A. 吗", "B. 呢", "C. 吧", "D. 的"],
-        correctAnswer: "C. 吧",
-        explanation: "Dùng trợ từ ngữ khí '吧' ở cuối câu để gợi ý, rủ rê."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[7] || [],
   },
   // ==========================================================================
   // LESSON 8: 我爸爸也在医院工作 (Bố tôi cũng làm việc ở bệnh viện)
@@ -1304,25 +1184,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l8-w23", "hanzi": "桌子", "pinyin": "zhuōzi", "hanViet": "trác tử", "vietnamese": "cái bàn", "hskLevel": 1, "radical": "木", "strokeCount": 13, "example": "桌子上有一本书。", "exampleTranslation": "Trên bàn có một cuốn sách.", "tags": ["Bài 8", "Danh từ"]},
       {"id": "hsk1-l8-w24", "hanzi": "胡医生", "pinyin": "Hú yīshēng", "hanViet": "hồ y sinh", "vietnamese": "bác sĩ Hồ", "hskLevel": 1, "radical": "月", "strokeCount": 21, "example": "胡医生是北京人。", "exampleTranslation": "Bác sĩ Hồ là người Bắc Kinh.", "tags": ["Bài 8", "Danh từ riêng"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l8-ex1",
-        type: "sentence_scramble",
-        question: "Sắp xếp các từ sau thành câu đúng ngữ pháp: 在 / 工作 / 爸爸 / 我 / 医院",
-        scrambleSegments: ["我爸爸", "在医院", "工作"],
-        options: ["我爸爸在医院工作", "我爸爸工作在医院", "在医院我爸爸工作"],
-        correctAnswer: "我爸爸在医院工作",
-        explanation: "Quy tắc nơi chốn: Chủ ngữ (我爸爸) + Ở đâu (在医院) + Làm gì (工作)."
-      },
-      {
-        id: "hsk1-l8-ex2",
-        type: "multiple_choice",
-        question: "Để nói 'Bên ngoài phòng', ta nói thế nào trong tiếng Trung?",
-        options: ["A. 外房间", "B. 房间外", "C. 房间在", "D. 房间里"],
-        correctAnswer: "B. 房间外",
-        explanation: "Từ chỉ phương vị đứng sau danh từ: 房间 (phòng) + 外 (ngoài) = 房间外."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[8] || [],
   },
   // ==========================================================================
   // LESSON 9: 我明天上午在学校学习 (Sáng mai tôi học ở trường)
@@ -1463,25 +1325,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l9-w22", "hanzi": "椅子", "pinyin": "yǐzi", "hanViet": "ỷ tử", "vietnamese": "cái ghế", "hskLevel": 1, "radical": "木", "strokeCount": 15, "example": "椅子上有两本书。", "exampleTranslation": "Trên ghế có hai cuốn sách.", "tags": ["Bài 9", "Danh từ"]},
       {"id": "hsk1-l9-w23", "hanzi": "做", "pinyin": "zuò", "hanViet": "tác", "vietnamese": "làm, nấu", "hskLevel": 1, "radical": "亻", "strokeCount": 11, "example": "你会做饭吗？", "exampleTranslation": "Bạn biết nấu ăn không?", "tags": ["Bài 9", "Động từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l9-ex1",
-        type: "sentence_scramble",
-        question: "Sắp xếp câu đúng trật tự thời gian và địa điểm: 在学校 / 我 / 明天上午 / 学习",
-        scrambleSegments: ["我", "明天上午", "在学校", "学习"],
-        options: ["我明天上午在学校学习", "我在学校明天上午学习", "明天上午学习我在学校"],
-        correctAnswer: "我明天上午在学校学习",
-        explanation: "Quy tắc vàng tiếng Trung: Thời gian (明天上午) đứng TRƯỚC địa điểm (在学校)."
-      },
-      {
-        id: "hsk1-l9-ex2",
-        type: "multiple_choice",
-        question: "Để nói 'bài hát thứ nhất', ta dùng:",
-        options: ["A. 一首歌", "B. 第一首歌", "C. 歌第一", "D. 头一首歌"],
-        correctAnswer: "B. 第一首歌",
-        explanation: "Tiền tố chỉ số thứ tự '第': 第 + 一 +  lượng từ 首 + danh từ 歌."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[9] || [],
   },
   // ==========================================================================
   // LESSON 10: 这儿的苹果真便宜！ (Táo ở đây thật rẻ!)
@@ -1624,24 +1468,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l10-w22", "hanzi": "这儿", "pinyin": "zhèr", "hanViet": "giá nhi", "vietnamese": "ở đây, chỗ này", "hskLevel": 1, "radical": "辶", "strokeCount": 9, "example": "这儿的苹果真便宜！", "exampleTranslation": "Táo ở đây thật rẻ!", "tags": ["Bài 10", "Đại từ"]},
       {"id": "hsk1-l10-w23", "hanzi": "这些", "pinyin": "zhèxiē", "hanViet": "giá tỉ", "vietnamese": "những cái này, các thứ này", "hskLevel": 1, "radical": "辶", "strokeCount": 15, "example": "这些书都是我的。", "exampleTranslation": "Những cuốn sách này đều là của tôi.", "tags": ["Bài 10", "Đại từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l10-ex1",
-        type: "multiple_choice",
-        question: "Hỏi giá của một cân táo, câu nào chuẩn nhất?",
-        options: ["A. 苹果几钱？", "B. 苹果怎么钱？", "C. 苹果多少钱一斤？", "D. 苹果什么钱？"],
-        correctAnswer: "C. 苹果多少钱一斤？",
-        explanation: "Hỏi giá tiền trong tiếng Trung dùng '多少钱' (duōshao qián)."
-      },
-      {
-        id: "hsk1-l10-ex2",
-        type: "fill_blank",
-        question: "Chọn phó từ cảm thán: 这儿的水果___便宜！(Hoa quả ở đây thật là rẻ!)",
-        options: ["A. 是", "B. 真", "C. 个", "D. 吗"],
-        correctAnswer: "B. 真",
-        explanation: "'真' (zhēn) đứng trước tính từ biểu thị cảm thán: 真便宜 (thật là rẻ)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[10] || [],
   },
   // ==========================================================================
   // LESSON 11: 我读大学呢 (Tôi đang học đại học đấy)
@@ -1788,24 +1615,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l11-w24", "hanzi": "知道", "pinyin": "zhīdào", "hanViet": "tri đạo", "vietnamese": "biết, hiểu rõ", "hskLevel": 1, "radical": "矢", "strokeCount": 20, "example": "你知道李文的手机号吗？", "exampleTranslation": "Bạn có biết số điện thoại của Lý Văn không?", "tags": ["Bài 11", "Động từ"]},
       {"id": "hsk1-l11-w25", "hanzi": "昨天", "pinyin": "zuótiān", "hanViet": "tạc thiên", "vietnamese": "hôm qua", "hskLevel": 1, "radical": "日", "strokeCount": 13, "example": "昨天下雪了。", "exampleTranslation": "Hôm qua tuyết rơi rồi.", "tags": ["Bài 11", "Danh từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l11-ex1",
-        type: "multiple_choice",
-        question: "Câu nào sau đây là câu hỏi chính phản đúng ngữ pháp?",
-        options: ["A. 你去不去学校吗？", "B. 你去不去学校？", "C. 你去学校不？", "D. 你去吗不？"],
-        correctAnswer: "B. 你去不去学校？",
-        explanation: "Câu hỏi chính phản (去不去) không được dùng thêm trợ từ '吗' ở cuối câu."
-      },
-      {
-        id: "hsk1-l11-ex2",
-        type: "fill_blank",
-        question: "Điền từ thích hợp để biểu thị hành động đang tiếp diễn: 他___在睡觉呢。",
-        options: ["A. 正", "B. 了", "C. 过", "D. 都"],
-        correctAnswer: "A. 正",
-        explanation: "Cụm '正在...呢' biểu thị hành động đang diễn ra."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[11] || [],
   },
   // ==========================================================================
   // LESSON 12: 昨天下雪了 (Hôm qua tuyết rơi rồi)
@@ -1942,24 +1752,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l12-w22", "hanzi": "再", "pinyin": "zài", "hanViet": "tái", "vietnamese": "lại, nữa (hành động lặp lại trong tương lai)", "hskLevel": 1, "radical": "冂", "strokeCount": 6, "example": "明天再见！", "exampleTranslation": "Ngày mai gặp lại nhé!", "tags": ["Bài 12", "Phó từ"]},
       {"id": "hsk1-l12-w23", "hanzi": "这里", "pinyin": "zhèlǐ", "hanViet": "giá lý", "vietnamese": "ở đây, chỗ này (đồng nghĩa 这儿)", "hskLevel": 1, "radical": "辶", "strokeCount": 14, "example": "这里的天气真好。", "exampleTranslation": "Thời tiết ở đây thật đẹp.", "tags": ["Bài 12", "Đại từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l12-ex1",
-        type: "multiple_choice",
-        question: "Để cảm thán 'Trời lạnh quá!', câu nào chuẩn nhất?",
-        options: ["A. 天气很大冷。", "B. 天气太冷了！", "C. 天气太冷吗？", "D. 天气了太冷。"],
-        correctAnswer: "B. 天气太冷了！",
-        explanation: "Cấu trúc cảm thán chuẩn: '太 + Tính từ + 了' (太冷了)."
-      },
-      {
-        id: "hsk1-l12-ex2",
-        type: "fill_blank",
-        question: "Điền từ vào chỗ trống: 昨天___雪了。(Hôm qua có tuyết rơi rồi)",
-        options: ["A. 上", "B. 下", "C. 出", "D. 来"],
-        correctAnswer: "B. 下",
-        explanation: "Rơi tuyết, rơi mưa trong tiếng Trung dùng động từ '下' (下雪, 下雨)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[12] || [],
   },
   // ==========================================================================
   // LESSON 13: 请给我一杯茶 (Xin cho tôi một tách trà)
@@ -2092,25 +1885,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l13-w19", "hanzi": "这个", "pinyin": "zhège", "hanViet": "giá cá", "vietnamese": "cái này, người này", "hskLevel": 1, "radical": "辶", "strokeCount": 10, "example": "这个苹果真大！", "exampleTranslation": "Quả táo này to thật!", "tags": ["Bài 13", "Đại từ"]},
       {"id": "hsk1-l13-w20", "hanzi": "坐", "pinyin": "zuò", "hanViet": "tọa", "vietnamese": "ngồi, đi (tàu, xe, máy bay)", "hskLevel": 1, "radical": "土", "strokeCount": 7, "example": "我们坐出租车去吧。", "exampleTranslation": "Chúng ta đi xe taxi đi nhé.", "tags": ["Bài 13", "Động từ"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l13-ex1",
-        type: "sentence_scramble",
-        question: "Sắp xếp câu hai tân ngữ sau: 一杯茶 / 请 / 我 / 给",
-        scrambleSegments: ["请", "给我", "一杯茶"],
-        options: ["请给我一杯茶", "请一杯茶给我", "给我请一杯茶"],
-        correctAnswer: "请给我一杯茶",
-        explanation: "Cấu trúc hai tân ngữ: Động từ (给) + Tân ngữ người (我) + Tân ngữ vật (一杯茶)."
-      },
-      {
-        id: "hsk1-l13-ex2",
-        type: "multiple_choice",
-        question: "Để xin phép ai đó xem thử đồ vật một cách lịch sự, bạn nói:",
-        options: ["A. 我看一下。", "B. 我看了一点儿。", "C. 我看太好了。", "D. 我看不到。"],
-        correctAnswer: "A. 我看一下。",
-        explanation: "Cấu trúc 'Động từ + 一下' biểu thị làm thử động tác trong thời gian ngắn: 看一下 (xem một chút)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[13] || [],
   },
   // ==========================================================================
   // LESSON 14: 我看了一个电影 (Tôi đã xem một bộ phim)
@@ -2256,25 +2031,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l14-w26", "hanzi": "汉语", "pinyin": "Hànyǔ", "hanViet": "hán ngữ", "vietnamese": "tiếng Hán, tiếng Trung", "hskLevel": 1, "radical": "氵", "strokeCount": 23, "example": "他在大学学习汉语。", "exampleTranslation": "Anh ấy học tiếng Trung ở trường đại học.", "tags": ["Bài 14", "Danh từ riêng"]},
       {"id": "hsk1-l14-w27", "hanzi": "汉字", "pinyin": "Hànzì", "hanViet": "hán tự", "vietnamese": "chữ Hán", "hskLevel": 1, "radical": "氵", "strokeCount": 11, "example": "汉字很有意思。", "exampleTranslation": "Chữ Hán rất thú vị.", "tags": ["Bài 14", "Danh từ riêng"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l14-ex1",
-        type: "fill_blank",
-        question: "Điền trợ từ thích hợp vào câu diễn đạt hành động đã làm: 我看___一个电影。",
-        options: ["A. 的", "B. 了", "C. 呢", "D. 吧"],
-        correctAnswer: "B. 了",
-        explanation: "Trợ từ động thái '了' đứng sau động từ (看了) biểu thị hành động xem đã diễn ra."
-      },
-      {
-        id: "hsk1-l14-ex2",
-        type: "sentence_scramble",
-        question: "Sắp xếp câu dùng phó từ phạm vi '都': 都是 / 我们 / 中学生",
-        scrambleSegments: ["我们", "都是", "中学生"],
-        options: ["我们都是中学生", "都是我们中学生", "中学生我们都是"],
-        correctAnswer: "Chúng tôi đều là học sinh trung học",
-        explanation: "Phó từ '都' đứng trước vị ngữ: 我们 (Chủ ngữ) + 都是 (Phó từ + Động từ) + 中学生 (Tân ngữ)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[14] || [],
   },
   // ==========================================================================
   // LESSON 15: 大兴机场见！ (Hẹn gặp ở sân bay Đại Hưng!)
@@ -2395,24 +2152,7 @@ export const NEW_HSK1_FULL_LESSONS: DetailedTextbookLesson[] = [
       {"id": "hsk1-l15-w19", "hanzi": "大兴机场", "pinyin": "Dàxīng Jīchǎng", "hanViet": "đại hưng cơ trường", "vietnamese": "Sân bay Quốc tế Đại Hưng", "hskLevel": 1, "radical": "大", "strokeCount": 22, "example": "大兴机场见！", "exampleTranslation": "Hẹn gặp ở sân bay Đại Hưng nhé!", "tags": ["Bài 15", "Danh từ riêng"]},
       {"id": "hsk1-l15-w20", "hanzi": "西安", "pinyin": "Xī'ān", "hanViet": "tây an", "vietnamese": "thành phố Tây An", "hskLevel": 1, "radical": "覀", "strokeCount": 12, "example": "我想去西安旅游。", "exampleTranslation": "Tôi muốn đi du lịch Tây An.", "tags": ["Bài 15", "Danh từ riêng"]},
     ],
-    exercises: [
-      {
-        id: "hsk1-l15-ex1",
-        type: "multiple_choice",
-        question: "Để nói 'Hẹn gặp ở sân bay Đại Hưng!', câu nào chuẩn nhất?",
-        options: ["A. 见大兴机场！", "B. 大兴机场见！", "C. 去大兴机场！", "D. 大兴机场到了！"],
-        correctAnswer: "B. 大兴机场见！",
-        explanation: "Cấu trúc hẹn gặp: Địa điểm + 见 (Dàxīng Jīchǎng jiàn)."
-      },
-      {
-        id: "hsk1-l15-ex2",
-        type: "fill_blank",
-        question: "Điền liên từ bổ sung thích hợp: 我想去北京，___想去西安。",
-        options: ["A. 还", "B. 吗", "C. 了", "D. 呢"],
-        correctAnswer: "A. 还",
-        explanation: "Câu phức đẳng lập bổ sung: '..., 还想...' (ngoài ra còn muốn...)."
-      },
-    ],
+    exercises: HSK1_LESSON_EXERCISES[15] || [],
     cultureBonus: {
       title: "HSK 1 结业寄语 (Lời chúc tốt nghiệp HSK 1)",
       summary: "Chúc mừng bạn đã hoàn thành trọn vẹn 15 bài học chuẩn Tân HSK 1 (HSK 3.0)!",

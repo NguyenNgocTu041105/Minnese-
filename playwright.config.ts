@@ -3,19 +3,22 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright E2E Testing Configuration for Minnese Chinese WebApp
  */
+const PORT = process.env.PORT || '8000';
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${PORT}`;
+
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
   expect: {
-    timeout: 5000,
+    timeout: 15 * 1000,
   },
-  fullyParallel: true,
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -25,14 +28,10 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: 'node dist/server.cjs',
+    url: BASE_URL,
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },

@@ -135,12 +135,23 @@ export const QUICK_TOPIC_SUGGESTIONS = [
   'Sức khỏe, Thể thao & Giải trí',
 ];
 
+export interface LessonScopePromptContext {
+  lessonNumber: number;
+  titleHanzi: string;
+  titleVietnamese: string;
+  vocabText: string;
+  grammarText: string;
+  scopeDescription?: string;
+  teacherNote?: string;
+}
+
 export interface GoldenPromptBuilderParams {
   level: number;
   format: GoldenPromptFormatKey | string;
   questionCount?: number;
   topic?: string;
   includePinyin?: boolean;
+  lessonContext?: LessonScopePromptContext;
 }
 
 /**
@@ -176,6 +187,19 @@ export function buildGoldenPrompt(params: GoldenPromptBuilderParams): string {
   const includePinyin = params.includePinyin !== undefined ? params.includePinyin : level <= 3;
 
   const levelMeta = HSK_LEVEL_META[level] || HSK_LEVEL_META[1];
+  const lc = params.lessonContext;
+
+  const vocabTargetLine = lc && lc.vocabText.trim()
+    ? `${lc.vocabText.trim()} (CHỈ sử dụng từ vựng bài học giáo viên đã dạy, KHÔNG lấy tràn lan toàn bộ từ vựng HSK ${level} chưa học)`
+    : levelMeta.vocabTarget;
+
+  const grammarFocusLine = lc && lc.grammarText.trim()
+    ? `${lc.grammarText.trim()} (Bám sát cấu trúc ngữ pháp giáo viên chỉ định)`
+    : levelMeta.grammarFocus;
+
+  const lessonHeaderLine = lc
+    ? `\n- Bài học đang dạy: Bài ${lc.lessonNumber}: ${lc.titleHanzi} (${lc.titleVietnamese})${lc.scopeDescription ? `\n- Phạm vi giới hạn kiến thức: ${lc.scopeDescription}` : ''}${lc.teacherNote ? `\n- Yêu cầu riêng của giáo viên: ${lc.teacherNote}` : ''}`
+    : '';
 
   const pinyinInstruction = includePinyin
     ? 'Yêu cầu phiên âm: BẮT BUỘC có phiên âm Pinyin chuẩn thanh điệu kèm trong dấu ngoặc đơn sau câu chữ Hán.'
@@ -186,9 +210,9 @@ export function buildGoldenPrompt(params: GoldenPromptBuilderParams): string {
   switch (formatKey) {
     case 'reading_mcq': {
       return `Bạn là Chuyên gia Khảo thí Hán ngữ Quốc tế chuẩn HSK 3.0.
-Hãy biên soạn ${questionCount} câu hỏi trắc nghiệm Đọc hiểu tiếng Trung trình độ HSK ${level}.
-- Khung từ vựng mục tiêu: ${levelMeta.vocabTarget}
-- Điểm ngữ pháp trọng tâm: ${levelMeta.grammarFocus}
+Hãy biên soạn ${questionCount} câu hỏi trắc nghiệm Đọc hiểu tiếng Trung trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
@@ -207,8 +231,9 @@ Câu 2: [A/B/C/D]. Giải thích: ...`;
 
     case 'listening_dialogue': {
       return `Bạn là Chuyên gia Biên soạn Đề thi Nghe hiểu HSK 3.0.
-Hãy tạo ${questionCount} câu hỏi Nghe hiểu hội thoại hai nhân vật Nam (男) và Nữ (女) trình độ HSK ${level}.
-- Khung từ vựng mục tiêu: ${levelMeta.vocabTarget}
+Hãy tạo ${questionCount} câu hỏi Nghe hiểu hội thoại hai nhân vật Nam (男) và Nữ (女) trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
@@ -233,8 +258,9 @@ Câu 2: [A/B/C/D]. Giải thích: ...`;
       const optionLetters = ['A', 'B', 'C', 'D', 'E'].slice(0, Math.min(Math.max(questionCount, 3), 5));
       const poolCount = optionLetters.length;
       return `Bạn là Giáo viên Khảo thí Tiếng Trung HSK.
-Hãy biên soạn bài tập ghép nối hội thoại chuẩn HSK ${level} gồm ${poolCount} câu ngữ cảnh và ${poolCount} phương án đối đáp lựa chọn A đến ${optionLetters[optionLetters.length - 1]} (mỗi phương án chỉ dùng một lần).
-- Khung từ vựng mục tiêu: ${levelMeta.vocabTarget}
+Hãy biên soạn bài tập ghép nối hội thoại chuẩn HSK ${level} gồm ${poolCount} câu ngữ cảnh và ${poolCount} phương án đối đáp lựa chọn A đến ${optionLetters[optionLetters.length - 1]} (mỗi phương án chỉ dùng một lần).${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
@@ -253,9 +279,9 @@ ${Array.from({ length: poolCount }, (_, i) => `Câu ${i + 1}: [${optionLetters.j
 
     case 'fill_in_blank': {
       return `Bạn là Chuyên gia Ngữ pháp Hán ngữ HSK 3.0.
-Hãy tạo ${questionCount} câu hỏi bài tập điền từ vào chỗ trống cho trình độ HSK ${level}.
-- Khung từ vựng mục tiêu: ${levelMeta.vocabTarget}
-- Điểm ngữ pháp trọng tâm: ${levelMeta.grammarFocus}
+Hãy tạo ${questionCount} câu hỏi bài tập điền từ vào chỗ trống cho trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
@@ -276,8 +302,9 @@ Câu 2: [A/B/C/D]. Giải thích: ...`;
 
     case 'true_false': {
       return `Bạn là Chuyên gia Khảo thí Hán ngữ Quốc tế HSK 3.0.
-Hãy biên soạn ${questionCount} câu bài tập Đọc hiểu Đúng / Sai trình độ HSK ${level}.
-- Khung từ vựng mục tiêu: ${levelMeta.vocabTarget}
+Hãy biên soạn ${questionCount} câu bài tập Đọc hiểu Đúng / Sai trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
@@ -294,8 +321,9 @@ Câu 2: [A hoặc B]. Giải thích: ...`;
 
     case 'json_strict': {
       return `Bạn là API tạo dữ liệu đề thi HSK 3.0 cho nền tảng MinNese.
-Hãy tạo ${questionCount} câu hỏi HSK ${level} chất lượng cao và trả về DUY NHẤT một khối mã JSON hợp lệ (không kèm lời chào hay giải thích ngoài mã JSON):
-- Khung từ vựng: ${levelMeta.vocabTarget}
+Hãy tạo ${questionCount} câu hỏi HSK ${level} chất lượng cao và trả về DUY NHẤT một khối mã JSON hợp lệ (không kèm lời chào hay giải thích ngoài mã JSON):${lessonHeaderLine}
+- Khung từ vựng: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
@@ -323,6 +351,7 @@ export interface GoldenPromptLibraryModalProps {
   onClose: () => void;
   initialLevel?: number;
   initialFormat?: GoldenPromptFormatKey | string;
+  lessonContext?: LessonScopePromptContext;
   onApplyToEditor?: (promptText: string) => void;
 }
 
@@ -331,6 +360,7 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
   onClose,
   initialLevel = 1,
   initialFormat = 'reading_mcq',
+  lessonContext,
   onApplyToEditor,
 }) => {
   const [selectedLevel, setSelectedLevel] = useState<number>(initialLevel);
@@ -344,7 +374,13 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
     return 'reading_mcq';
   });
   const [questionCount, setQuestionCount] = useState<number>(5);
-  const [topic, setTopic] = useState<string>('Đời sống hàng ngày, gia đình, công việc, du lịch');
+  const [topic, setTopic] = useState<string>(() =>
+    lessonContext
+      ? `Bài ${lessonContext.lessonNumber}: ${lessonContext.titleHanzi} (${lessonContext.titleVietnamese})`
+      : 'Đời sống hàng ngày, gia đình, công việc, du lịch'
+  );
+  const [customVocabText, setCustomVocabText] = useState<string>(() => lessonContext?.vocabText || '');
+  const [customGrammarText, setCustomGrammarText] = useState<string>(() => lessonContext?.grammarText || '');
   const [includePinyin, setIncludePinyin] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -354,9 +390,14 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
       if (initialLevel && initialLevel >= 1 && initialLevel <= 6) {
         setSelectedLevel(initialLevel);
       }
+      if (lessonContext) {
+        setTopic(`Bài ${lessonContext.lessonNumber}: ${lessonContext.titleHanzi} (${lessonContext.titleVietnamese})`);
+        setCustomVocabText(lessonContext.vocabText || '');
+        setCustomGrammarText(lessonContext.grammarText || '');
+      }
       setCopied(false);
     }
-  }, [isOpen, initialLevel]);
+  }, [isOpen, initialLevel, lessonContext]);
 
   // Adjust pinyin default when level changes (HSK 1-3 defaults to true, HSK 4-6 defaults to false)
   const handleLevelChange = useCallback((level: number) => {
@@ -376,8 +417,15 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
       questionCount,
       topic,
       includePinyin,
+      lessonContext: lessonContext
+        ? {
+            ...lessonContext,
+            vocabText: customVocabText,
+            grammarText: customGrammarText,
+          }
+        : undefined,
     });
-  }, [selectedLevel, selectedFormat, questionCount, topic, includePinyin]);
+  }, [selectedLevel, selectedFormat, questionCount, topic, includePinyin, lessonContext, customVocabText, customGrammarText]);
 
   // Handle clipboard copy
   const handleCopyPrompt = async () => {
@@ -632,6 +680,35 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
                 </button>
               ))}
             </div>
+
+            {lessonContext && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[var(--color-border)]">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-[var(--color-primary)]">
+                    Từ vựng bài học muốn kiểm tra (Giáo viên tự chọn / sửa):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customVocabText}
+                    onChange={(e) => setCustomVocabText(e.target.value)}
+                    placeholder="Nhập các từ vựng bài học muốn đưa vào đề..."
+                    className="w-full p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-primary)]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-[var(--color-primary)]">
+                    Cấu trúc ngữ pháp bài học muốn kiểm tra (Giáo viên tự chọn / sửa):
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customGrammarText}
+                    onChange={(e) => setCustomGrammarText(e.target.value)}
+                    placeholder="Nhập các cấu trúc ngữ pháp bài học muốn xoáy sâu..."
+                    className="w-full p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-primary)]"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 4: Live Prompt Preview */}

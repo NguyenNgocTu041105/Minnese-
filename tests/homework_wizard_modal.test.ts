@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   getCurriculumLessonsForLevel,
   synthesizeLessonQuestions,
+  buildHomeworkLessonSystemPrompt,
   CORE_EXERCISE_TYPES,
   DIFFICULTY_LEVELS,
 } from '../src/components/Admin/HomeworkWizardModal';
+import { buildGoldenPrompt } from '../src/components/Admin/GoldenPromptLibraryModal';
 import { EDGE_TTS_VOICES } from '../src/utils/chineseAudio';
 
 describe('HomeworkWizardModal & Curriculum Question Synthesis', () => {
@@ -158,6 +160,63 @@ describe('HomeworkWizardModal & Curriculum Question Synthesis', () => {
       expect(types).toContain('fill_blank');
       expect(types).toContain('listening');
       expect(types).toContain('meaning');
+    });
+  });
+
+  describe('6. Lesson-Scoped Teacher-Controlled System Prompt & Golden Prompt Integration', () => {
+    it('should build a lesson-scoped System Prompt using only the teacher-selected vocabulary and grammar structures', () => {
+      const prompt = buildHomeworkLessonSystemPrompt({
+        level: 2,
+        lessonNumber: 3,
+        titleHanzi: '左边那个红色的是我的',
+        titleVietnamese: 'Cái màu đỏ bên trái kia là của tôi',
+        vocabItems: [
+          { hanzi: '旁边', pinyin: 'pángbiān', vietnamese: 'bên cạnh' },
+          { hanzi: '红色', pinyin: 'hóngsè', vietnamese: 'màu đỏ' },
+        ],
+        grammarItems: [
+          { title: 'Cụm chữ 的', explanation: 'Danh từ hóa cụm tính từ/động từ + 的' },
+        ],
+        scopeMode: 'custom_only',
+        templateKey: 'mixed_homework',
+        questionCount: 8,
+        difficultyLabel: 'Chuẩn lớp học (Medium)',
+        teacherNote: 'Tập trung phân biệt 旁边 và 左边 trong phòng học.',
+      });
+
+      expect(prompt).toContain('Bài 3: 左边那个红色的是我的');
+      expect(prompt).toContain('旁边 (pángbiān - bên cạnh)');
+      expect(prompt).toContain('红色 (hóngsè - màu đỏ)');
+      expect(prompt).toContain('Cụm chữ 的');
+      expect(prompt).toContain('CHỈ TẬP TRUNG 100% vào đúng danh sách từ vựng và cấu trúc ngữ pháp giáo viên đã chỉ định');
+      expect(prompt).toContain('Tập trung phân biệt 旁边 và 左边 trong phòng học.');
+      expect(prompt).toContain('DANH SÁCH TỪ VỰNG BẮT BUỘC ĐƯA VÀO ĐỀ (DO GIÁO VIÊN CHỌN / BỔ SUNG)');
+    });
+
+    it('should inject lessonContext into GoldenPromptLibraryModal buildGoldenPrompt instead of whole-level vocabulary', () => {
+      const lessonPrompt = buildGoldenPrompt({
+        level: 3,
+        format: 'fill_in_blank',
+        questionCount: 5,
+        topic: 'Bài 4: Cô ấy luôn cười nói với khách hàng',
+        includePinyin: true,
+        lessonContext: {
+          lessonNumber: 4,
+          titleHanzi: '她总是笑着跟客人说话',
+          titleVietnamese: 'Cô ấy luôn cười nói với khách hàng',
+          vocabText: '总是 (zǒngshì: luôn luôn), 客人 (kèrén: khách hàng), 聪明 (cōngming: thông minh)',
+          grammarText: 'Động từ + 着 biểu thị trạng thái đi kèm (V1 + 着 + V2)',
+          scopeDescription: 'Chỉ dùng từ vựng Bài 1 -> Bài 4, cấm dùng từ Bài 5 trở đi.',
+          teacherNote: 'Đặt câu sát tình huống làm việc tại quầy lễ tân.',
+        },
+      });
+
+      expect(lessonPrompt).toContain('Bài 4: 她总是笑着跟客人说话');
+      expect(lessonPrompt).toContain('总是 (zǒngshì: luôn luôn)');
+      expect(lessonPrompt).toContain('Động từ + 着 biểu thị trạng thái đi kèm');
+      expect(lessonPrompt).toContain('Chỉ dùng từ vựng Bài 1 -> Bài 4');
+      expect(lessonPrompt).toContain('Đặt câu sát tình huống làm việc tại quầy lễ tân.');
+      expect(lessonPrompt).toContain('CHỈ sử dụng từ vựng bài học giáo viên đã dạy');
     });
   });
 });

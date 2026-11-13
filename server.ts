@@ -1079,17 +1079,25 @@ Trả về DUY NHẤT một JSON Array hợp lệ chứa đúng ${targetCount} c
       grammarPoints = [],
       count = 10,
       practiceMode = 'comprehensive',
+      customSystemPrompt = '',
+      scopeMode = 'strict_lesson',
+      teacherNote = '',
     } = req.body;
 
     const targetCount = Math.min(20, Math.max(5, Number(count) || 10));
     const gemini = getGeminiClient();
 
     const vocabSummary = Array.isArray(vocabulary)
-      ? vocabulary.slice(0, 25).map((v: any) => `${v.hanzi} (${v.pinyin} - ${v.vietnamese || v.english || ''})`).join(', ')
+      ? vocabulary.slice(0, 35).map((v: any) => `${v.hanzi} (${v.pinyin} - ${v.vietnamese || v.english || ''})`).join(', ')
       : '';
     const grammarSummary = Array.isArray(grammarPoints)
       ? grammarPoints.map((g: any) => `${g.title}: ${g.explanation}`).join('; ')
       : '';
+    const scopeRuleDescription = scopeMode === 'custom_only'
+      ? 'CHỈ SỬ DỤNG 100% danh sách Từ vựng & Cấu trúc ngữ pháp do Giáo viên chỉ định ở trên. Tuyệt đối không tự ý thêm từ ngoài danh sách.'
+      : scopeMode === 'cumulative'
+        ? `Chỉ sử dụng từ vựng và ngữ pháp lũy tiến từ Bài 1 đến Bài ${lessonNumber} (HSK ${hskLevel}). Tuyệt đối không dùng từ của các bài học chưa dạy (từ Bài ${Number(lessonNumber) + 1} trở đi).`
+        : `Bám sát trọng tâm Bài ${lessonNumber}: "${titleHanzi}". Tuyệt đối không dùng từ vựng hoặc cấu trúc ngữ pháp của các bài sau chưa học.`;
 
     // Smart algorithmic fallback generator for guaranteed offline resilience
     const generateFallbackLessonExercises = () => {
@@ -1225,14 +1233,22 @@ Trả về DUY NHẤT một JSON Array hợp lệ chứa đúng ${targetCount} c
     }
 
     try {
+      const customPromptBlock = customSystemPrompt && String(customSystemPrompt).trim()
+        ? `\n[CHỈ ĐỊNH SYSTEM PROMPT TÙY CHỈNH CỦA GIÁO VIÊN DẠY LỚP NÀY]:\n${String(customSystemPrompt).trim()}\n`
+        : '';
+      const teacherNoteBlock = teacherNote && String(teacherNote).trim()
+        ? `\n- Ghi chú riêng của Giáo viên: ${String(teacherNote).trim()}`
+        : '';
+
       const prompt = `Bạn là Chuyên gia Khảo thí Ngữ văn Hán ngữ New HSK (Trình độ New HSK ${hskLevel} chuẩn 3.0) và Giảng viên tiếng Trung sư phạm cao cấp.
-Nhiệm vụ của bạn: Hãy biên soạn chính xác ${targetCount} câu bài tập luyện tập chuyên sâu cho Bài ${lessonNumber}: "${titleHanzi}" (${titleVietnamese}) thuộc giáo trình New HSK ${hskLevel}.
+Nhiệm vụ của bạn: Hãy biên soạn chính xác ${targetCount} câu bài tập về nhà chuyên sâu cho Bài ${lessonNumber}: "${titleHanzi}" (${titleVietnamese}) thuộc giáo trình New HSK ${hskLevel}.
 
-Thông tin bài học:
-- Từ vựng trọng tâm: ${vocabSummary || 'Từ vựng thông dụng bài này'}
-- Điểm ngữ pháp bài này: ${grammarSummary || 'Mẫu câu và cấu trúc trọng tâm của bài'}
-- Chế độ luyện tập yêu cầu: ${practiceMode}
-
+Thông tin bài học & Quyền tự chủ của Giáo viên (KHÁC VỚI ĐỀ THI TOÀN CẤP HSK):
+- Từ vựng trọng tâm do Giáo viên chọn: ${vocabSummary || 'Từ vựng thông dụng bài này'}
+- Điểm ngữ pháp & Cấu trúc câu do Giáo viên chọn: ${grammarSummary || 'Mẫu câu và cấu trúc trọng tâm của bài'}
+- Quy tắc giới hạn phạm vi bài học: ${scopeRuleDescription}
+- Chế độ luyện tập yêu cầu: ${practiceMode}${teacherNoteBlock}
+${customPromptBlock}
 YÊU CẦU ĐẶC BIỆT VỀ ĐA DẠNG HÓA DẠNG BÀI TẬP:
 Hãy phân bổ đều ${targetCount} câu hỏi qua các dạng bài tập thực tiễn sau:
 1. "sentence_scramble": Sắp xếp các cụm từ xáo trộn thành câu đúng ngữ pháp tiếng Trung (cung cấp mảng scrambleSegments gồm các mảnh từ).

@@ -44,6 +44,8 @@ import {
 import {
   GoldenPromptLibraryModal,
   GoldenPromptFormatKey,
+  buildGoldenPrompt,
+  LessonScopePromptContext,
 } from './GoldenPromptLibraryModal';
 import {
   NEW_HSK1_FULL_LESSONS,
@@ -418,6 +420,124 @@ export function synthesizeLessonQuestions(
   return questions.slice(0, count);
 }
 
+export type HomeworkScopeMode = 'strict_lesson' | 'cumulative' | 'custom_only';
+export type HomeworkPromptTemplateKey =
+  | 'mixed_homework'
+  | 'reading_mcq'
+  | 'fill_in_blank'
+  | 'listening_dialogue'
+  | 'dialogue_matching'
+  | 'json_strict';
+
+export interface HomeworkLessonPromptOptions {
+  level: number;
+  lessonNumber: number;
+  titleHanzi: string;
+  titleVietnamese: string;
+  vocabItems: Array<{ hanzi: string; pinyin?: string; vietnamese?: string }>;
+  grammarItems: Array<{ title: string; explanation?: string }>;
+  scopeMode: HomeworkScopeMode;
+  templateKey: HomeworkPromptTemplateKey;
+  questionCount: number;
+  difficultyLabel: string;
+  teacherNote?: string;
+  includePinyin?: boolean;
+}
+
+/**
+ * Builds a Lesson-Scoped & Teacher-Controlled System Prompt specifically for Homework Assignments.
+ * Unlike whole-level exam prompts, this strictly constrains vocabulary and grammar to the exact
+ * lesson(s), words, and sentence patterns chosen or added by the teacher.
+ */
+export function buildHomeworkLessonSystemPrompt(opts: HomeworkLessonPromptOptions): string {
+  const vocabFormatted =
+    opts.vocabItems.length > 0
+      ? opts.vocabItems
+          .map((v) =>
+            v.pinyin || v.vietnamese
+              ? `${v.hanzi} (${[v.pinyin, v.vietnamese].filter(Boolean).join(' - ')})`
+              : v.hanzi
+          )
+          .join(', ')
+      : `Từ vựng trọng tâm của Bài ${opts.lessonNumber}`;
+
+  const grammarFormatted =
+    opts.grammarItems.length > 0
+      ? opts.grammarItems
+          .map((g, i) => `${i + 1}. ${g.title}${g.explanation ? ` (${g.explanation})` : ''}`)
+          .join('\n   ')
+      : `Mẫu câu giao tiếp trong Bài ${opts.lessonNumber}`;
+
+  const scopeRuleText =
+    opts.scopeMode === 'custom_only'
+      ? `CHỈ TẬP TRUNG 100% vào đúng danh sách từ vựng và cấu trúc ngữ pháp giáo viên đã chỉ định bên dưới. Tuyệt đối KHÔNG tự ý lấy thêm từ vựng/ngữ pháp lan man của cả cấp độ HSK ${opts.level}.`
+      : opts.scopeMode === 'cumulative'
+      ? `Giới hạn từ vựng & ngữ pháp LŨY TIẾN từ Bài 1 đến Bài ${opts.lessonNumber} (Giáo trình New HSK ${opts.level}), trong đó ưu tiên kiểm tra trực tiếp từ vựng và cấu trúc của Bài ${opts.lessonNumber}. Tuyệt đối CẤM dùng từ vựng thuộc Bài ${opts.lessonNumber + 1} trở đi mà học viên chưa được học.`
+      : `GIỚI HẠN NGHIÊM NGẶT TRONG BÀI HỌC HIỆN TẠI (Bài ${opts.lessonNumber}: ${opts.titleHanzi}). Không sinh tràn lan toàn bộ từ vựng/cấu trúc của cả level HSK ${opts.level}; chỉ dùng từ vựng bài này và các từ cơ bản học viên đã biết.`;
+
+  if (opts.templateKey !== 'mixed_homework') {
+    return buildGoldenPrompt({
+      level: opts.level,
+      format: opts.templateKey,
+      questionCount: opts.questionCount,
+      topic: `Bài ${opts.lessonNumber}: ${opts.titleHanzi} (${opts.titleVietnamese})`,
+      includePinyin: opts.includePinyin ?? opts.level <= 3,
+      lessonContext: {
+        lessonNumber: opts.lessonNumber,
+        titleHanzi: opts.titleHanzi,
+        titleVietnamese: opts.titleVietnamese,
+        vocabText: vocabFormatted,
+        grammarText: grammarFormatted.replace(/\n\s*/g, '; '),
+        scopeDescription: scopeRuleText,
+        teacherNote: opts.teacherNote,
+      },
+    });
+  }
+
+  const pinyinRule =
+    opts.includePinyin ?? opts.level <= 3
+      ? 'BẮT BUỘC kèm phiên âm Pinyin có thanh điệu trong ngoặc đơn sau câu chữ Hán.'
+      : 'Chỉ viết chữ Hán chuẩn, không kèm Pinyin ở câu dẫn.';
+
+  return `Bạn là Giảng viên Tiếng Trung Sư phạm & Chuyên gia Thiết kế Bài tập Về nhà (Giáo trình New HSK ${opts.level}).
+Hãy biên soạn bộ bài tập về nhà gồm ${opts.questionCount} câu hỏi bám sát tiến độ thực tế trên lớp của giáo viên:
+
+1. THÔNG TIN BÀI HỌC & PHẠM VI KIẾN THỨC (DO GIÁO VIÊN QUYẾT ĐỊNH):
+- Bài học vừa giảng dạy: Giáo trình New HSK ${opts.level} — Bài ${opts.lessonNumber}: ${opts.titleHanzi} (${opts.titleVietnamese})
+- Độ khó mục tiêu: ${opts.difficultyLabel}
+- Quy tắc phạm vi kiến thức: ${scopeRuleText}
+- ${pinyinRule}
+
+2. DANH SÁCH TỪ VỰNG BẮT BUỘC ĐƯA VÀO ĐỀ (DO GIÁO VIÊN CHỌN / BỔ SUNG):
+   ${vocabFormatted}
+
+3. CẤU TRÚC NGỮ PHÁP & MẪU CÂU BẮT BUỘC KIỂM TRA (DO GIÁO VIÊN CHỌN / BỔ SUNG):
+   ${grammarFormatted}${opts.teacherNote?.trim() ? `\n\n4. YÊU CẦU SƯ PHẠM RIÊNG CỦA GIÁO VIÊN:\n   ${opts.teacherNote.trim()}` : ''}
+
+YÊU CẦU CẤU TRÚC ĐỀ ĐA DẠNG & ĐỊNH DẠNG CHUẨN CANONICAL (ĐỂ HỆ THỐNG BÓC TÁCH TỰ ĐỘNG 100%):
+Hãy kết hợp linh hoạt các dạng bài tập (Trắc nghiệm từ vựng/ngữ pháp, Điền từ vào chỗ trống ____, Đọc hiểu câu/đoạn ngắn, và Nghe hội thoại 男/女/问) xoay quanh đúng từ vựng & cấu trúc trên:
+- Với câu Trắc nghiệm / Điền từ / Đọc hiểu:
+  Câu [STT]: [Câu tiếng Trung có ____ hoặc câu hỏi đọc hiểu]
+  A. [Phương án A]
+  B. [Phương án B]
+  C. [Phương án C]
+  D. [Phương án D]
+- Với câu Nghe hội thoại (nếu có):
+  Câu [STT]:
+  男：[Lời thoại nhân vật Nam dùng từ vựng/cấu trúc bài học]
+  女：[Lời thoại nhân vật Nữ dùng từ vựng/cấu trúc bài học]
+  问：[Câu hỏi kiểm tra thông tin]?
+  A. [Phương án A]
+  B. [Phương án B]
+  C. [Phương án C]
+  D. [Phương án D]
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: [A/B/C/D]. Giải thích: [Dịch nghĩa tiếng Việt, chỉ rõ từ vựng/cấu trúc thuộc Bài ${opts.lessonNumber} được kiểm tra và lý do chọn đáp án].
+Câu 2: [A/B/C/D]. Giải thích: ...`;
+}
+
 export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   isOpen,
   onClose,
@@ -510,10 +630,32 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   const [rawPastedText, setRawPastedText] = useState<string>('');
   const [isParsingRawText, setIsParsingRawText] = useState<boolean>(false);
 
-  // Golden Prompt integration state
+  // Golden Prompt & Lesson-Scoped Teacher Customizer states
   const [isGoldenPromptModalOpen, setIsGoldenPromptModalOpen] = useState<boolean>(false);
   const [appliedGoldenPrompt, setAppliedGoldenPrompt] = useState<string>('');
+  const [isPromptManuallyEdited, setIsPromptManuallyEdited] = useState<boolean>(false);
   const [isGeneratingGoldenPrompt, setIsGeneratingGoldenPrompt] = useState<boolean>(false);
+  const [copiedSystemPrompt, setCopiedSystemPrompt] = useState<boolean>(false);
+
+  // Teacher's customizable Vocabulary & Grammar for the selected lesson
+  const [selectedVocabHanzi, setSelectedVocabHanzi] = useState<string[]>([]);
+  const [customVocabInput, setCustomVocabInput] = useState<string>('');
+  const [selectedGrammarTitles, setSelectedGrammarTitles] = useState<string[]>([]);
+  const [customGrammarInput, setCustomGrammarInput] = useState<string>('');
+  const [lessonScopeMode, setLessonScopeMode] = useState<HomeworkScopeMode>('strict_lesson');
+  const [homeworkPromptTemplate, setHomeworkPromptTemplate] =
+    useState<HomeworkPromptTemplateKey>('mixed_homework');
+  const [teacherPromptNote, setTeacherPromptNote] = useState<string>('');
+  const [includePinyinInPrompt, setIncludePinyinInPrompt] = useState<boolean>(true);
+
+  // Sync teacher's default selected vocabulary & grammar whenever selectedLesson changes
+  useEffect(() => {
+    const defaultVocab = (selectedLesson.vocabulary || []).map((v) => v.hanzi);
+    const defaultGrammar = (selectedLesson.grammarPoints || []).map((g) => g.title);
+    setSelectedVocabHanzi(defaultVocab);
+    setSelectedGrammarTitles(defaultGrammar);
+    setIsPromptManuallyEdited(false);
+  }, [selectedLesson]);
 
   // Exam bank selection
   const [selectedExamId, setSelectedExamId] = useState<string>('');
@@ -534,6 +676,181 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   // TTS Voice state
   const [selectedVoice, setSelectedVoice] = useState<string>('zh-CN-XiaoxiaoNeural');
   const [isPlayingVoicePreview, setIsPlayingVoicePreview] = useState<boolean>(false);
+
+  // Compute effective vocabulary items (teacher-selected lesson words + teacher's custom typed words)
+  const effectiveVocabList = useMemo(() => {
+    const basePool =
+      lessonScopeMode === 'cumulative'
+        ? availableLessons
+            .filter((l) => l.lessonNumber <= selectedLesson.lessonNumber)
+            .flatMap((l) => l.vocabulary || [])
+        : selectedLesson.vocabulary || [];
+
+    const selectedFromLesson = (selectedLesson.vocabulary || []).filter((v) =>
+      selectedVocabHanzi.includes(v.hanzi)
+    );
+
+    // Parse teacher's custom vocabulary input (e.g. "咖啡 (kāfēi - cà phê), 图书馆, 电脑")
+    const customParsed = customVocabInput
+      .split(/[,;，；\n]+/)
+      .map((raw) => raw.trim())
+      .filter(Boolean)
+      .map((item, idx) => {
+        const matchParen = item.match(/^([^\s(（]+)\s*[（(]([^)）]+)[)）]$/);
+        if (matchParen) {
+          const hanzi = matchParen[1].trim();
+          const inside = matchParen[2].split(/[-–—:]/).map((s) => s.trim());
+          return {
+            id: `custom-v-${idx}`,
+            hanzi,
+            pinyin: inside.length > 1 ? inside[0] : '',
+            vietnamese: inside.length > 1 ? inside.slice(1).join(' - ') : inside[0] || hanzi,
+          };
+        }
+        const parts = item.split(/[-–—:]/).map((s) => s.trim());
+        return {
+          id: `custom-v-${idx}`,
+          hanzi: parts[0],
+          pinyin: parts.length > 2 ? parts[1] : '',
+          vietnamese: parts.length > 1 ? parts[parts.length - 1] : `từ vựng giáo viên thêm (${parts[0]})`,
+        };
+      });
+
+    if (lessonScopeMode === 'custom_only') {
+      const combined = [...customParsed, ...selectedFromLesson];
+      return combined.length > 0 ? combined : selectedLesson.vocabulary || [];
+    }
+
+    if (lessonScopeMode === 'cumulative') {
+      const seen = new Set<string>();
+      const merged = [...customParsed, ...selectedFromLesson, ...basePool].filter((w) => {
+        if (!w?.hanzi || seen.has(w.hanzi)) return false;
+        seen.add(w.hanzi);
+        return true;
+      });
+      return merged;
+    }
+
+    const combined = [...customParsed, ...selectedFromLesson];
+    return combined.length > 0 ? combined : selectedLesson.vocabulary || [];
+  }, [
+    selectedLesson,
+    selectedVocabHanzi,
+    customVocabInput,
+    lessonScopeMode,
+    availableLessons,
+  ]);
+
+  // Compute effective grammar structures (teacher-selected lesson grammar + teacher's custom grammar)
+  const effectiveGrammarList = useMemo(() => {
+    const selectedFromLesson = (selectedLesson.grammarPoints || []).filter((g) =>
+      selectedGrammarTitles.includes(g.title)
+    );
+
+    const customGrammarParsed = customGrammarInput
+      .split(/[;\n；]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((raw, idx) => {
+        const [titlePart, ...rest] = raw.split(/[:：-]/);
+        return {
+          id: `custom-g-${idx}`,
+          title: titlePart.trim(),
+          explanation: rest.join(':').trim() || `Cấu trúc ngữ pháp do giáo viên yêu cầu kiểm tra (${raw})`,
+          examples: [
+            {
+              hanzi: titlePart.trim(),
+              pinyin: '',
+              vietnamese: rest.join(':').trim() || raw,
+            },
+          ],
+        };
+      });
+
+    const combined = [...customGrammarParsed, ...selectedFromLesson];
+    return combined.length > 0 ? combined : selectedLesson.grammarPoints || [];
+  }, [selectedLesson, selectedGrammarTitles, customGrammarInput]);
+
+  // Build effective lesson object for algorithmic/AI question generation
+  const effectiveLessonForGeneration = useMemo<DetailedTextbookLesson>(() => {
+    return {
+      ...selectedLesson,
+      vocabulary: effectiveVocabList as any,
+      grammarPoints: effectiveGrammarList as any,
+    };
+  }, [selectedLesson, effectiveVocabList, effectiveGrammarList]);
+
+  // Live auto-generated Lesson-Scoped System Prompt
+  const autoGeneratedLessonPrompt = useMemo(() => {
+    const diffLabel =
+      DIFFICULTY_LEVELS.find((d) => d.key === difficultyLevel)?.label || 'Trung bình (Standard)';
+    return buildHomeworkLessonSystemPrompt({
+      level: targetLevel,
+      lessonNumber: selectedLesson.lessonNumber,
+      titleHanzi: selectedLesson.titleHanzi,
+      titleVietnamese: selectedLesson.titleVietnamese,
+      vocabItems: effectiveVocabList,
+      grammarItems: effectiveGrammarList,
+      scopeMode: lessonScopeMode,
+      templateKey: homeworkPromptTemplate,
+      questionCount,
+      difficultyLabel: diffLabel,
+      teacherNote: teacherPromptNote,
+      includePinyin: includePinyinInPrompt,
+    });
+  }, [
+    targetLevel,
+    selectedLesson,
+    effectiveVocabList,
+    effectiveGrammarList,
+    lessonScopeMode,
+    homeworkPromptTemplate,
+    questionCount,
+    difficultyLevel,
+    teacherPromptNote,
+    includePinyinInPrompt,
+  ]);
+
+  // Keep appliedGoldenPrompt synced with autoGeneratedLessonPrompt unless manually edited by teacher
+  useEffect(() => {
+    if (!isPromptManuallyEdited) {
+      setAppliedGoldenPrompt(autoGeneratedLessonPrompt);
+    }
+  }, [autoGeneratedLessonPrompt, isPromptManuallyEdited]);
+
+  const lessonContextForModal = useMemo<LessonScopePromptContext>(() => {
+    const vocabText = effectiveVocabList
+      .map((v) => `${v.hanzi}${v.vietnamese ? ` (${v.vietnamese})` : ''}`)
+      .join(', ');
+    const grammarText = effectiveGrammarList.map((g) => g.title).join('; ');
+    return {
+      lessonNumber: selectedLesson.lessonNumber,
+      titleHanzi: selectedLesson.titleHanzi,
+      titleVietnamese: selectedLesson.titleVietnamese,
+      vocabText,
+      grammarText,
+      scopeDescription:
+        lessonScopeMode === 'cumulative'
+          ? `Ôn tập lũy tiến từ Bài 1 đến Bài ${selectedLesson.lessonNumber}`
+          : lessonScopeMode === 'custom_only'
+          ? 'Chỉ dùng 100% từ vựng & cấu trúc giáo viên đã chọn'
+          : `Giới hạn trong Bài ${selectedLesson.lessonNumber}: ${selectedLesson.titleHanzi}`,
+      teacherNote: teacherPromptNote,
+    };
+  }, [selectedLesson, effectiveVocabList, effectiveGrammarList, lessonScopeMode, teacherPromptNote]);
+
+  const handleCopySystemPrompt = async () => {
+    const textToCopy = appliedGoldenPrompt || autoGeneratedLessonPrompt;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      }
+      setCopiedSystemPrompt(true);
+      setTimeout(() => setCopiedSystemPrompt(false), 2500);
+    } catch {
+      // Fallback
+    }
+  };
 
   // Loading & Question State
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState<boolean>(false);
@@ -598,8 +915,12 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     setErrorMsg(null);
 
     try {
-      if (questionSource === 'curriculum') {
-        // Attempt backend endpoint /api/gemini/generate-lesson-exercises
+      if (questionSource === 'curriculum' || questionSource === 'golden_prompt') {
+        if (questionSource === 'golden_prompt') {
+          setIsGeneratingGoldenPrompt(true);
+        }
+
+        // Attempt backend endpoint /api/gemini/generate-lesson-exercises with teacher's exact vocab, grammar & custom system prompt
         try {
           const res = await fetch('/api/gemini/generate-lesson-exercises', {
             method: 'POST',
@@ -609,15 +930,20 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
               lessonNumber: selectedLesson.lessonNumber,
               titleHanzi: selectedLesson.titleHanzi,
               titleVietnamese: selectedLesson.titleVietnamese,
-              vocabulary: selectedLesson.vocabulary || [],
-              grammarPoints: selectedLesson.grammarPoints || [],
+              vocabulary: effectiveVocabList,
+              grammarPoints: effectiveGrammarList,
               count: questionCount,
               practiceMode,
+              scopeMode: lessonScopeMode,
+              teacherNote: teacherPromptNote,
+              customSystemPrompt:
+                questionSource === 'golden_prompt'
+                  ? appliedGoldenPrompt || autoGeneratedLessonPrompt
+                  : autoGeneratedLessonPrompt,
             }),
           });
           const data = await res.json();
           if (data.exercises && data.exercises.length > 0) {
-            // Map exercises to QuizQuestion
             const mapped: QuizQuestion[] = data.exercises.map((ex: any, idx: number) => {
               const audioTxt = ex.audioText || ex.hanziPrompt || '';
               return {
@@ -634,12 +960,13 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                 audio_url: `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`,
                 options: ex.options || ['A', 'B', 'C', 'D'],
                 correctAnswer: ex.correctAnswer || (ex.options ? ex.options[0] : 'A'),
-                explanation: ex.explanation || 'Giải thích chuẩn theo giáo trình.',
+                explanation: ex.explanation || 'Giải thích chuẩn theo bài học.',
                 hskLevel: (targetLevel as HSKLevel) || 1,
               };
             });
             setQuestions(mapped);
             setCurrentStep(3);
+            setIsGeneratingGoldenPrompt(false);
             setIsGeneratingQuestions(false);
             return;
           }
@@ -647,9 +974,9 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           console.warn('API generate-lesson-exercises fallback to local synthesis:', apiErr);
         }
 
-        // Guaranteed local algorithmic synthesis fallback
+        // Guaranteed local algorithmic synthesis strictly using teacher's selected & custom vocab/grammar
         const synthetic = synthesizeLessonQuestions(
-          selectedLesson,
+          effectiveLessonForGeneration,
           targetLevel,
           selectedFormats,
           questionCount,
@@ -658,6 +985,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
         );
         setQuestions(synthetic);
         setCurrentStep(3);
+        setIsGeneratingGoldenPrompt(false);
       } else if (questionSource === 'raw_text') {
         if (!rawPastedText.trim()) {
           setErrorMsg('Vui lòng dán văn bản bài tập hoặc tải file tài liệu lên.');
@@ -723,9 +1051,8 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           setQuestions(parsedLocal);
           setCurrentStep(3);
         } else {
-          // If regex couldn't find blocks, synthesize and alert
           const fallbackQ = synthesizeLessonQuestions(
-            selectedLesson,
+            effectiveLessonForGeneration,
             targetLevel,
             selectedFormats,
             questionCount,
@@ -736,48 +1063,6 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           setCurrentStep(3);
         }
         setIsParsingRawText(false);
-      } else if (questionSource === 'golden_prompt') {
-        if (!appliedGoldenPrompt.trim()) {
-          setErrorMsg('Vui lòng chọn Prompt từ Thư viện Chuẩn Vàng hoặc nhập Prompt.');
-          setIsGeneratingQuestions(false);
-          return;
-        }
-
-        setIsGeneratingGoldenPrompt(true);
-        try {
-          const res = await fetch('/api/gemini/generate-quiz', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              topic: appliedGoldenPrompt.slice(0, 300),
-              hskLevel: targetLevel,
-              count: questionCount,
-            }),
-          });
-          const data = await res.json();
-          if (data.questions && data.questions.length > 0) {
-            setQuestions(data.questions);
-            setCurrentStep(3);
-            setIsGeneratingGoldenPrompt(false);
-            setIsGeneratingQuestions(false);
-            return;
-          }
-        } catch (geminiErr) {
-          console.warn('Golden prompt AI generation fallback:', geminiErr);
-        }
-
-        // Fallback synthesis
-        const synFromPrompt = synthesizeLessonQuestions(
-          selectedLesson,
-          targetLevel,
-          selectedFormats,
-          questionCount,
-          difficultyLevel,
-          selectedVoice
-        );
-        setQuestions(synFromPrompt);
-        setCurrentStep(3);
-        setIsGeneratingGoldenPrompt(false);
       } else if (questionSource === 'exam_bank') {
         const found = onlineExams.find((e) => e.id === selectedExamId);
         if (found && found.questions && found.questions.length > 0) {
@@ -813,7 +1098,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     // If questions count is less than target, supplement
     if (updated.length < questionCount) {
       const extra = synthesizeLessonQuestions(
-        selectedLesson,
+        effectiveLessonForGeneration,
         targetLevel,
         selectedFormats,
         questionCount,
@@ -1324,20 +1609,20 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     {
                       key: 'curriculum',
                       label: 'Tạo từ Bài học Giáo trình',
-                      desc: 'Từ vựng & Ngữ pháp bài này',
+                      desc: 'Từ vựng & Cấu trúc bài này',
                       icon: BookOpen,
+                    },
+                    {
+                      key: 'golden_prompt',
+                      label: 'System Prompt Theo Bài Học',
+                      desc: 'Tùy chỉnh từ vựng & cấu trúc ra đề',
+                      icon: Sparkles,
                     },
                     {
                       key: 'raw_text',
                       label: 'Nhập Văn bản / Tài liệu',
                       desc: 'Dán bài tập, file text',
                       icon: FileText,
-                    },
-                    {
-                      key: 'golden_prompt',
-                      label: 'Thư viện Golden Prompt',
-                      desc: 'Bộ Prompt chuẩn khảo thí',
-                      icon: Sparkles,
                     },
                     {
                       key: 'exam_bank',
@@ -1376,50 +1661,223 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                 </div>
               </div>
 
-              {/* Source Mode 1: Curriculum Lesson AI Generator */}
-              {questionSource === 'curriculum' && (
+              {/* Shared Teacher Vocabulary & Grammar Customizer for Curriculum & Golden Prompt */}
+              {(questionSource === 'curriculum' || questionSource === 'golden_prompt') && (
                 <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
                         <BookOpen className="w-4 h-4 text-[var(--color-primary)]" />
-                        <span>Sinh câu hỏi tự động bám sát Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi}</span>
+                        <span>
+                          Quyền Tự Chủ Của Giáo Viên — Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})
+                        </span>
                       </h4>
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">
-                        Hệ thống sẽ tổng hợp từ {selectedLesson.vocabulary?.length || 0} từ vựng và {selectedLesson.grammarPoints?.length || 0} cấu trúc ngữ pháp bài học.
+                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
+                        Khác với đề thi tổng hợp cả level, bài tập về nhà chỉ kiểm tra đúng những từ vựng và cấu trúc ngữ pháp mà giáo viên đã dạy trong bài học hoặc tự chỉ định bên dưới.
                       </p>
                     </div>
                     <span className="text-xs px-2.5 py-1 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold">
-                      HSK {targetLevel}
+                      HSK {targetLevel} • Bài {selectedLesson.lessonNumber}
                     </span>
                   </div>
 
+                  {/* Scope Mode Selector */}
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-[var(--color-text-primary)]">
-                      Chế độ rèn luyện bài học:
+                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
+                      1. Phạm vi kiến thức cho phép khi sinh đề:
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
-                        { key: 'comprehensive', label: 'Toàn diện (Tổng hợp)' },
-                        { key: 'listening', label: 'Luyện Nghe phản xạ' },
-                        { key: 'reading', label: 'Đọc hiểu & Đoạn văn' },
-                        { key: 'grammar', label: 'Ngữ pháp & Điền từ' },
-                      ].map((mode) => (
-                        <button
-                          key={mode.key}
-                          type="button"
-                          onClick={() => setPracticeMode(mode.key as any)}
-                          className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                            practiceMode === mode.key
-                              ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-xs'
-                              : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]'
-                          }`}
-                        >
-                          {mode.label}
-                        </button>
-                      ))}
+                        {
+                          key: 'strict_lesson' as HomeworkScopeMode,
+                          title: `🔒 Chỉ trong Bài ${selectedLesson.lessonNumber}`,
+                          desc: 'Cấm dùng từ vựng ở các bài sau chưa học',
+                        },
+                        {
+                          key: 'cumulative' as HomeworkScopeMode,
+                          title: `📚 Lũy tiến Bài 1 → Bài ${selectedLesson.lessonNumber}`,
+                          desc: 'Ôn tập kết hợp các bài đã dạy từ đầu',
+                        },
+                        {
+                          key: 'custom_only' as HomeworkScopeMode,
+                          title: '🎯 100% Từ & Cấu trúc giáo viên chọn',
+                          desc: 'Chỉ xoáy sâu vào đúng danh sách bên dưới',
+                        },
+                      ].map((sc) => {
+                        const isSelected = lessonScopeMode === sc.key;
+                        return (
+                          <button
+                            key={sc.key}
+                            type="button"
+                            onClick={() => {
+                              setLessonScopeMode(sc.key);
+                              setIsPromptManuallyEdited(false);
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]/40 ring-1 ring-[var(--color-primary)]'
+                                : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/50'
+                            }`}
+                          >
+                            <div className="text-xs font-bold text-[var(--color-text-primary)]">
+                              {sc.title}
+                            </div>
+                            <div className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">
+                              {sc.desc}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
+
+                  {/* Teacher Vocabulary Picker & Custom Input */}
+                  <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-[var(--color-text-primary)]">
+                        2. Từ vựng đưa vào đề ({effectiveVocabList.length} từ đang áp dụng):
+                      </label>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedVocabHanzi((selectedLesson.vocabulary || []).map((v) => v.hanzi));
+                            setIsPromptManuallyEdited(false);
+                          }}
+                          className="text-[var(--color-primary)] font-semibold hover:underline cursor-pointer"
+                        >
+                          Chọn hết từ bài học
+                        </button>
+                        <span className="text-[var(--color-border)]">|</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedVocabHanzi([]);
+                            setIsPromptManuallyEdited(false);
+                          }}
+                          className="text-[var(--color-text-secondary)] hover:text-red-500 cursor-pointer"
+                        >
+                          Bỏ chọn
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      {(selectedLesson.vocabulary || []).map((v) => {
+                        const checked = selectedVocabHanzi.includes(v.hanzi);
+                        return (
+                          <button
+                            key={v.id || v.hanzi}
+                            type="button"
+                            onClick={() => {
+                              setSelectedVocabHanzi((prev) =>
+                                prev.includes(v.hanzi)
+                                  ? prev.filter((item) => item !== v.hanzi)
+                                  : [...prev, v.hanzi]
+                              );
+                              setIsPromptManuallyEdited(false);
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 ${
+                              checked
+                                ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-2xs'
+                                : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <span>{checked ? '✓' : '+'}</span>
+                            <span className="font-bold">{v.hanzi}</span>
+                            <span className="text-[10px] opacity-85">({v.vietnamese})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <input
+                      type="text"
+                      value={customVocabInput}
+                      onChange={(e) => {
+                        setCustomVocabInput(e.target.value);
+                        setIsPromptManuallyEdited(false);
+                      }}
+                      placeholder="➕ Giáo viên tự nhập thêm từ vựng muốn kiểm tra (VD: 咖啡 (kāfēi - cà phê), 图书馆, 电脑)..."
+                      className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                    />
+                  </div>
+
+                  {/* Teacher Grammar Structure Picker & Custom Input */}
+                  <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
+                      3. Cấu trúc ngữ pháp & Mẫu câu muốn kiểm tra ({effectiveGrammarList.length} cấu trúc):
+                    </label>
+                    {(selectedLesson.grammarPoints || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedLesson.grammarPoints || []).map((g) => {
+                          const checked = selectedGrammarTitles.includes(g.title);
+                          return (
+                            <button
+                              key={g.id || g.title}
+                              type="button"
+                              onClick={() => {
+                                setSelectedGrammarTitles((prev) =>
+                                  prev.includes(g.title)
+                                    ? prev.filter((item) => item !== g.title)
+                                    : [...prev, g.title]
+                                );
+                                setIsPromptManuallyEdited(false);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                checked
+                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold'
+                                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60 hover:opacity-100'
+                              }`}
+                            >
+                              <span>{checked ? '✓' : '+'}</span>
+                              <span>{g.title}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <input
+                      type="text"
+                      value={customGrammarInput}
+                      onChange={(e) => {
+                        setCustomGrammarInput(e.target.value);
+                        setIsPromptManuallyEdited(false);
+                      }}
+                      placeholder="➕ Giáo viên tự nhập thêm cấu trúc ngữ pháp / mẫu câu muốn xoáy sâu (cách nhau bằng dấu chấm phẩy ;)..."
+                      className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                    />
+                  </div>
+
+                  {questionSource === 'curriculum' && (
+                    <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]">
+                      <label className="block text-xs font-semibold text-[var(--color-text-primary)]">
+                        4. Trọng tâm rèn luyện bài học:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { key: 'comprehensive', label: 'Toàn diện (Tổng hợp)' },
+                          { key: 'listening', label: 'Luyện Nghe phản xạ' },
+                          { key: 'reading', label: 'Đọc hiểu & Đoạn văn' },
+                          { key: 'grammar', label: 'Ngữ pháp & Điền từ' },
+                        ].map((mode) => (
+                          <button
+                            key={mode.key}
+                            type="button"
+                            onClick={() => setPracticeMode(mode.key as any)}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                              practiceMode === mode.key
+                                ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-xs'
+                                : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]'
+                            }`}
+                          >
+                            {mode.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1468,57 +1926,121 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                 </div>
               )}
 
-              {/* Source Mode 3: Golden Prompt Library Integration */}
+              {/* Source Mode 3: Lesson-Scoped System Prompt & Golden Prompt Studio */}
               {questionSource === 'golden_prompt' && (
-                <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-4">
-                  <div className="flex items-start justify-between">
+                <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
                         <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span>Thư Viện Prompt Chuẩn Vàng Khảo Thí HSK</span>
+                        <span>System Prompt Cá Nhân Hóa Theo Bài Học & Ý Muốn Giáo Viên</span>
                       </h4>
                       <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
-                        Bộ Prompt được chuẩn hóa với cấu trúc Canonical, đảm bảo AI sinh câu hỏi chính xác 100%.
+                        System Prompt được tự động ràng buộc chặt chẽ theo các từ vựng và cấu trúc ngữ pháp của Bài {selectedLesson.lessonNumber} mà giáo viên đã chọn ở trên (không lấy lan man toàn bộ level).
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsGoldenPromptModalOpen(true)}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm hover:opacity-95 transition-all cursor-pointer shrink-0"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      <span>✨ Mở Thư Viện Prompt Chuẩn Vàng</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopySystemPrompt}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{copiedSystemPrompt ? 'Đã chép System Prompt!' : '📋 Sao chép System Prompt'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsGoldenPromptModalOpen(true)}
+                        className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 hover:bg-amber-500/20 transition-all cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>✨ Mở Thư Viện Prompt Chuẩn Vàng</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {appliedGoldenPrompt ? (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
-                        <span className="font-semibold text-[var(--color-text-primary)]">
-                          Prompt đã áp dụng vào bộ tạo đề:
-                        </span>
+                  {/* Prompt Format Template Switcher */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
+                      4. Chọn mẫu cấu trúc System Prompt bài tập:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { key: 'mixed_homework' as HomeworkPromptTemplateKey, label: '✨ Tổng hợp Bài tập về nhà (Khuyên dùng)' },
+                        { key: 'fill_in_blank' as HomeworkPromptTemplateKey, label: 'Điền từ vào chỗ trống (____)' },
+                        { key: 'listening_dialogue' as HomeworkPromptTemplateKey, label: 'Nghe hội thoại (男/女/问)' },
+                        { key: 'reading_mcq' as HomeworkPromptTemplateKey, label: 'Trắc nghiệm Đọc hiểu bài học' },
+                        { key: 'dialogue_matching' as HomeworkPromptTemplateKey, label: 'Ghép nối câu hội thoại' },
+                        { key: 'json_strict' as HomeworkPromptTemplateKey, label: 'JSON Chuẩn HSK' },
+                      ].map((tpl) => {
+                        const active = homeworkPromptTemplate === tpl.key;
+                        return (
+                          <button
+                            key={tpl.key}
+                            type="button"
+                            onClick={() => {
+                              setHomeworkPromptTemplate(tpl.key);
+                              setIsPromptManuallyEdited(false);
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                              active
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                                : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-amber-500/50'
+                            }`}
+                          >
+                            {tpl.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Teacher pedagogical note input */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
+                      5. Ghi chú / Chỉ thị sư phạm riêng của giáo viên vào System Prompt (Tùy chọn):
+                    </label>
+                    <input
+                      type="text"
+                      value={teacherPromptNote}
+                      onChange={(e) => {
+                        setTeacherPromptNote(e.target.value);
+                        setIsPromptManuallyEdited(false);
+                      }}
+                      placeholder="VD: Đặt câu xoay quanh tình huống ở trường học, cài bẫy phân biệt vị trí phó từ..."
+                      className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                    />
+                  </div>
+
+                  {/* Live Editable System Prompt Textarea */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
+                      <span className="font-bold text-[var(--color-text-primary)]">
+                        Nội dung System Prompt (Tự động cập nhật theo Từ vựng & Cấu trúc bài học — Có thể sửa trực tiếp):
+                      </span>
+                      {isPromptManuallyEdited && (
                         <button
                           type="button"
-                          onClick={() => setAppliedGoldenPrompt('')}
-                          className="text-[11px] text-red-500 hover:underline cursor-pointer"
+                          onClick={() => {
+                            setIsPromptManuallyEdited(false);
+                            setAppliedGoldenPrompt(autoGeneratedLessonPrompt);
+                          }}
+                          className="text-[11px] text-[var(--color-primary)] font-semibold hover:underline cursor-pointer"
                         >
-                          Xóa Prompt
+                          🔄 Khôi phục theo Từ vựng & Cấu trúc đã chọn
                         </button>
-                      </div>
-                      <textarea
-                        rows={5}
-                        value={appliedGoldenPrompt}
-                        onChange={(e) => setAppliedGoldenPrompt(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-primary)]"
-                      />
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-4 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-center space-y-2">
-                      <p className="text-xs text-[var(--color-text-secondary)]">
-                        Chưa chọn Prompt Chuẩn Vàng. Hãy nhấn nút &quot;✨ Mở Thư Viện Prompt Chuẩn Vàng&quot; bên trên để chọn định dạng (Đọc hiểu, Nghe đối thoại, Điền từ...).
-                      </p>
-                    </div>
-                  )}
+                    <textarea
+                      rows={8}
+                      value={appliedGoldenPrompt}
+                      onChange={(e) => {
+                        setAppliedGoldenPrompt(e.target.value);
+                        setIsPromptManuallyEdited(true);
+                      }}
+                      className="w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono leading-relaxed focus:outline-none focus:border-[var(--color-primary)]"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -2130,15 +2652,17 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
         </div>
       </div>
 
-      {/* GOLDEN PROMPT LIBRARY MODAL MODAL INTEGRATION */}
+      {/* GOLDEN PROMPT LIBRARY MODAL INTEGRATION (SCOPED TO SELECTED LESSON & TEACHER VOCAB/GRAMMAR) */}
       {isGoldenPromptModalOpen && (
         <GoldenPromptLibraryModal
           isOpen={isGoldenPromptModalOpen}
           onClose={() => setIsGoldenPromptModalOpen(false)}
           initialLevel={targetLevel}
           initialFormat="listening_dialogue"
+          lessonContext={lessonContextForModal}
           onApplyToEditor={(promptText) => {
             setAppliedGoldenPrompt(promptText);
+            setIsPromptManuallyEdited(true);
             setQuestionSource('golden_prompt');
             setIsGoldenPromptModalOpen(false);
           }}

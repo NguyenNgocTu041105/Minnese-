@@ -3390,7 +3390,27 @@ export const QBankAdmin: React.FC = () => {
                     Đọc nội dung từng câu bên dưới rồi phê duyệt hoặc từ chối. Câu đã duyệt sẽ vào Luyện tập.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs">
+                    <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Nguồn AI:</span>
+                    <select
+                      value={schedulerStatus?.preferredProvider || 'auto'}
+                      onChange={(e) =>
+                        handleUpdateSchedulerConfig({
+                          preferredProvider: e.target.value as 'auto' | 'ollama' | 'gemini' | 'groq' | 'deepseek',
+                        })
+                      }
+                      disabled={schedulerActionLoading}
+                      aria-label="Chọn nguồn AI sinh câu hỏi tự động"
+                      className="bg-transparent text-xs font-bold text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+                    >
+                      <option value="auto">Tự động (Waterfall)</option>
+                      <option value="gemini">Gemini</option>
+                      <option value="groq">Groq Cloud</option>
+                      <option value="deepseek">DeepSeek</option>
+                      <option value="ollama">Ollama (Local)</option>
+                    </select>
+                  </div>
                   <button
                     type="button"
                     onClick={handleToggleScheduler}

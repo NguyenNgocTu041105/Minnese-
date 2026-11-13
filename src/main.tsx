@@ -4,8 +4,24 @@ import App from './App.tsx';
 import {ErrorBoundary} from './components/ErrorBoundary.tsx';
 import './index.css';
 
-// Gracefully prevent benign AbortError / WebSocket disconnects from surfacing uncaught errors
+// Auto-update handling: when mobile Chrome restores from background tab (bfcache)
+// or when a new deployment invalidates old lazy-loaded chunks (vite:preloadError)
 if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', () => {
+    if (navigator.onLine) {
+      console.warn('[Minnese] New version detected after deploy. Automatically updating...');
+      window.location.reload();
+    }
+  });
+
+  window.addEventListener('pageshow', (event) => {
+    // Page restored from mobile browser bfcache / suspended background tab
+    if (event.persisted && navigator.onLine) {
+      window.location.reload();
+    }
+  });
+
+  // Gracefully prevent benign AbortError / WebSocket disconnects from surfacing uncaught errors
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
     const msg = (reason && (reason.message || (typeof reason === 'string' ? reason : ''))) || '';

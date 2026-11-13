@@ -3638,11 +3638,24 @@ Return ONLY a JSON object matching this schema:
 
   if (isProduction) {
     if (hasBuiltDist) {
-      app.use(express.static(distPath));
+      // 1. Long-term immutable caching for Vite hashed assets
+      app.use('/assets', express.static(path.join(distPath, 'assets'), {
+        maxAge: '1y',
+        immutable: true,
+      }));
+      // 2. Static files (index: false ensures root / is not cached by default static middleware)
+      app.use(express.static(distPath, { index: false }));
       app.use(express.static(path.join(process.cwd(), 'public')));
-      app.get('*', (req: Request, res: Response) => {
+      // 3. Strict anti-cache headers for index.html: all browsers instantly receive latest deployed assets
+      const serveFreshIndexHtml = (_req: Request, res: Response) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
         res.sendFile(path.join(distPath, 'index.html'));
-      });
+      };
+      app.get('/', serveFreshIndexHtml);
+      app.get('*', serveFreshIndexHtml);
     } else {
       console.warn('[Static] Production mode active but dist/index.html not found. Checked paths:', distCandidates);
       app.get('*', (req: Request, res: Response) => {

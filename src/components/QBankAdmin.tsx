@@ -611,6 +611,40 @@ export function detectCharNoise(q: QbQuestionItem): { hasNoise: boolean; reasons
   };
 }
 
+// Isolated countdown component so 1-second ticks never re-render the 9,000-line QBankAdmin tree
+const SchedulerCountdown = React.memo(
+  ({ nextRunTime, isRunning }: { nextRunTime?: string | null; isRunning?: boolean }) => {
+    const [secLeft, setSecLeft] = useState<number | null>(null);
+
+    useEffect(() => {
+      if (isRunning || !nextRunTime) {
+        setSecLeft(null);
+        return;
+      }
+      const update = () => {
+        const diffMs = new Date(nextRunTime).getTime() - Date.now();
+        setSecLeft(Math.max(0, Math.round(diffMs / 1000)));
+      };
+      update();
+      const timer = setInterval(update, 1000);
+      return () => clearInterval(timer);
+    }, [nextRunTime, isRunning]);
+
+    if (isRunning) {
+      return <span>Đang tự động sinh câu hỏi...</span>;
+    }
+    if (secLeft !== null && secLeft > 0) {
+      return (
+        <span>
+          Lần chạy tự động kế tiếp: trong {Math.floor(secLeft / 60).toString().padStart(2, '0')}:
+          {(secLeft % 60).toString().padStart(2, '0')}
+        </span>
+      );
+    }
+    return <span>Chuẩn bị kích hoạt đợt tiếp theo...</span>;
+  }
+);
+
 export const QBankAdmin: React.FC = () => {
   // Navigation / sub-view state: 'duyet_de' is the first sub-tab
   const [activeSubTab, setActiveSubTab] = useState<'duyet_de' | 'review' | 'generate' | 'import' | 'studio' | 'sync' | 'coverage'>('duyet_de');
@@ -814,23 +848,7 @@ export const QBankAdmin: React.FC = () => {
   const genContinuousLoopActiveRef = useRef<boolean>(false);
   const [genLoopTotalSaved, setGenLoopTotalSaved] = useState<number>(0);
   const [genLoopBatchesDone, setGenLoopBatchesDone] = useState<number>(0);
-  const [schedulerCountdownSec, setSchedulerCountdownSec] = useState<number | null>(null);
   const [dismissedLastError, setDismissedLastError] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (!schedulerStatus?.enabled || !schedulerStatus?.nextRunTime) {
-      setSchedulerCountdownSec(null);
-      return;
-    }
-    const updateCountdown = () => {
-      const diffMs = new Date(schedulerStatus.nextRunTime!).getTime() - Date.now();
-      const sec = Math.max(0, Math.round(diffMs / 1000));
-      setSchedulerCountdownSec(sec);
-    };
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 1000);
-    return () => clearInterval(timer);
-  }, [schedulerStatus?.enabled, schedulerStatus?.nextRunTime]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [genSummary, setGenSummary] = useState<{
@@ -1493,8 +1511,10 @@ export const QBankAdmin: React.FC = () => {
   }, [promptTokenModal]);
 
   // Poll scheduler status & pending questions smoothly while robot is enabled or running
+  // Poll every 4s only while actively running; 15s when idle, and skip state updates if nothing changed
   useEffect(() => {
     if (!schedulerStatus?.enabled && !schedulerStatus?.isRunning) return;
+    const pollMs = schedulerStatus?.isRunning ? 4000 : 15000;
     const interval = setInterval(async () => {
       const res = await safeApiCall<{ status: any }>('/api/qbank/scheduler/status');
       if (res.success && res.data?.status) {
@@ -1505,7 +1525,16 @@ export const QBankAdmin: React.FC = () => {
           nextStatus.generatedToday !== schedulerStatus?.generatedToday ||
           nextStatus.lastBatchId !== schedulerStatus?.lastBatchId;
 
-        setSchedulerStatus(nextStatus);
+        const hasUiChange =
+          hasStateChange ||
+          nextStatus.enabled !== schedulerStatus?.enabled ||
+          nextStatus.preferredProvider !== schedulerStatus?.preferredProvider ||
+          nextStatus.lastError !== schedulerStatus?.lastError ||
+          nextStatus.nextRunTime !== schedulerStatus?.nextRunTime;
+
+        if (hasUiChange) {
+          setSchedulerStatus(nextStatus);
+        }
 
         if (hasStateChange) {
           loadPendingQuestions(undefined, true);
@@ -1524,20 +1553,23 @@ export const QBankAdmin: React.FC = () => {
           }
         }
       }
-    }, 4000);
+    }, pollMs);
     return () => clearInterval(interval);
-  }, [schedulerStatus?.enabled, schedulerStatus?.isRunning, schedulerStatus?.generatedToday, schedulerStatus?.lastBatchId, loadPendingQuestions, loadProgress, loadPoolStats, loadCoverageDashboard]);
+  }, [schedulerStatus?.enabled, schedulerStatus?.isRunning, schedulerStatus?.generatedToday, schedulerStatus?.lastBatchId, schedulerStatus?.preferredProvider, schedulerStatus?.lastError, schedulerStatus?.nextRunTime, loadPendingQuestions, loadProgress, loadPoolStats, loadCoverageDashboard]);
 
-  // Initial fetch
+  // Initial fetch: prioritize primary pending/progress data first, defer secondary analytics by 350ms
   useEffect(() => {
-    loadStats();
-    loadQuestions();
-    loadProgress();
     loadPendingQuestions();
-    loadPoolStats();
+    loadProgress();
+    loadStats();
     loadSchedulerStatus();
-    loadCoverageDashboard();
-    loadBlueprintReport();
+    const secondaryTimer = setTimeout(() => {
+      loadQuestions();
+      loadPoolStats();
+      loadCoverageDashboard();
+      loadBlueprintReport();
+    }, 350);
+    return () => clearTimeout(secondaryTimer);
   }, [loadStats, loadQuestions, loadProgress, loadPendingQuestions, loadPoolStats, loadSchedulerStatus, loadCoverageDashboard, loadBlueprintReport]);
 
   // Total pending count from progress or stats
@@ -3964,13 +3996,10 @@ export const QBankAdmin: React.FC = () => {
                       {schedulerStatus?.enabled ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
                           <Clock className={`w-3 h-3 text-emerald-500 ${schedulerStatus?.isRunning ? 'animate-spin' : ''}`} />
-                          <span>
-                            {schedulerStatus?.isRunning
-                              ? 'Đang tự động sinh câu hỏi...'
-                              : schedulerCountdownSec !== null && schedulerCountdownSec > 0
-                              ? `Lần chạy tự động kế tiếp: trong ${Math.floor(schedulerCountdownSec / 60).toString().padStart(2, '0')}:${(schedulerCountdownSec % 60).toString().padStart(2, '0')}`
-                              : 'Chuẩn bị kích hoạt đợt tiếp theo...'}
-                          </span>
+                          <SchedulerCountdown
+                            nextRunTime={schedulerStatus?.nextRunTime}
+                            isRunning={schedulerStatus?.isRunning}
+                          />
                         </span>
                       ) : (
                         <span className="text-slate-400">Robot đang tạm dừng</span>

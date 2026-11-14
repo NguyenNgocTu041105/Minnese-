@@ -202,6 +202,25 @@ export interface HomeworkWizardModalProps {
 }
 
 /**
+ * Curated authentic Chinese vocabulary fallback bank
+ * Used when a lesson has sparse or hollow vocabulary so students never encounter placeholder distractor text.
+ */
+export const FALLBACK_VOCAB_BANK: TextbookVocabWord[] = [
+  { hanzi: '你好', pinyin: 'nǐ hǎo', vietnamese: 'xin chào' },
+  { hanzi: '谢谢', pinyin: 'xièxie', vietnamese: 'cảm ơn' },
+  { hanzi: '再见', pinyin: 'zàijiàn', vietnamese: 'tạm biệt' },
+  { hanzi: '老师', pinyin: 'lǎoshī', vietnamese: 'thầy cô giáo' },
+  { hanzi: '学生', pinyin: 'xuésheng', vietnamese: 'học sinh' },
+  { hanzi: '朋友', pinyin: 'péngyou', vietnamese: 'bạn bè' },
+  { hanzi: '中国', pinyin: 'Zhōngguó', vietnamese: 'Trung Quốc' },
+  { hanzi: '高兴', pinyin: 'gāoxìng', vietnamese: 'vui vẻ' },
+  { hanzi: '学习', pinyin: 'xuéxí', vietnamese: 'học tập' },
+  { hanzi: '今天', pinyin: 'jīntiān', vietnamese: 'hôm nay' },
+  { hanzi: '明天', pinyin: 'míngtiān', vietnamese: 'ngày mai' },
+  { hanzi: '喜欢', pinyin: 'xǐhuan', vietnamese: 'thích' },
+];
+
+/**
  * High-performance, pedagogical Algorithmic Question Synthesizer
  * Guarantees rich, authentic, 100% offline-resilient questions directly from textbook lesson data.
  */
@@ -225,38 +244,69 @@ export function synthesizeLessonQuestions(
   const activeDifficultyMeta =
     DIFFICULTY_LEVELS.find((d) => d.key === difficulty) || DIFFICULTY_LEVELS[1];
 
-  // Helper to pick random distractor meanings
+  // Derive an enriched curriculum vocabulary pool to provide 100% authentic distractors
+  const curriculumLessons = getCurriculumLessonsForLevel(level);
+  const curriculumVocabPool = curriculumLessons.flatMap((l) => l.vocabulary || []);
+  const effectiveVocabPool =
+    vocab.length > 0
+      ? vocab
+      : curriculumVocabPool.length > 0
+      ? curriculumVocabPool
+      : FALLBACK_VOCAB_BANK;
+
+  // Helper to extract meaning safely across WordItem and TextbookVocabWord
+  const getWordMeaning = (w: { vietnamese?: string; meaning?: string } | { vietnamese?: string }): string => {
+    return ('vietnamese' in w && w.vietnamese) || ('meaning' in w && (w as { meaning?: string }).meaning) || '';
+  };
+
+  // Helper to pick authentic random distractor meanings (never mock strings)
   const getVocabDistractors = (
     targetWord: TextbookVocabWord,
     pool: TextbookVocabWord[],
     needed: number = 3
   ): string[] => {
-    const others = pool
+    const targetMeaning = getWordMeaning(targetWord).trim().toLowerCase();
+    const primary = pool
       .filter((w) => w.hanzi !== targetWord.hanzi)
-      .map((w) => w.vietnamese || w.meaning || 'khác');
-    const shuffled = [...new Set(others)].sort(() => 0.5 - Math.random());
-    const result = shuffled.slice(0, needed);
-    while (result.length < needed) {
-      result.push(`Nghĩa bổ sung ${result.length + 1}`);
-    }
-    return result;
+      .map((w) => getWordMeaning(w).trim())
+      .filter((m) => m && m.toLowerCase() !== targetMeaning);
+
+    const secondary = curriculumVocabPool
+      .filter((w) => w.hanzi !== targetWord.hanzi)
+      .map((w) => getWordMeaning(w).trim())
+      .filter((m) => m && m.toLowerCase() !== targetMeaning);
+
+    const fallback = FALLBACK_VOCAB_BANK
+      .filter((w) => w.hanzi !== targetWord.hanzi)
+      .map((w) => w.vietnamese!)
+      .filter((m) => m.toLowerCase() !== targetMeaning);
+
+    const candidates = [...new Set([...primary, ...secondary, ...fallback])].sort(() => 0.5 - Math.random());
+    return candidates.slice(0, needed);
   };
 
-  // Helper to pick random distractor Hanzi
+  // Helper to pick authentic random distractor Hanzi (never mock strings)
   const getHanziDistractors = (
     targetWord: TextbookVocabWord,
     pool: TextbookVocabWord[],
     needed: number = 3
   ): string[] => {
-    const others = pool
+    const primary = pool
+      .filter((w) => w.hanzi !== targetWord.hanzi)
+      .map((w) => w.hanzi.trim())
+      .filter(Boolean);
+
+    const secondary = curriculumVocabPool
+      .filter((w) => w.hanzi !== targetWord.hanzi)
+      .map((w) => w.hanzi.trim())
+      .filter(Boolean);
+
+    const fallback = FALLBACK_VOCAB_BANK
       .filter((w) => w.hanzi !== targetWord.hanzi)
       .map((w) => w.hanzi);
-    const shuffled = [...new Set(others)].sort(() => 0.5 - Math.random());
-    const result = shuffled.slice(0, needed);
-    while (result.length < needed) {
-      result.push(`词${result.length + 1}`);
-    }
-    return result;
+
+    const candidates = [...new Set([...primary, ...secondary, ...fallback])].sort(() => 0.5 - Math.random());
+    return candidates.slice(0, needed);
   };
 
   // Generate for each selected format
@@ -267,23 +317,25 @@ export function synthesizeLessonQuestions(
     if (fmt === 'mcq') {
       // 1. Multiple Choice (Trắc nghiệm)
       for (let i = 0; i < questionsPerFormat; i++) {
-        const v = vocab[(i + 0) % (vocab.length || 1)] || {
-          hanzi: '学习',
-          pinyin: 'xuéxí',
-          vietnamese: 'học tập',
-        };
-        const correct = v.vietnamese;
-        const distractors = getVocabDistractors(v, vocab, 3);
+        const v =
+          vocab[(i + 0) % (vocab.length || 1)] ||
+          effectiveVocabPool[i % effectiveVocabPool.length] || {
+            hanzi: '学习',
+            pinyin: 'xuéxí',
+            vietnamese: 'học tập',
+          };
+        const correct = getWordMeaning(v) || 'học tập';
+        const distractors = getVocabDistractors(v, effectiveVocabPool, 3);
         const options = [correct, ...distractors].sort(() => 0.5 - Math.random());
 
         questions.push({
           id: `wiz-mcq-${timestamp}-${qIdx++}`,
           type: 'meaning',
           prompt: `Chọn nghĩa tiếng Việt chính xác của từ chữ Hán sau:`,
-          questionChinese: `${v.hanzi} (${v.pinyin})`,
+          questionChinese: `${v.hanzi}${v.pinyin ? ` (${v.pinyin})` : ''}`,
           options,
           correctAnswer: correct,
-          explanation: `Chữ Hán "${v.hanzi}" có phiên âm Pinyin là "${v.pinyin}", mang ý nghĩa là "${v.vietnamese}". Đây là từ vựng trọng tâm trong Bài ${lesson.lessonNumber}.`,
+          explanation: `Chữ Hán "${v.hanzi}" có phiên âm Pinyin là "${v.pinyin || ''}", mang ý nghĩa là "${correct}". Đây là từ vựng trọng tâm trong Bài ${lesson.lessonNumber}.`,
           hskLevel: (level as HSKLevel) || 1,
           usageNotes: `Cấp độ: HSK ${level} • ${activeDifficultyMeta.label}`,
         });
@@ -293,18 +345,20 @@ export function synthesizeLessonQuestions(
       for (let i = 0; i < questionsPerFormat; i++) {
         let sentenceHanzi = '';
         let sentenceVi = '';
-        let targetWord = vocab[(i + 1) % (vocab.length || 1)] || {
-          hanzi: '好',
-          pinyin: 'hǎo',
-          vietnamese: 'tốt, khỏe',
-        };
+        const targetWord =
+          vocab[(i + 1) % (vocab.length || 1)] ||
+          effectiveVocabPool[(i + 1) % effectiveVocabPool.length] || {
+            hanzi: '好',
+            pinyin: 'hǎo',
+            vietnamese: 'tốt, khỏe',
+          };
 
         // Try to find an example sentence containing this word
         for (const gp of grammar) {
           const matchedEx = gp.examples?.find((e) => e.hanzi?.includes(targetWord.hanzi));
           if (matchedEx) {
             sentenceHanzi = matchedEx.hanzi;
-            sentenceVi = matchedEx.vietnamese;
+            sentenceVi = matchedEx.vietnamese || '';
             break;
           }
         }
@@ -329,7 +383,7 @@ export function synthesizeLessonQuestions(
           ? sentenceHanzi.replace(targetWord.hanzi, '____')
           : `____${sentenceHanzi.slice(1)}`;
 
-        const distractors = getHanziDistractors(targetWord, vocab, 3);
+        const distractors = getHanziDistractors(targetWord, effectiveVocabPool, 3);
         const options = [targetWord.hanzi, ...distractors].sort(() => 0.5 - Math.random());
 
         questions.push({
@@ -339,13 +393,31 @@ export function synthesizeLessonQuestions(
           questionChinese: blankedSentence,
           options,
           correctAnswer: targetWord.hanzi,
-          explanation: `Từ cần điền là "${targetWord.hanzi}" (${targetWord.pinyin} - ${targetWord.vietnamese}). Câu hoàn chỉnh: "${sentenceHanzi}" ${sentenceVi ? `(${sentenceVi})` : ''}.`,
+          explanation: `Từ cần điền là "${targetWord.hanzi}" (${targetWord.pinyin || ''} - ${getWordMeaning(targetWord) || 'nghĩa từ vựng'}). Câu hoàn chỉnh: "${sentenceHanzi}" ${sentenceVi ? `(${sentenceVi})` : ''}.`,
           hskLevel: (level as HSKLevel) || 1,
           usageNotes: `Cấp độ: HSK ${level} • ${activeDifficultyMeta.label}`,
         });
       }
     } else if (fmt === 'reading') {
       // 3. Reading Comprehension (Đọc hiểu)
+      const readingDistractorPools = [
+        [
+          'Nhân vật trong bài khóa không tham gia hoạt động giao tiếp này',
+          'Nội dung bài khóa diễn ra vào ban đêm tại bệnh viện',
+          'Các nhân vật từ chối gặp gỡ và không chào hỏi nhau',
+        ],
+        [
+          'Bài khóa nói về việc đi du lịch nước ngoài vào mùa đông',
+          'Nhân vật chính quyết định nghỉ học và không đến lớp',
+          'Nội dung mang ý nghĩa phủ định và phản đối kế hoạch',
+        ],
+        [
+          'Bài khóa không đề cập đến trường lớp hay công việc hàng ngày',
+          'Thông tin trong bài khóa trái ngược với tiến trình bài học',
+          'Nhân vật không biết tiếng Trung và không muốn học tập',
+        ],
+      ];
+
       for (let i = 0; i < questionsPerFormat; i++) {
         const primaryText = texts[i % (texts.length || 1)] || texts[0];
         let passage = '';
@@ -359,18 +431,9 @@ export function synthesizeLessonQuestions(
           passage = `我叫张明，是北京大学的学生。我今天去教室学习汉语，老师是李老师。`;
         }
 
-        const v = vocab[(i + 2) % (vocab.length || 1)] || {
-          hanzi: '李老师',
-          vietnamese: 'thầy Lý',
-        };
-
         const correct = `Bài khóa đề cập đến nội dung bài học: ${lesson.titleVietnamese || 'Giao tiếp hàng ngày'}`;
-        const options = [
-          correct,
-          `Bài khóa không đề cập đến trường học hay giao tiếp`,
-          `Nhân vật không tham gia bài học`,
-          `Nội dung mang ý nghĩa phủ định hoàn toàn`,
-        ].sort(() => 0.5 - Math.random());
+        const distractors = readingDistractorPools[i % readingDistractorPools.length];
+        const options = [correct, ...distractors].sort(() => 0.5 - Math.random());
 
         questions.push({
           id: `wiz-read-${timestamp}-${qIdx++}`,
@@ -387,25 +450,29 @@ export function synthesizeLessonQuestions(
     } else if (fmt === 'listening') {
       // 4. Listening Comprehension (Bài tập Nghe)
       for (let i = 0; i < questionsPerFormat; i++) {
-        const v1 = vocab[(i * 2) % (vocab.length || 1)] || {
-          hanzi: '今天',
-          pinyin: 'jīntiān',
-          vietnamese: 'hôm nay',
-        };
-        const v2 = vocab[(i * 2 + 1) % (vocab.length || 1)] || {
-          hanzi: '高兴',
-          pinyin: 'gāoxìng',
-          vietnamese: 'vui vẻ',
-        };
+        const v1 =
+          vocab[(i * 2) % (vocab.length || 1)] ||
+          effectiveVocabPool[(i * 2) % effectiveVocabPool.length] || {
+            hanzi: '今天',
+            pinyin: 'jīntiān',
+            vietnamese: 'hôm nay',
+          };
+        const v2 =
+          vocab[(i * 2 + 1) % (vocab.length || 1)] ||
+          effectiveVocabPool[(i * 2 + 1) % effectiveVocabPool.length] || {
+            hanzi: '高兴',
+            pinyin: 'gāoxìng',
+            vietnamese: 'vui vẻ',
+          };
 
         const speaker1 = `男：你好！今天你忙吗？`;
         const speaker2 = `女：我不忙，我很${v2.hanzi}。`;
         const questionPrompt = `问：女的今天怎么样？`;
         const dialogueScript = `${speaker1}\n${speaker2}\n${questionPrompt}`;
-        const audioText = `男：你好！今天你忙吗？女：我不忙，我很高兴。问：女的今天怎么样？`;
+        const audioText = `${speaker1} ${speaker2} ${questionPrompt}`;
 
         const correct = v2.hanzi;
-        const distractors = getHanziDistractors(v2, vocab, 3);
+        const distractors = getHanziDistractors(v2, effectiveVocabPool, 3);
         const options = [correct, ...distractors].sort(() => 0.5 - Math.random());
 
         const audioUrl = `/api/tts?text=${encodeURIComponent(audioText)}&voice=${encodeURIComponent(ttsVoice)}`;
@@ -419,7 +486,7 @@ export function synthesizeLessonQuestions(
           audio_url: audioUrl,
           options,
           correctAnswer: correct,
-          explanation: `Trong đoạn hội thoại đối thoại, người nữ nói: "我不忙，我很${v2.hanzi}." Do đó đáp án chính xác là "${correct}" (${v2.pinyin} - ${v2.vietnamese}).`,
+          explanation: `Trong đoạn hội thoại đối thoại, người nữ nói: "我不忙，我很${v2.hanzi}." Do đó đáp án chính xác là "${correct}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`,
           hskLevel: (level as HSKLevel) || 1,
           usageNotes: `Cấp độ: HSK ${level} • Giọng đọc: ${ttsVoice}`,
         });
@@ -428,20 +495,20 @@ export function synthesizeLessonQuestions(
   });
 
   // If questions generated are fewer than desired count, fill with extra MCQ or Fill-blank
-  while (questions.length < count && vocab.length > 0) {
-    const v = vocab[questions.length % vocab.length];
-    const correct = v.vietnamese;
-    const distractors = getVocabDistractors(v, vocab, 3);
+  while (questions.length < count && effectiveVocabPool.length > 0) {
+    const v = effectiveVocabPool[questions.length % effectiveVocabPool.length];
+    const correct = getWordMeaning(v) || 'học tập';
+    const distractors = getVocabDistractors(v, effectiveVocabPool, 3);
     const options = [correct, ...distractors].sort(() => 0.5 - Math.random());
 
     questions.push({
       id: `wiz-extra-${timestamp}-${qIdx++}`,
       type: 'meaning',
       prompt: `Chọn nghĩa tiếng Việt của từ "${v.hanzi}":`,
-      questionChinese: `${v.hanzi} (${v.pinyin})`,
+      questionChinese: `${v.hanzi}${v.pinyin ? ` (${v.pinyin})` : ''}`,
       options,
       correctAnswer: correct,
-      explanation: `Từ "${v.hanzi}" (${v.pinyin}) có nghĩa là "${v.vietnamese}".`,
+      explanation: `Từ "${v.hanzi}" (${v.pinyin || ''}) có nghĩa là "${correct}".`,
       hskLevel: (level as HSKLevel) || 1,
     });
   }
@@ -970,6 +1037,12 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
 
     try {
       if (questionSource === 'curriculum' || questionSource === 'golden_prompt') {
+        if (lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0) {
+          setErrorMsg('Ở chế độ "100% Từ & Cấu trúc giáo viên chọn", vui lòng tích chọn ít nhất 1 từ vựng trong bài học hoặc tự nhập từ vựng muốn kiểm tra vào ô bên dưới trước khi tạo câu hỏi.');
+          setIsGeneratingQuestions(false);
+          return;
+        }
+
         if (questionSource === 'golden_prompt') {
           setIsGeneratingGoldenPrompt(true);
         }
@@ -998,7 +1071,19 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           });
           const data = await res.json();
           if (data.exercises && data.exercises.length > 0) {
-            const mapped: QuizQuestion[] = data.exercises.map((ex: any, idx: number) => {
+            interface ExerciseApiResponse {
+              id?: string;
+              type?: string;
+              question?: string;
+              vietnamesePrompt?: string;
+              hanziPrompt?: string;
+              questionChinese?: string;
+              audioText?: string;
+              options?: string[];
+              correctAnswer?: string;
+              explanation?: string;
+            }
+            const mapped: QuizQuestion[] = data.exercises.map((ex: ExerciseApiResponse, idx: number) => {
               const audioTxt = ex.audioText || ex.hanziPrompt || '';
               return {
                 id: ex.id || `gen-q-${Date.now()}-${idx}`,
@@ -1140,16 +1225,34 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     }
   };
 
-  // Re-bind TTS voice and difficulty when user advances from Step 3 to Step 4
+  // Re-bind TTS voice, formats and difficulty when user advances from Step 3 to Step 4
   const handleProceedToStep4 = () => {
-    // If questions were already loaded, make sure listening questions use the selected voice
-    const updated = questions.map((q) => {
+    // If questions were synthesized from curriculum or golden prompt (without manual edits),
+    // re-synthesize so that teacher's Step 3 choices (formats, questionCount, difficultyLevel, voice) are 100% honored
+    if (questionSource === 'curriculum' || (questionSource === 'golden_prompt' && !isPromptManuallyEdited)) {
+      const refreshed = synthesizeLessonQuestions(
+        effectiveLessonForGeneration,
+        targetLevel,
+        selectedFormats.length > 0 ? selectedFormats : ['mcq', 'fill_blank'],
+        questionCount,
+        difficultyLevel,
+        selectedVoice
+      );
+      setQuestions(refreshed);
+      setCurrentStep(4);
+      return;
+    }
+
+    // For imported raw_text, exam_bank, or manually modified Golden Prompt:
+    // Update listening audio TTS and enforce questionCount limit
+    const updated = questions.slice(0, questionCount).map((q) => {
       if (q.type === 'listening') {
         const audioTxt = q.audioText || q.questionChinese || q.prompt;
         return {
           ...q,
           audioText: audioTxt,
           audio_url: `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`,
+          usageNotes: `Cấp độ: HSK ${targetLevel} • Giọng đọc: ${selectedVoice}`,
         };
       }
       return q;
@@ -1160,12 +1263,12 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
       const extra = synthesizeLessonQuestions(
         effectiveLessonForGeneration,
         targetLevel,
-        selectedFormats,
+        selectedFormats.length > 0 ? selectedFormats : ['mcq', 'fill_blank'],
         questionCount,
         difficultyLevel,
         selectedVoice
       );
-      setQuestions(extra);
+      setQuestions([...updated, ...extra.slice(0, questionCount - updated.length)]);
     } else {
       setQuestions(updated);
     }
@@ -1177,6 +1280,10 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   const handleQuickCreate = () => {
     if (targetType === 'class' && (!selectedClassId || activeClassList.length === 0)) {
       setErrorMsg('Vui lòng chọn một lớp học nhận bài tập trước khi tạo nhanh, hoặc chuyển sang chế độ "Theo Cấp Độ HSK".');
+      return;
+    }
+    if (lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0) {
+      setErrorMsg('Ở chế độ "100% Từ & Cấu trúc giáo viên chọn", vui lòng tích chọn ít nhất 1 từ vựng hoặc tự nhập từ vựng trước khi tạo nhanh.');
       return;
     }
     setErrorMsg(null);
@@ -1302,7 +1409,17 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     try {
       const examCode = `HW-${Math.floor(1000 + Math.random() * 9000)}`;
       const durationMinutes = Math.max(10, Math.ceil(questions.length * 1.5));
-      const finalDueDate = assignDueDate ? new Date(assignDueDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString();
+      let finalDueDate: string;
+      try {
+        const parsedDate = assignDueDate ? new Date(assignDueDate) : null;
+        if (parsedDate && !isNaN(parsedDate.getTime())) {
+          finalDueDate = parsedDate.toISOString();
+        } else {
+          finalDueDate = new Date(Date.now() + 7 * 86400000).toISOString();
+        }
+      } catch {
+        finalDueDate = new Date(Date.now() + 7 * 86400000).toISOString();
+      }
 
       // 1. Create real OnlineExamDoc so it is 100% playable in OnlineExamRunner
       const newExamDoc: OnlineExamDoc = {
@@ -1362,23 +1479,23 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm sm:backdrop-blur-md animate-fadeIn">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl max-w-4xl w-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden transition-all">
         {/* MODAL HEADER WITH 4-STEP TRACKER */}
-        <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="flex items-center justify-between pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center shadow-xs">
-                <Wand2 className="w-5 h-5" />
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="flex items-center justify-between pb-2.5 sm:pb-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center shadow-xs shrink-0">
+                <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                <h3 className="text-sm sm:text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
                   <span>Giao Bài Tập Về Nhà Mới</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold tracking-wide uppercase">
                     4-Step AI Wizard
                   </span>
                 </h3>
-                <p className="text-xs text-[var(--color-text-secondary)]">
+                <p className="text-[11px] sm:text-xs text-[var(--color-text-secondary)] line-clamp-1">
                   Cá nhân hóa theo tiến độ lớp • Multi-source & Golden Prompt • Giọng đọc Khảo thí TTS
                 </p>
               </div>
@@ -1393,7 +1510,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           </div>
 
           {/* Stepper Progress Bar */}
-          <div className="grid grid-cols-4 gap-2 pt-2 border-t border-[var(--color-border)]">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2 pt-2 border-t border-[var(--color-border)]">
             {[
               { num: 1, label: 'Mục tiêu & Lớp', icon: GraduationCap },
               { num: 2, label: 'Nguồn & Prompt', icon: Sparkles },
@@ -1412,7 +1529,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                       setCurrentStep(step.num);
                     }
                   }}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer ${
+                  className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-1.5 sm:px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer ${
                     isActive
                       ? 'bg-[var(--color-primary)] text-white shadow-xs font-bold'
                       : isPassed
@@ -1439,7 +1556,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
         </div>
 
         {/* MODAL BODY (DYNAMIC STEP CONTENT) */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
           {errorMsg && (
             <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-start justify-between gap-2.5 animate-fadeIn">
               <div className="flex items-start gap-2">
@@ -1499,14 +1616,14 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     {targetType === 'class' ? 'Chỉ học viên trong lớp nhận bài' : 'Toàn bộ học viên theo cấp độ HSK'}
                   </span>
                 </div>
-                <div className="inline-flex p-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)]">
+                <div className="w-full sm:w-auto grid grid-cols-1 sm:inline-flex p-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] gap-1 sm:gap-0">
                   <button
                     type="button"
                     onClick={() => {
                       setTargetType('class');
                       setErrorMsg(null);
                     }}
-                    className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center sm:justify-start gap-1.5 ${
                       targetType === 'class'
                         ? 'bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-xs font-bold'
                         : 'text-[var(--color-text-secondary)]'
@@ -1521,7 +1638,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                       setTargetType('level');
                       setErrorMsg(null);
                     }}
-                    className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center sm:justify-start gap-1.5 ${
                       targetType === 'level'
                         ? 'bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-xs font-bold'
                         : 'text-[var(--color-text-secondary)]'
@@ -1609,7 +1726,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                   <label className="block text-xs font-semibold text-[var(--color-text-secondary)]">
                     Chọn cấp độ New HSK mục tiêu:
                   </label>
-                  <div className="grid grid-cols-6 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
                     {[1, 2, 3, 4, 5, 6].map((lvl) => (
                       <button
                         key={lvl}
@@ -1805,7 +1922,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                         key={src.key}
                         type="button"
                         onClick={() => {
-                          setQuestionSource(src.key as any);
+                          setQuestionSource(src.key as 'curriculum' | 'raw_text' | 'golden_prompt' | 'exam_bank');
                           setErrorMsg(null);
                         }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
@@ -1918,6 +2035,18 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                         </button>
                       </div>
                     </div>
+
+                    {lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0 && (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-2 animate-fadeIn">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                          <p className="font-bold">Chưa chọn từ vựng cho chế độ &quot;100% Từ & Cấu trúc giáo viên chọn&quot;</p>
+                          <p className="text-[11px] leading-relaxed">
+                            Vui lòng tích chọn ít nhất 1 từ vựng trong danh sách hoặc gõ từ vựng vào ô nhập liệu bên dưới để hệ thống bám sát yêu cầu của bạn.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
                       {(selectedLesson.vocabulary || []).length === 0 ? (
@@ -2040,7 +2169,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                           <button
                             key={mode.key}
                             type="button"
-                            onClick={() => setPracticeMode(mode.key as any)}
+                            onClick={() => setPracticeMode(mode.key as 'comprehensive' | 'listening' | 'reading' | 'grammar')}
                             className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                               practiceMode === mode.key
                                 ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-xs'
@@ -2656,7 +2785,7 @@ D. 同学
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3.5 max-h-[50vh] overflow-y-auto pr-1">
+                <div className="space-y-3.5 pr-1">
                 {questions.map((q, idx) => {
                   const isEditing = editingQuestionId === q.id;
                   const isPlayingAudio = playingQuestionId === q.id;

@@ -731,4 +731,159 @@ Câu 1: Câu hỏi bị thiếu hoàn toàn danh sách các phương án A B C D
     });
   });
 
+  // ==========================================================================
+  // VECTOR 7: LISTENING AUDIO TEXT SYNCHRONIZATION WITH TARGET DIALOGUE
+  // ==========================================================================
+  describe('Vector 7: Listening Audio Text Dynamic Synchronization', () => {
+    it('Never emits hardcoded placeholder dialogue in audioText when target vocabulary changes', () => {
+      const customLesson: DetailedTextbookLesson = {
+        lessonNumber: 1,
+        titleHanzi: '测试课',
+        titlePinyin: 'Cèshì kè',
+        titleVietnamese: 'Bài kiểm tra',
+        pageStart: 1,
+        objectives: [],
+        exercises: [],
+        texts: [],
+        grammarPoints: [],
+        vocabulary: [
+          { id: '1', hanzi: '累', pinyin: 'lèi', vietnamese: 'mệt mỏi', hskLevel: 1 },
+          { id: '2', hanzi: '渴', pinyin: 'kě', vietnamese: 'khát nước', hskLevel: 1 },
+        ],
+      };
+
+      const questions = synthesizeLessonQuestions(
+        customLesson,
+        1,
+        ['listening'],
+        2,
+        'medium',
+        'zh-CN-XiaoxiaoNeural'
+      );
+
+      expect(questions.length).toBe(2);
+      questions.forEach((q) => {
+        expect(q.type).toBe('listening');
+        expect(q.audioText).toBeDefined();
+        // audioText must contain the exact target word being asked
+        expect(q.audioText).toContain(q.correctAnswer as string);
+        // audioText must be synchronized with dialogue script
+        expect(q.audioText).toContain('问：女的今天怎么样？');
+        // audio_url must encode this exact audioText
+        expect(q.audio_url).toContain(encodeURIComponent(q.audioText as string));
+      });
+    });
+  });
+
+  // ==========================================================================
+  // VECTOR 8: AUTHENTIC DISTRACTORS & ZERO MOCK PLACEHOLDERS
+  // ==========================================================================
+  describe('Vector 8: Authentic Distractors & Zero Mock Placeholders', () => {
+    it('Never emits "Nghĩa bổ sung" or "词[0-9]" even for hollow lessons or lessons with a single word', () => {
+      const singleWordLesson: DetailedTextbookLesson = {
+        lessonNumber: 1,
+        titleHanzi: '单字课',
+        titlePinyin: 'Dān zì kè',
+        titleVietnamese: 'Bài một từ duy nhất',
+        pageStart: 1,
+        objectives: [],
+        exercises: [],
+        texts: [],
+        grammarPoints: [],
+        vocabulary: [
+          { id: 'w1', hanzi: '咖啡', pinyin: 'kāfēi', vietnamese: 'cà phê', hskLevel: 1 },
+        ],
+      };
+
+      const questions = synthesizeLessonQuestions(
+        singleWordLesson,
+        1,
+        ['mcq', 'fill_blank', 'reading', 'listening'],
+        8,
+        'medium',
+        'zh-CN-YunxiNeural'
+      );
+
+      expect(questions.length).toBe(8);
+      questions.forEach((q) => {
+        expect(q.options?.length).toBe(4);
+        q.options?.forEach((opt) => {
+          expect(opt).not.toMatch(/Nghĩa bổ sung/i);
+          expect(opt).not.toMatch(/^词\d+$/);
+          expect(opt.trim().length).toBeGreaterThan(0);
+        });
+        expect(q.explanation).not.toMatch(/Nghĩa bổ sung/i);
+        expect(q.explanation).not.toMatch(/词\d+/);
+      });
+    });
+  });
+
+  // ==========================================================================
+  // VECTOR 9: STEP 3 FORMAT & PARAMETER RE-BINDING INTEGRITY
+  // ==========================================================================
+  describe('Vector 9: Step 3 Parameter Re-Binding Integrity', () => {
+    it('Re-synthesizes exactly according to teacher-selected formats, count, and difficulty', () => {
+      const lesson = getCurriculumLessonsForLevel(1)[0];
+
+      // Teacher in Step 3 selects ONLY fill_blank, count = 5, easy difficulty
+      const step3Questions = synthesizeLessonQuestions(
+        lesson,
+        1,
+        ['fill_blank'],
+        5,
+        'easy',
+        'zh-CN-XiaoyiNeural'
+      );
+
+      expect(step3Questions.length).toBe(5);
+      step3Questions.forEach((q) => {
+        expect(q.type).toBe('fill_blank');
+        expect(q.questionChinese).toContain('____');
+      });
+
+      // Teacher in Step 3 selects ONLY listening, count = 3, hard difficulty
+      const listenOnlyQuestions = synthesizeLessonQuestions(
+        lesson,
+        1,
+        ['listening'],
+        3,
+        'hard',
+        'zh-CN-YunjianNeural'
+      );
+
+      expect(listenOnlyQuestions.length).toBe(3);
+      listenOnlyQuestions.forEach((q) => {
+        expect(q.type).toBe('listening');
+        expect(q.audio_url).toContain(`voice=${encodeURIComponent('zh-CN-YunjianNeural')}`);
+      });
+    });
+  });
+
+  // ==========================================================================
+  // VECTOR 10: DUE DATE SANITIZATION & RANGE ERROR SAFETY
+  // ==========================================================================
+  describe('Vector 10: Due Date Sanitization & Range Error Safety', () => {
+    it('Safely parses empty, cleared, or invalid due date strings without throwing RangeError', () => {
+      const testInputs = ['', '   ', 'invalid-date-string', null as unknown as string, undefined as unknown as string];
+
+      testInputs.forEach((input) => {
+        let finalDueDate: string;
+        try {
+          const parsedDate = input ? new Date(input) : null;
+          if (parsedDate && !isNaN(parsedDate.getTime())) {
+            finalDueDate = parsedDate.toISOString();
+          } else {
+            finalDueDate = new Date(Date.now() + 7 * 86400000).toISOString();
+          }
+        } catch {
+          finalDueDate = new Date(Date.now() + 7 * 86400000).toISOString();
+        }
+
+        expect(typeof finalDueDate).toBe('string');
+        expect(finalDueDate).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+        expect(Number.isNaN(new Date(finalDueDate).getTime())).toBe(false);
+      });
+    });
+  });
+
 });

@@ -312,6 +312,7 @@ describe('Adversarial Stress Test: HomeworkWizardModal & Step Transitions', () =
         titleVietnamese: 'Bài rỗng',
         pageStart: 1,
         objectives: [],
+        exercises: [],
         texts: [],
         grammarPoints: [],
         vocabulary: [],
@@ -589,13 +590,14 @@ Câu 1: Câu hỏi bị thiếu hoàn toàn danh sách các phương án A B C D
     });
 
     it('Level-targeted assignments properly omit target_class_id', () => {
-      const targetType: 'class' | 'level' = 'level';
+      const targetType = 'level' as 'class' | 'level';
       const targetLevel = 3;
       const assignTitle = 'Bài tập Toàn diện HSK 3';
 
       const newAssign: AssignmentDoc = {
         id: `assign-${Date.now()}`,
         title: assignTitle,
+        description: 'Bài tập',
         target_type: targetType,
         target_class_id: targetType === 'class' ? 'some-id' : undefined,
         hsk_level: targetLevel,

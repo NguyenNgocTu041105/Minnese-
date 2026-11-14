@@ -22,6 +22,7 @@ import {
   Copy,
   Layers,
   Edit2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   X,

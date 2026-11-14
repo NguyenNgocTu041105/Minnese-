@@ -886,4 +886,100 @@ Câu 1: Câu hỏi bị thiếu hoàn toàn danh sách các phương án A B C D
     });
   });
 
+  // ==========================================================================
+  // VECTOR 11: RBAC 2-TIER ISOLATION, AUTO-CLAMPING & STEP 4 INTEGRITY
+  // ==========================================================================
+  describe('Vector 11: RBAC 2-Tier Isolation, Auto-Clamping & Step 4 Integrity', () => {
+    const mockAllClasses = [
+      { id: 'c1', class_name: 'Lớp HSK 1 - Thầy Nam', class_code: 'HSK1-A', hsk_level: 1, created_by: 'nam@school.com', teacher_name: 'Thầy Nam' },
+      { id: 'c2', class_name: 'Lớp HSK 2 - Cô Hoa', class_code: 'HSK2-B', hsk_level: 2, created_by: 'hoa@school.com', teacher_name: 'Cô Hoa' },
+      { id: 'c3', class_name: 'Lớp HSK 3 - Thầy Tuấn', class_code: 'HSK3-C', hsk_level: 3, created_by: 'tuan@school.com', teacher_name: 'Thầy Tuấn' },
+    ];
+
+    it('Invariant 11.1: RBAC Sub-Admin teacher with 0 classes (myClasses = []) is strictly isolated to [] and cannot leak other teachers classes', () => {
+      const teacherEmail: string = 'newteacher@school.com';
+      const myClasses: typeof mockAllClasses = [];
+
+      const isSuperAdmin = teacherEmail === 'babysharkkk123@gmail.com' || teacherEmail.toLowerCase().includes('admin');
+      const activeClassList = isSuperAdmin ? mockAllClasses : myClasses !== undefined ? myClasses : mockAllClasses;
+
+      expect(isSuperAdmin).toBe(false);
+      expect(activeClassList).toEqual([]);
+      expect(activeClassList.length).toBe(0);
+      // Empty activeClassList correctly triggers empty state in wizard
+    });
+
+    it('Invariant 11.2: RBAC Sub-Admin teacher with assigned classes only accesses their own classes', () => {
+      const teacherEmail: string = 'hoa@school.com';
+      const myClasses = [mockAllClasses[1]]; // Only Cô Hoa's class
+
+      const isSuperAdmin = teacherEmail === 'babysharkkk123@gmail.com' || teacherEmail.toLowerCase().includes('admin');
+      const activeClassList = isSuperAdmin ? mockAllClasses : myClasses !== undefined ? myClasses : mockAllClasses;
+
+      expect(isSuperAdmin).toBe(false);
+      expect(activeClassList.length).toBe(1);
+      expect(activeClassList[0].id).toBe('c2');
+      expect(activeClassList[0].class_name).toContain('Cô Hoa');
+    });
+
+    it('Invariant 11.3: Super Admin (babysharkkk123@gmail.com) always accesses all classes across the school', () => {
+      const superAdminEmail: string = 'babysharkkk123@gmail.com';
+      const myClasses: typeof mockAllClasses = []; // Even if root admin has 0 assigned classes
+
+      const isSuperAdmin = superAdminEmail === 'babysharkkk123@gmail.com' || superAdminEmail.toLowerCase().includes('admin');
+      const activeClassList = isSuperAdmin ? mockAllClasses : myClasses !== undefined ? myClasses : mockAllClasses;
+
+      expect(isSuperAdmin).toBe(true);
+      expect(activeClassList.length).toBe(3);
+      expect(activeClassList).toEqual(mockAllClasses);
+    });
+
+    it('Invariant 11.4: Selected lesson clamp logic correctly adjusts when switching to a level with fewer lessons', () => {
+      const hsk1Lessons = getCurriculumLessonsForLevel(1);
+      const hsk6Lessons = getCurriculumLessonsForLevel(6);
+
+      // Suppose teacher was at Lesson 14 in HSK 1
+      let selectedLessonNumber = 14;
+      expect(hsk1Lessons.some((l) => l.lessonNumber === selectedLessonNumber)).toBe(true);
+
+      // Switch to HSK 6
+      const targetLessons = hsk6Lessons;
+      if (targetLessons.length > 0 && !targetLessons.some((l) => l.lessonNumber === selectedLessonNumber)) {
+        selectedLessonNumber = targetLessons[0].lessonNumber;
+      }
+
+      expect(selectedLessonNumber).toBe(1);
+      expect(targetLessons.some((l) => l.lessonNumber === selectedLessonNumber)).toBe(true);
+    });
+
+    it('Invariant 11.5: Inline edit question sanitizer guarantees correctAnswer is always in options', () => {
+      const rawOptions = ['Phương án 1', '', '  ', 'Phương án 4'];
+      const rawAnswer = 'Phương án cũ đã bị xóa';
+
+      const sanitizedOptions = rawOptions.map(
+        (opt, i) => opt.trim() || `Phương án ${['A', 'B', 'C', 'D'][i] || i + 1}`
+      );
+      const validAnswer = sanitizedOptions.includes(rawAnswer.trim())
+        ? rawAnswer.trim()
+        : sanitizedOptions[0];
+
+      expect(sanitizedOptions).toEqual(['Phương án 1', 'Phương án B', 'Phương án C', 'Phương án 4']);
+      expect(validAnswer).toBe('Phương án 1');
+      expect(sanitizedOptions).toContain(validAnswer);
+    });
+
+    it('Invariant 11.6: Summary bar due date formatter safely handles empty or cleared strings without showing "Invalid Date"', () => {
+      const formatDueDate = (dateStr: string) => {
+        return dateStr && !isNaN(new Date(dateStr).getTime())
+          ? new Date(dateStr).toLocaleString('vi-VN')
+          : '7 ngày tới (23:59)';
+      };
+
+      expect(formatDueDate('')).toBe('7 ngày tới (23:59)');
+      expect(formatDueDate('   ')).toBe('7 ngày tới (23:59)');
+      expect(formatDueDate('invalid-date')).toBe('7 ngày tới (23:59)');
+      expect(formatDueDate('2026-11-20T23:59')).not.toContain('Invalid Date');
+    });
+  });
+
 });

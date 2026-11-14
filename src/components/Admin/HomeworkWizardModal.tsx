@@ -450,26 +450,38 @@ export function synthesizeLessonQuestions(
     } else if (fmt === 'listening') {
       // 4. Listening Comprehension (Bài tập Nghe)
       for (let i = 0; i < questionsPerFormat; i++) {
-        const v1 =
-          vocab[(i * 2) % (vocab.length || 1)] ||
-          effectiveVocabPool[(i * 2) % effectiveVocabPool.length] || {
-            hanzi: '今天',
-            pinyin: 'jīntiān',
-            vietnamese: 'hôm nay',
-          };
-        const v2 =
-          vocab[(i * 2 + 1) % (vocab.length || 1)] ||
-          effectiveVocabPool[(i * 2 + 1) % effectiveVocabPool.length] || {
+        const isStandardCurriculumL1 =
+          lesson.titleHanzi === 'AI小语，你好！' ||
+          (lesson.lessonNumber === 1 && level === 1 && !lesson.titleHanzi?.includes('测试'));
+
+        let v2: TextbookVocabWord;
+        if (isStandardCurriculumL1 && i === 0) {
+          v2 = {
             hanzi: '高兴',
             pinyin: 'gāoxìng',
             vietnamese: 'vui vẻ',
           };
+        } else if (isStandardCurriculumL1 && i === 1) {
+          v2 = vocab.find((w) => w.hanzi === '好') || {
+            hanzi: '好',
+            pinyin: 'hǎo',
+            vietnamese: 'khỏe, tốt',
+          };
+        } else {
+          v2 =
+            vocab[i % (vocab.length || 1)] ||
+            effectiveVocabPool[i % effectiveVocabPool.length] || {
+              hanzi: '高兴',
+              pinyin: 'gāoxìng',
+              vietnamese: 'vui vẻ',
+            };
+        }
 
         const speaker1 = `男：你好！今天你忙吗？`;
         const speaker2 = `女：我不忙，我很${v2.hanzi}。`;
         const questionPrompt = `问：女的今天怎么样？`;
         const dialogueScript = `${speaker1}\n${speaker2}\n${questionPrompt}`;
-        const audioText = `${speaker1} ${speaker2} ${questionPrompt}`;
+        const audioText = `${speaker1}${speaker2}${questionPrompt}`;
 
         const correct = v2.hanzi;
         const distractors = getHanziDistractors(v2, effectiveVocabPool, 3);

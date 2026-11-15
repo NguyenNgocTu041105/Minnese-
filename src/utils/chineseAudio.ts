@@ -37,41 +37,61 @@ const VOICE_SETTINGS_STORAGE_KEY = 'minnese_chinese_voice_settings_v2';
 export const EDGE_TTS_VOICES: VoiceOption[] = [
   {
     id: 'zh-CN-XiaoxiaoNeural',
-    name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình HSK',
+    name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình / Cô Giáo',
     lang: 'zh-CN',
     gender: 'female',
     accent: 'Standard (Bắc Kinh)',
-    description: '👩 Giọng Nữ Chuẩn Giáo Trình Bắc Ngữ / HSK - Tự nhiên, truyền cảm, chuẩn phát thanh viên',
+    description: '👩 Giọng Nữ Chuẩn Giáo Trình Bắc Ngữ / HSK • Tự nhiên, ấm áp (Cô Vương, Mẹ, Bác sĩ)',
     isNative: true,
     isAIStudio: true,
   },
   {
     id: 'zh-CN-XiaoyiNeural',
-    name: 'Hiểu Y (Xiaoyi) - Nữ Trẻ Trung, Tươi Vui',
+    name: 'Hiểu Y (Xiaoyi) - Nữ Học Sinh / AI Tiểu Ngữ',
     lang: 'zh-CN',
     gender: 'female',
     accent: 'Standard (Bắc Kinh)',
-    description: '👩 Giọng Nữ Trẻ Trung • Phát âm trong trẻo, sinh động',
+    description: '👩 Giọng Nữ Trẻ Trung • Trong trẻo, tươi vui (AI Tiểu Ngữ, Nữ sinh, Bạn học)',
     isNative: true,
     isAIStudio: true,
   },
   {
     id: 'zh-CN-YunxiNeural',
-    name: 'Vân Hy (Yunxi) - Nam Tự Nhiên, Trầm Ấm',
+    name: 'Vân Hy (Yunxi) - Nam Thanh Niên / Bạn Học',
     lang: 'zh-CN',
     gender: 'male',
     accent: 'Standard (Bắc Kinh)',
-    description: '👨 Giọng Nam Chuẩn • Trầm ấm, tròn vành rõ chữ',
+    description: '👨 Giọng Nam Chuẩn • Trầm ấm, tròn vành rõ chữ (Nam sinh viên, Bạn bè, Đồng nghiệp)',
     isNative: true,
     isAIStudio: true,
   },
   {
     id: 'zh-CN-YunjianNeural',
-    name: 'Vân Kiện (Yunjian) - Nam Chuẩn Khảo Thí HSK',
+    name: 'Vân Kiện (Yunjian) - Nam Giáo Viên / Khảo Thí HSK',
     lang: 'zh-CN',
     gender: 'male',
     accent: 'Standard (Bắc Kinh)',
-    description: '👨 Giọng Nam Khảo Thí • Đĩnh đạc, phong thái bài thi khảo thí',
+    description: '👨 Giọng Nam Đĩnh Đạc • Phong thái thầy giáo, bố, bác sĩ, giám khảo khảo thí',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-YunxiaNeural',
+    name: 'Vân Hạ (Yunxia) - Nam Học Sinh / Thiếu Niên',
+    lang: 'zh-CN',
+    gender: 'male',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👦 Giọng Nam Học Trò • Năng động, tự nhiên (Học sinh, Tiểu Minh, Em trai)',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-YunyangNeural',
+    name: 'Vân Dương (Yunyang) - Nam Phát Thanh Viên / Công Sở',
+    lang: 'zh-CN',
+    gender: 'male',
+    accent: 'Standard (Bắc Kinh)',
+    description: '🎙️ Giọng Nam Phát Thanh • Chuyên nghiệp, chuẩn mực (Bản tin, Quản lý, Nhân viên)',
     isNative: true,
     isAIStudio: true,
   },
@@ -550,17 +570,169 @@ function sleepWithAbort(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
+function computeDeterministicHash(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+const CONTEXTUAL_DIALOGUE_PAIRS: Array<{ male: string; female: string; narrator: string }> = [
+  { male: 'zh-CN-YunxiNeural', female: 'zh-CN-XiaoxiaoNeural', narrator: 'zh-CN-YunjianNeural' },
+  { male: 'zh-CN-YunjianNeural', female: 'zh-CN-XiaoyiNeural', narrator: 'zh-CN-YunyangNeural' },
+  { male: 'zh-CN-YunxiaNeural', female: 'zh-CN-XiaoxiaoNeural', narrator: 'zh-CN-YunjianNeural' },
+  { male: 'zh-CN-YunxiNeural', female: 'zh-CN-XiaoyiNeural', narrator: 'zh-CN-XiaoxiaoNeural' },
+  { male: 'zh-CN-YunyangNeural', female: 'zh-CN-XiaoxiaoNeural', narrator: 'zh-CN-YunjianNeural' },
+  { male: 'zh-CN-YunjianNeural', female: 'zh-CN-liaoning-XiaobeiNeural', narrator: 'zh-CN-YunyangNeural' },
+];
+
 /**
- * Plays dialogue turns sequentially with natural multi-role voice alternating,
- * authentic pauses between turns (650ms), and 1200ms before question prompt.
+ * Selects a context-appropriate (maleVoice, femaleVoice, narratorVoice) cast based on the dialogue content
+ * (e.g., Teacher vs Student, AI Tiểu Ngữ vs Classmate, Family/Elders, Workplace/Service, or hash-varied cast).
+ */
+export function selectContextualVoiceCast(
+  scriptText: string,
+  preferredMale?: string,
+  preferredFemale?: string
+): { male: string; female: string; narrator: string } {
+  const s = scriptText || '';
+  const h = computeDeterministicHash(s);
+
+  if (preferredMale && preferredFemale && preferredMale !== 'auto' && preferredFemale !== 'auto') {
+    return {
+      male: preferredMale,
+      female: preferredFemale,
+      narrator: preferredMale === 'zh-CN-YunjianNeural' ? 'zh-CN-YunyangNeural' : 'zh-CN-YunjianNeural',
+    };
+  }
+
+  // 1. Male student greeting Female teacher (e.g. "男：王老师，您好！")
+  if (/(?:男|甲|学生|同学|小明)\s*[:：][^。\n]*老师/.test(s)) {
+    return {
+      male: h % 2 === 0 ? 'zh-CN-YunxiaNeural' : 'zh-CN-YunxiNeural',
+      female: 'zh-CN-XiaoxiaoNeural',
+      narrator: 'zh-CN-YunjianNeural',
+    };
+  }
+  // 2. Female student greeting Male teacher (e.g. "女：王老师，您好！")
+  if (/(?:女|乙|小红|玛丽)\s*[:：][^。\n]*老师/.test(s)) {
+    return {
+      male: 'zh-CN-YunjianNeural',
+      female: 'zh-CN-XiaoyiNeural',
+      narrator: 'zh-CN-YunyangNeural',
+    };
+  }
+  // 3. AI Tiểu Ngữ / Young Classmates / Friends
+  if (/(?:AI小语|小语|同学|朋友|高兴|认识|名字|爱好)/.test(s)) {
+    return {
+      male: h % 2 === 0 ? 'zh-CN-YunxiNeural' : 'zh-CN-YunxiaNeural',
+      female: 'zh-CN-XiaoyiNeural',
+      narrator: 'zh-CN-XiaoxiaoNeural',
+    };
+  }
+  // 4. Family / Elders / Home
+  if (/(?:奶奶|外婆)/.test(s)) {
+    return {
+      male: 'zh-CN-YunjianNeural',
+      female: 'zh-CN-shaanxi-XiaoniNeural',
+      narrator: 'zh-CN-YunyangNeural',
+    };
+  }
+  if (/(?:爸爸|妈妈|爷爷|儿子|女儿|做饭)/.test(s)) {
+    return {
+      male: 'zh-CN-YunjianNeural',
+      female: 'zh-CN-XiaoxiaoNeural',
+      narrator: 'zh-CN-YunyangNeural',
+    };
+  }
+  // 5. Workplace / Business / Hospital / Service / Travel
+  if (/(?:经理|公司|上班|医生|医院|服务员|机场|火车)/.test(s)) {
+    return {
+      male: 'zh-CN-YunyangNeural',
+      female: h % 2 === 0 ? 'zh-CN-XiaoxiaoNeural' : 'zh-CN-liaoning-XiaobeiNeural',
+      narrator: 'zh-CN-YunjianNeural',
+    };
+  }
+
+  return CONTEXTUAL_DIALOGUE_PAIRS[h % CONTEXTUAL_DIALOGUE_PAIRS.length];
+}
+
+export function selectContextualSingleVoice(scriptText: string, preferredVoice?: string): string {
+  if (preferredVoice && preferredVoice !== 'auto' && preferredVoice !== 'default' && !preferredVoice.startsWith('gemini-')) {
+    return preferredVoice;
+  }
+  const s = scriptText || '';
+  if (/(?:AI小语|小语|小红|玛丽|妹妹|姐姐|女儿)/.test(s)) return 'zh-CN-XiaoyiNeural';
+  if (/(?:爸爸|爷爷|刘老师|陈老师|医生|经理)/.test(s)) return 'zh-CN-YunjianNeural';
+  if (/(?:小明|儿子|弟弟|男孩)/.test(s)) return 'zh-CN-YunxiaNeural';
+  if (/(?:王老师|李老师|张老师|妈妈)/.test(s)) return 'zh-CN-XiaoxiaoNeural';
+  const pool = [
+    'zh-CN-XiaoxiaoNeural',
+    'zh-CN-YunxiNeural',
+    'zh-CN-XiaoyiNeural',
+    'zh-CN-YunjianNeural',
+    'zh-CN-YunyangNeural',
+    'zh-CN-YunxiaNeural',
+  ];
+  return pool[computeDeterministicHash(s) % pool.length];
+}
+
+/**
+ * Plays dialogue turns (or a raw dialogue script string) sequentially with context-aware
+ * multi-character neural voices, authentic pauses between turns (650ms), and 1200ms before question prompt.
  */
 export async function playDialogueSequence(
-  turns: DialogueTurn[],
-  settings: VoiceSettings,
+  turnsOrScript: DialogueTurn[] | string,
+  settingsOrOptions?: VoiceSettings | { rate?: number; pitch?: number; maleVoice?: string; femaleVoice?: string },
   overrideRate?: number,
   overridePitch?: number
 ): Promise<void> {
   stopChineseAudio();
+
+  const savedSettings = getSavedVoiceSettings();
+  let settings: VoiceSettings = savedSettings;
+  let effectiveRate = overrideRate;
+  let effectivePitch = overridePitch;
+  let preferredMale: string | undefined;
+  let preferredFemale: string | undefined;
+
+  if (settingsOrOptions && typeof settingsOrOptions === 'object') {
+    if ('voiceId' in settingsOrOptions) {
+      settings = settingsOrOptions as VoiceSettings;
+    } else {
+      const opts = settingsOrOptions as { rate?: number; pitch?: number; maleVoice?: string; femaleVoice?: string };
+      if (effectiveRate === undefined && opts.rate !== undefined) effectiveRate = opts.rate;
+      if (effectivePitch === undefined && opts.pitch !== undefined) effectivePitch = opts.pitch;
+      preferredMale = opts.maleVoice;
+      preferredFemale = opts.femaleVoice;
+    }
+  }
+
+  let turns: DialogueTurn[];
+  let rawContextText = '';
+  if (typeof turnsOrScript === 'string') {
+    rawContextText = turnsOrScript;
+    const parsed = parseDialogueTurns(turnsOrScript);
+    if (parsed && parsed.length > 0) {
+      turns = parsed;
+    } else {
+      const sanitized = sanitizeQuestionAudioText(turnsOrScript) || sanitizeDialogueScript(turnsOrScript) || turnsOrScript;
+      const singleVoice = selectContextualSingleVoice(turnsOrScript);
+      try {
+        await playPutonghuaAudioStream(sanitized, effectiveRate ?? settings.rate ?? 0.9, singleVoice, false);
+        return;
+      } catch {
+        await playBrowserUtterance(cleanAudioText(sanitized), settings, effectiveRate, effectivePitch);
+        return;
+      }
+    }
+  } else {
+    turns = turnsOrScript;
+    rawContextText = turns.map((t) => `${t.role === 'male' ? '男：' : t.role === 'female' ? '女：' : '问：'}${t.text}`).join('\n');
+  }
+
+  const voiceCast = selectContextualVoiceCast(rawContextText, preferredMale, preferredFemale);
   const controller = new AbortController();
   dialogueAbortController = controller;
 
@@ -578,25 +750,25 @@ export async function playDialogueSequence(
     const cleanText = cleanAudioText(resolvedTurnText || turn.text);
     if (!cleanText || !/[\u4e00-\u9fa50-9]/.test(cleanText)) continue;
 
-    let turnPitch = overridePitch ?? settings.pitch ?? 1.0;
+    let turnPitch = effectivePitch ?? settings.pitch ?? 1.0;
     if (turn.role === 'male') {
-      turnPitch = overridePitch ? overridePitch * 0.88 : 0.88;
+      turnPitch = effectivePitch ? effectivePitch * 0.88 : 0.88;
     } else if (turn.role === 'female') {
-      turnPitch = overridePitch ? overridePitch * 1.12 : 1.12;
+      turnPitch = effectivePitch ? effectivePitch * 1.12 : 1.12;
     }
 
     const roleVoice =
       turn.role === 'male'
-        ? 'zh-CN-YunxiNeural'
+        ? voiceCast.male
         : turn.role === 'female'
-        ? 'zh-CN-XiaoxiaoNeural'
-        : 'zh-CN-YunjianNeural';
+        ? voiceCast.female
+        : voiceCast.narrator;
 
     try {
-      await playPutonghuaAudioStream(cleanText, overrideRate ?? settings.rate ?? 0.9, roleVoice, true);
+      await playPutonghuaAudioStream(cleanText, effectiveRate ?? settings.rate ?? 0.9, roleVoice, true);
     } catch {
       if (!controller.signal.aborted) {
-        await playBrowserUtterance(cleanText, settings, overrideRate, turnPitch, turn.role, true);
+        await playBrowserUtterance(cleanText, settings, effectiveRate, turnPitch, turn.role, true);
       }
     }
     if (controller.signal.aborted) break;

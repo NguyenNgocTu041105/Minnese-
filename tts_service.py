@@ -8,6 +8,7 @@ import sys
 import os
 import argparse
 import asyncio
+import hashlib
 import json
 import re
 from typing import List, Tuple
@@ -42,13 +43,101 @@ VOICES = list(VOICES_CATALOG.keys())
 
 DIALOGUE_PAIRS = [
     {"male": "zh-CN-YunxiNeural", "female": "zh-CN-XiaoxiaoNeural", "label": "Nam Vân Hy + Nữ Hiểu Hiểu (Chuẩn HSK)"},
-    {"male": "zh-CN-YunjianNeural", "female": "zh-CN-XiaoyiNeural", "label": "Nam Vân Kiện + Nữ Hiểu Y (Chuẩn khảo thí)"},
-    {"male": "zh-CN-YunyangNeural", "female": "zh-CN-XiaoxiaoNeural", "label": "Nam Vân Dương + Nữ Hiểu Hiểu (Trang trọng / Tin tức)"},
-    {"male": "zh-CN-YunxiaNeural", "female": "zh-CN-XiaoyiNeural", "label": "Nam Vân Hạ + Nữ Hiểu Y (Học sinh & Bạn bè)"},
+    {"male": "zh-CN-YunjianNeural", "female": "zh-CN-XiaoyiNeural", "label": "Nam Vân Kiện + Nữ Hiểu Y (Thầy giáo & Nữ sinh)"},
+    {"male": "zh-CN-YunxiaNeural", "female": "zh-CN-XiaoxiaoNeural", "label": "Nam Vân Hạ + Nữ Hiểu Hiểu (Nam sinh & Cô giáo)"},
+    {"male": "zh-CN-YunxiNeural", "female": "zh-CN-XiaoyiNeural", "label": "Nam Vân Hy + Nữ Hiểu Y (Bạn học trẻ trung)"},
+    {"male": "zh-CN-YunyangNeural", "female": "zh-CN-XiaoxiaoNeural", "label": "Nam Vân Dương + Nữ Hiểu Hiểu (Công sở / Tin tức)"},
+    {"male": "zh-CN-YunjianNeural", "female": "zh-CN-liaoning-XiaobeiNeural", "label": "Nam Vân Kiện + Nữ Tiểu Bối (Đời sống sinh động)"},
 ]
 
-FEMALE_INDICATORS = {"女", "妈妈", "母亲", "奶奶", "女儿", "妹妹", "姐姐", "小红", "女的", "女声", "乙", "b"}
-MALE_INDICATORS = {"男", "爸爸", "父亲", "爷爷", "儿子", "弟弟", "哥哥", "小明", "男的", "男声", "甲", "a"}
+CHARACTER_VOICE_MAP = {
+    # Female Youth / AI / Student
+    "ai小语": "zh-CN-XiaoyiNeural",
+    "小语": "zh-CN-XiaoyiNeural",
+    "女学生": "zh-CN-XiaoyiNeural",
+    "女同学": "zh-CN-XiaoyiNeural",
+    "小红": "zh-CN-XiaoyiNeural",
+    "小丽": "zh-CN-XiaoyiNeural",
+    "小美": "zh-CN-XiaoyiNeural",
+    "玛丽": "zh-CN-XiaoyiNeural",
+    "安娜": "zh-CN-XiaoyiNeural",
+    "女儿": "zh-CN-XiaoyiNeural",
+    "妹妹": "zh-CN-XiaoyiNeural",
+    "姐姐": "zh-CN-XiaoyiNeural",
+    "女孩": "zh-CN-XiaoyiNeural",
+    # Female Lively / Friend / Service
+    "小贝": "zh-CN-liaoning-XiaobeiNeural",
+    "闺蜜": "zh-CN-liaoning-XiaobeiNeural",
+    "室友": "zh-CN-liaoning-XiaobeiNeural",
+    "服务员": "zh-CN-liaoning-XiaobeiNeural",
+    "售货员": "zh-CN-liaoning-XiaobeiNeural",
+    # Female Elder
+    "奶奶": "zh-CN-shaanxi-XiaoniNeural",
+    "外婆": "zh-CN-shaanxi-XiaoniNeural",
+    "老太太": "zh-CN-shaanxi-XiaoniNeural",
+    # Female Teacher / Mother / Standard
+    "王老师": "zh-CN-XiaoxiaoNeural",
+    "李老师": "zh-CN-XiaoxiaoNeural",
+    "张老师": "zh-CN-XiaoxiaoNeural",
+    "老师": "zh-CN-XiaoxiaoNeural",
+    "女老师": "zh-CN-XiaoxiaoNeural",
+    "妈妈": "zh-CN-XiaoxiaoNeural",
+    "母亲": "zh-CN-XiaoxiaoNeural",
+    "阿姨": "zh-CN-XiaoxiaoNeural",
+    "护士": "zh-CN-XiaoxiaoNeural",
+    # Male Youth / Student
+    "学生": "zh-CN-YunxiaNeural",
+    "男学生": "zh-CN-YunxiaNeural",
+    "同学们": "zh-CN-YunxiaNeural",
+    "小明": "zh-CN-YunxiaNeural",
+    "小刚": "zh-CN-YunxiaNeural",
+    "小亮": "zh-CN-YunxiaNeural",
+    "儿子": "zh-CN-YunxiaNeural",
+    "弟弟": "zh-CN-YunxiaNeural",
+    "小朋友": "zh-CN-YunxiaNeural",
+    "男孩": "zh-CN-YunxiaNeural",
+    # Male Young Adult / Classmate / Friend
+    "同学": "zh-CN-YunxiNeural",
+    "男同学": "zh-CN-YunxiNeural",
+    "大卫": "zh-CN-YunxiNeural",
+    "麦克": "zh-CN-YunxiNeural",
+    "小王": "zh-CN-YunxiNeural",
+    "小张": "zh-CN-YunxiNeural",
+    "小李": "zh-CN-YunxiNeural",
+    "哥哥": "zh-CN-YunxiNeural",
+    "朋友": "zh-CN-YunxiNeural",
+    "同事": "zh-CN-YunxiNeural",
+    "客人": "zh-CN-YunxiNeural",
+    "顾客": "zh-CN-YunxiNeural",
+    # Male Teacher / Father / Elder / Doctor / Boss
+    "男老师": "zh-CN-YunjianNeural",
+    "刘老师": "zh-CN-YunjianNeural",
+    "陈老师": "zh-CN-YunjianNeural",
+    "教授": "zh-CN-YunjianNeural",
+    "爸爸": "zh-CN-YunjianNeural",
+    "父亲": "zh-CN-YunjianNeural",
+    "爷爷": "zh-CN-YunjianNeural",
+    "医生": "zh-CN-YunjianNeural",
+    "大夫": "zh-CN-YunjianNeural",
+    "经理": "zh-CN-YunjianNeural",
+    "老板": "zh-CN-YunjianNeural",
+    "主任": "zh-CN-YunjianNeural",
+    # Male Professional / Announcer / Driver
+    "广播": "zh-CN-YunyangNeural",
+    "记者": "zh-CN-YunyangNeural",
+    "司机": "zh-CN-YunyangNeural",
+    "先生": "zh-CN-YunyangNeural",
+}
+
+FEMALE_INDICATORS = {"女", "妈妈", "母亲", "奶奶", "外婆", "女儿", "妹妹", "姐姐", "小红", "小丽", "小美", "玛丽", "安娜", "小语", "ai小语", "阿姨", "护士", "女的", "女声", "乙", "b"}
+MALE_INDICATORS = {"男", "爸爸", "父亲", "爷爷", "儿子", "弟弟", "哥哥", "小明", "小刚", "小王", "小张", "小李", "大卫", "麦克", "先生", "司机", "经理", "男的", "男声", "甲", "a"}
+
+
+def _deterministic_seed_index(seed_key: str, modulo: int) -> int:
+    if not seed_key or modulo <= 1:
+        return 0
+    digest = hashlib.md5(seed_key.encode("utf-8", errors="ignore")).hexdigest()
+    return int(digest[:8], 16) % modulo
 
 
 def get_or_create_chime() -> bytes:
@@ -112,7 +201,7 @@ def resolve_dialogue_pair(
     voice_female: str | None = None,
     seed_key: str | None = None,
 ) -> Tuple[str, str]:
-    """Resolves (male_voice, female_voice) tuple based on requested voice or seed key."""
+    """Resolves context-aware (male_voice, female_voice) tuple based on lesson content, character roles, or seed key."""
     if voice_male and voice_female:
         return (voice_male, voice_female)
 
@@ -128,11 +217,52 @@ def resolve_dialogue_pair(
             return (m, f)
 
     if seed_key:
-        pair_idx = abs(hash(seed_key)) % len(DIALOGUE_PAIRS)
+        s = str(seed_key)
+        # Context 1: Male student greeting Female teacher (e.g. "男：王老师，您好！")
+        if re.search(r"(?:男|甲|A|学生|同学|小明)\s*[:：][^。\n]*老师", s):
+            m = "zh-CN-YunxiaNeural" if _deterministic_seed_index(s, 2) == 0 else "zh-CN-YunxiNeural"
+            return (m, "zh-CN-XiaoxiaoNeural")
+        # Context 2: Female student greeting Male teacher (e.g. "女：王老师，您好！")
+        if re.search(r"(?:女|乙|B|女学生|小红|玛丽)\s*[:：][^。\n]*老师", s):
+            return ("zh-CN-YunjianNeural", "zh-CN-XiaoyiNeural")
+        # Context 3: AI Tiểu Ngữ / Young Classmates / Friends
+        if any(k in s for k in ("AI小语", "小语", "同学", "朋友", "高兴", "认识", "爱好")):
+            m = "zh-CN-YunxiNeural" if _deterministic_seed_index(s, 2) == 0 else "zh-CN-YunxiaNeural"
+            return (m, "zh-CN-XiaoyiNeural")
+        # Context 4: Family / Home / Elders
+        if any(k in s for k in ("奶奶", "外婆")):
+            return ("zh-CN-YunjianNeural", "zh-CN-shaanxi-XiaoniNeural")
+        if any(k in s for k in ("爸爸", "妈妈", "爷爷", "儿子", "女儿", "做饭")):
+            return ("zh-CN-YunjianNeural", "zh-CN-XiaoxiaoNeural")
+        # Context 5: Workplace / Business / Hospital / Service
+        if any(k in s for k in ("经理", "公司", "上班", "医生", "医院", "服务员", "机场", "火车")):
+            f = "zh-CN-XiaoxiaoNeural" if _deterministic_seed_index(s, 2) == 0 else "zh-CN-liaoning-XiaobeiNeural"
+            return ("zh-CN-YunyangNeural", f)
+
+        pair_idx = _deterministic_seed_index(s, len(DIALOGUE_PAIRS))
     else:
         pair_idx = 0
     pair = DIALOGUE_PAIRS[pair_idx]
     return (pair["male"], pair["female"])
+
+
+def resolve_single_contextual_voice(raw_text: str, requested_voice: str = "auto") -> str:
+    """Selects a context-fitting voice for single-sentence listening prompts when voice is 'auto'."""
+    if requested_voice and requested_voice != "auto" and requested_voice in VOICES_CATALOG:
+        return requested_voice
+    s = str(raw_text or "")
+    for char_name, char_voice in CHARACTER_VOICE_MAP.items():
+        if char_name in s.lower():
+            return char_voice
+    single_pool = [
+        "zh-CN-XiaoxiaoNeural",
+        "zh-CN-YunxiNeural",
+        "zh-CN-XiaoyiNeural",
+        "zh-CN-YunjianNeural",
+        "zh-CN-YunyangNeural",
+        "zh-CN-YunxiaNeural",
+    ]
+    return single_pool[_deterministic_seed_index(s, len(single_pool))]
 
 
 def _clean_spoken_chinese_content(text: str) -> str:
@@ -202,11 +332,22 @@ def parse_dialogue_segments(
 
     if not has_dialogue:
         cleaned_single = _clean_spoken_chinese_content(text_before_q)
-        return [(default_voice, cleaned_single or text_before_q)], male_v, female_v
+        single_voice = resolve_single_contextual_voice(text_before_q, default_voice)
+        return [(single_voice, cleaned_single or text_before_q)], male_v, female_v
 
     segments: List[Tuple[str, str]] = []
     speaker_voice_map: dict = {}
-    available_voices = [male_v, female_v]
+    used_voices_in_dialogue: List[str] = []
+    available_voices = [
+        male_v,
+        female_v,
+        "zh-CN-XiaoyiNeural",
+        "zh-CN-YunjianNeural",
+        "zh-CN-YunxiaNeural",
+        "zh-CN-YunyangNeural",
+        "zh-CN-liaoning-XiaobeiNeural",
+        "zh-CN-shaanxi-XiaoniNeural",
+    ]
 
     for line in lines:
         m_speaker = re.match(r"^([\u4e00-\u9fa5A-Za-z0-9_]{1,8}(?:说|的说|声)?)\s*[:：]\s*(.*)$", line)
@@ -222,25 +363,42 @@ def parse_dialogue_segments(
 
             tag_clean = re.sub(r"(?:说|的说|声)$", "", speaker_tag).strip().lower()
 
-            if any(f in tag_clean for f in FEMALE_INDICATORS):
-                voice = female_v
-            elif any(m in tag_clean for m in MALE_INDICATORS):
-                voice = male_v
-            else:
-                if speaker_tag not in speaker_voice_map:
-                    voice_idx = len(speaker_voice_map) % len(available_voices)
-                    speaker_voice_map[speaker_tag] = available_voices[voice_idx]
+            if speaker_tag in speaker_voice_map:
                 voice = speaker_voice_map[speaker_tag]
+            else:
+                if tag_clean in CHARACTER_VOICE_MAP:
+                    candidate_voice = CHARACTER_VOICE_MAP[tag_clean]
+                    # Ensure distinct voices if another speaker already claimed candidate_voice
+                    if candidate_voice in used_voices_in_dialogue:
+                        cand_gender = VOICES_CATALOG.get(candidate_voice, {}).get("gender", "female")
+                        alt_gender_voices = [
+                            v for v in available_voices
+                            if v not in used_voices_in_dialogue
+                        ]
+                        candidate_voice = alt_gender_voices[0] if alt_gender_voices else (male_v if cand_gender == "female" else female_v)
+                    voice = candidate_voice
+                elif any(f in tag_clean for f in FEMALE_INDICATORS):
+                    voice = female_v if female_v not in used_voices_in_dialogue else "zh-CN-XiaoyiNeural"
+                elif any(m in tag_clean for m in MALE_INDICATORS):
+                    voice = male_v if male_v not in used_voices_in_dialogue else "zh-CN-YunjianNeural"
+                else:
+                    unused = [v for v in available_voices if v not in used_voices_in_dialogue]
+                    voice = unused[0] if unused else available_voices[len(speaker_voice_map) % len(available_voices)]
+
+                speaker_voice_map[speaker_tag] = voice
+                if voice not in used_voices_in_dialogue:
+                    used_voices_in_dialogue.append(voice)
 
             segments.append((voice, content))
         else:
             clean_line = _clean_spoken_chinese_content(line.strip())
             if clean_line:
-                segments.append((default_voice, clean_line))
+                segments.append((resolve_single_contextual_voice(clean_line, default_voice), clean_line))
 
     if not segments:
         cleaned_single = _clean_spoken_chinese_content(text_before_q)
-        return [(default_voice, cleaned_single or text_before_q)], male_v, female_v
+        single_voice = resolve_single_contextual_voice(text_before_q, default_voice)
+        return [(single_voice, cleaned_single or text_before_q)], male_v, female_v
 
     return segments, male_v, female_v
 
@@ -326,7 +484,7 @@ def generate_audio(
 
     segments, male_v, female_v = parse_dialogue_segments(
         str(text),
-        default_voice=DEFAULT_VOICE if chosen_voice == "auto" else chosen_voice,
+        default_voice="auto" if chosen_voice == "auto" else chosen_voice,
         voice_male=voice_male,
         voice_female=voice_female,
     )
@@ -334,9 +492,11 @@ def generate_audio(
     try:
         if len(segments) > 1:
             asyncio.run(_synthesize_multi_segments(segments, output_path, intro_chime=intro_chime))
-            used_voice = f"dialogue-multi-voice ({male_v} + {female_v})"
+            distinct_voices = list(dict.fromkeys(v for v, _ in segments))
+            used_voice = f"dialogue-multi-voice ({' + '.join(distinct_voices)})"
         else:
-            voice_to_use = DEFAULT_VOICE if chosen_voice == "auto" else chosen_voice
+            voice_to_use = segments[0][0] if (chosen_voice == "auto" and segments) else (DEFAULT_VOICE if chosen_voice == "auto" else chosen_voice)
+            used_voice = voice_to_use
             asyncio.run(_synthesize(segments[0][1], output_path, voice_to_use, intro_chime=intro_chime))
     except Exception as primary_err:
         try:

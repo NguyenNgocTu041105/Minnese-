@@ -770,6 +770,22 @@ export function sanitizeDialogueScript(raw: string): string {
     text = text.replace(/(?<=^|[^\p{L}])B\s*[:：]\s*/gui, ' 乙：');
   }
 
+  // 5b. Convert named lesson characters in multi-turn dialogues into standard 女： / 男： roles
+  // so multi-role dialogue TTS assigns distinct voices without reading the speaker label aloud
+  const charDialogueMatches = text.match(
+    /(?<=^|[^\p{L}])(?:AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|女老师|男老师|老师|女学生|男学生|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|小美|小王|小张|小李|大卫|玛丽|安娜|麦克|医生|大夫|护士|服务员|售货员|经理|老板|司机|客人|顾客)\s*[:：]/giu
+  );
+  if (charDialogueMatches && charDialogueMatches.length >= 2) {
+    text = text.replace(
+      /(?<=^|[^\p{L}])(?:AI小语|小语|王老师|李老师|张老师|女老师|老师|女学生|妈妈|奶奶|姐姐|妹妹|女儿|小红|小丽|小美|玛丽|安娜|护士|服务员|售货员)\s*[:：]\s*/gui,
+      ' 女：'
+    );
+    text = text.replace(
+      /(?<=^|[^\p{L}])(?:刘老师|陈老师|男老师|男学生|学生|同学们|同学|爸爸|爷爷|哥哥|弟弟|儿子|小明|小王|小张|小李|大卫|麦克|医生|大夫|经理|老板|司机|客人|顾客)\s*[:：]\s*/gui,
+      ' 男：'
+    );
+  }
+
   // 6. Strip Latin speaker/option labels like `A. `, `B. `, `A、 `, `B、 `, `(A)`, `(B)`
   text = text.replace(/(?<=^|[^\p{L}])([A-Da-d])\s*[.、\)]\s*/gu, ' ');
   text = text.replace(/[\(（\[【]\s*([A-Da-d])\s*[\)）\]】]\s*/gu, ' ');
@@ -871,7 +887,10 @@ export function sanitizeQuestionAudioText(raw: string): string {
 
       // Strip named character labels at the start of dialogue lines (e.g. "王老师：", "老师：", "学生：", "同学：", "你：")
       // so the narrator reads the spoken sentences naturally without repeating character names on every line
-      cleaned = cleaned.replace(/^(?:王老师|李老师|张老师|老师|学生|同学们|同学|你|我|A|B)\s*[:：]\s*/i, '').trim();
+      cleaned = cleaned.replace(
+        /^(?:AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|小王|小张|小李|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|你|我|A|B)\s*[:：]\s*/i,
+        ''
+      ).trim();
 
       // 6. If line mixes Vietnamese prose with embedded Chinese words (e.g. "Trong cụm từ 你好, cách phát âm..."),
       // extract only the Chinese segments so TTS never reads Vietnamese words with a Chinese accent

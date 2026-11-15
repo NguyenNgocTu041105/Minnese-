@@ -1800,27 +1800,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
       const playSpokenScriptFallback = async () => {
         if (!textToPlay) return;
-        const normalizedLines = textToPlay
-          .replace(/(?:^|[\r\n\s]+|(?<=[。？！?!]))(?=(?:男|女|甲|乙|老师|学生|爸爸|妈妈|A|B)\s*[:：])/g, '\n')
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .filter(Boolean);
-        const hasSpeakerTags = normalizedLines.some((l) =>
-          /^(?:男|女|甲|乙|老师|学生|爸爸|妈妈|A|B)\s*[:：]/i.test(l)
-        );
-        if (hasSpeakerTags && normalizedLines.length > 0) {
-          const dialogueItems = normalizedLines.map((line, idx) => {
-            const m = line.match(/^([^:：]+)[:：]\s*(.*)$/);
-            const speaker = m ? m[1].trim() : idx % 2 === 0 ? '男' : '女';
-            const hanzi = m ? m[2].trim() : line;
-            const gender: 'male' | 'female' =
-              /女|妈|姐|妹|小红|乙|b/i.test(speaker) ? 'female' : 'male';
-            return { speaker, gender, hanzi };
-          });
-          await playDialogueSequence(dialogueItems, undefined, undefined, rate);
-        } else {
-          await playChineseAudio(textToPlay, rate, pitch);
-        }
+        await playDialogueSequence(textToPlay, { rate, pitch });
       };
 
       const playSinglePass = async () => {

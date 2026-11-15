@@ -2725,8 +2725,6 @@ export const QBankAdmin: React.FC = () => {
       stopChineseAudio();
       await playDialogueSequence(text, {
         rate: 0.9,
-        maleVoice: 'zh-CN-YunxiNeural',
-        femaleVoice: 'zh-CN-XiaoxiaoNeural',
       });
       setIsPlayingWebSpeechId(null);
       return;

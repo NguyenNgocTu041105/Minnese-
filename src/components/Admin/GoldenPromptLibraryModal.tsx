@@ -231,24 +231,25 @@ Câu 2: [A/B/C/D]. Giải thích: ...`;
 
     case 'listening_dialogue': {
       return `Bạn là Chuyên gia Biên soạn Đề thi Nghe hiểu HSK 3.0.
-Hãy tạo ${questionCount} câu hỏi Nghe hiểu hội thoại hai nhân vật Nam (男) và Nữ (女) trình độ HSK ${level}.${lessonHeaderLine}
+Hãy tạo ${questionCount} câu hỏi Nghe hiểu hội thoại đa dạng nhân vật và ngữ cảnh trình độ HSK ${level}.${lessonHeaderLine}
 - Khung từ vựng mục tiêu: ${vocabTargetLine}
 - Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
 - Chủ đề: ${topic}
 - ${pinyinInstruction}
 
-YÊU CẦU KỸ THUẬT VÀ ĐỊNH DẠNG BẮT BUỘC (TUÂN THỦ 100% ĐỂ HỆ THỐNG TỰ ĐỘNG BÓC TÁCH VÀ TẠO AUDIO TTS TỰ NHIÊN):
-1. Mỗi câu hỏi gồm lời thoại của 2 nhân vật, sau đó là câu hỏi 问：
+YÊU CẦU KỸ THUẬT VÀ ĐỊNH DẠNG BẮT BUỘC (TUÂN THỦ 100% ĐỂ HỆ THỐNG TỰ ĐỘNG BÓC TÁCH VÀ PHÂN VAI GIỌNG ĐỌC NEURAL TTS THEO NHÂN VẬT):
+1. Đa dạng hóa tình huống và tuyến nhân vật sát hợp với bài học (ví dụ: thầy/cô giáo 王老师/李老师 với học sinh 学生/同学, AI小语 với bạn học, bố mẹ 爸爸/妈妈 với con cái, đồng nghiệp/bạn bè 大卫/玛丽, nhân viên 服务员 với khách 客人, hoặc cặp nhân vật 男/女).
+2. Mỗi câu hỏi gồm lời thoại đối đáp của 2 nhân vật, sau đó là câu hỏi 问：
    Câu [STT]:
-   男：[Lời thoại nhân vật Nam bằng chữ Hán]${pinyinExample}
-   女：[Lời thoại nhân vật Nữ bằng chữ Hán]${pinyinExample}
+   男：[Lời thoại nhân vật 1 bằng chữ Hán (có thể dùng 男： hoặc tên nhân vật phù hợp bài học như 王老师：, 学生：, 爸爸：)]${pinyinExample}
+   女：[Lời thoại nhân vật 2 bằng chữ Hán (có thể dùng 女： hoặc tên nhân vật đối đáp như 学生：, AI小语：, 妈妈：)]${pinyinExample}
    问：[Câu hỏi về nội dung hội thoại]?
    A. [Phương án A]
    B. [Phương án B]
    C. [Phương án C]
    D. [Phương án D]
-2. Bẫy tư duy: Cài cắm chi tiết đổi ý hoặc thông tin gây nhiễu tự nhiên giữa hai nhân vật để kiểm tra năng lực nghe hiểu thực chất.
-3. BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+3. Bẫy tư duy: Cài cắm chi tiết đổi ý hoặc thông tin gây nhiễu tự nhiên giữa hai nhân vật để kiểm tra năng lực nghe hiểu thực chất.
+4. BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
 ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
 Câu 1: [A/B/C/D]. Giải thích: [Dịch toàn bộ lời thoại sang tiếng Việt, giải thích chi tiết vì sao đáp án này đúng và phân tích bẫy nghe].
 Câu 2: [A/B/C/D]. Giải thích: ...`;

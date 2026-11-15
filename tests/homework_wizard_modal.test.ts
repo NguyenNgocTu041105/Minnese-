@@ -8,7 +8,13 @@ import {
   DIFFICULTY_LEVELS,
 } from '../src/components/Admin/HomeworkWizardModal';
 import { buildGoldenPrompt } from '../src/components/Admin/GoldenPromptLibraryModal';
-import { EDGE_TTS_VOICES, sanitizeQuestionAudioText, parseDialogueTurns } from '../src/utils/chineseAudio';
+import {
+  EDGE_TTS_VOICES,
+  sanitizeQuestionAudioText,
+  parseDialogueTurns,
+  selectContextualVoiceCast,
+  selectContextualSingleVoice,
+} from '../src/utils/chineseAudio';
 import { sanitizeAndVerifyPinyinInText, verifyAndFixQuizQuestionPinyin } from '../src/utils/pinyinEngine';
 
 describe('HomeworkWizardModal & Curriculum Question Synthesis', () => {
@@ -442,6 +448,30 @@ Câu 10: D. Giải thích: 再见 (zàijiàn) có nghĩa là "Tạm biệt, hẹ
       });
       expect(fixedQ.options).toEqual(['你 (nǐ)', '您 (nín)', '你们 (nǐmen)', '大家 (dàjiā)']);
       expect(fixedQ.questionChinese).toBe('男：王老师，您好！(Wáng lǎoshī, nín hǎo!)\n女：你好！(Nǐ hǎo!)');
+    });
+
+    it('should select context-fitting voices for diverse characters (Teacher, Student, AI Tiểu Ngữ, Parents) and parse named character dialogues', () => {
+      // Teacher & Student dialogue
+      const teacherStudentTurns = parseDialogueTurns('王老师：同学们，大家好！\n学生：王老师，您好！');
+      expect(teacherStudentTurns).toEqual([
+        { role: 'female', text: '同学们，大家好！' },
+        { role: 'male', text: '王老师，您好！' },
+      ]);
+
+      // Context-aware voice cast selection
+      const teacherCast = selectContextualVoiceCast('男：王老师，您好！\n女：你好！谢谢你们。');
+      expect(teacherCast.female).toBe('zh-CN-XiaoxiaoNeural');
+      expect(['zh-CN-YunxiaNeural', 'zh-CN-YunxiNeural']).toContain(teacherCast.male);
+
+      const aiXiaoyuCast = selectContextualVoiceCast('男：AI小语，你好！很高兴认识你。\n女：你好！');
+      expect(aiXiaoyuCast.female).toBe('zh-CN-XiaoyiNeural');
+
+      const familyCast = selectContextualVoiceCast('爸爸：今天在家里做饭吗？\n妈妈：好的。');
+      expect(familyCast.male).toBe('zh-CN-YunjianNeural');
+      expect(familyCast.female).toBe('zh-CN-XiaoxiaoNeural');
+
+      expect(selectContextualSingleVoice('AI小语，你好！')).toBe('zh-CN-XiaoyiNeural');
+      expect(selectContextualSingleVoice('爸爸今天去医院看医生。')).toBe('zh-CN-YunjianNeural');
     });
   });
 });

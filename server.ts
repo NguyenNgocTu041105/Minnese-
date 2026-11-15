@@ -2172,32 +2172,60 @@ QUY TẮC BẮT BUỘC:
     res.json([
       {
         id: 'zh-CN-XiaoxiaoNeural',
-        name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình HSK',
+        name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình / Cô Giáo',
         gender: 'female',
         accent: 'Standard (Bắc Kinh)',
-        description: 'Giọng Nữ Chuẩn Giáo Trình BLCUP / HSK - Tự nhiên, truyền cảm, chuẩn phát thanh viên',
+        description: 'Giọng Nữ Chuẩn Giáo Trình BLCUP / HSK - Tự nhiên, ấm áp (Cô Vương, Mẹ, Bác sĩ)',
         isDefault: true,
       },
       {
         id: 'zh-CN-XiaoyiNeural',
-        name: 'Hiểu Y (Xiaoyi) - Nữ Trẻ Trung, Tươi Vui',
+        name: 'Hiểu Y (Xiaoyi) - Nữ Học Sinh / AI Tiểu Ngữ',
         gender: 'female',
         accent: 'Standard (Bắc Kinh)',
-        description: 'Giọng Nữ Trẻ Trung, phát âm trong trẻo, sinh động',
+        description: 'Giọng Nữ Trẻ Trung, phát âm trong trẻo, sinh động (AI Tiểu Ngữ, Nữ sinh, Bạn học)',
       },
       {
         id: 'zh-CN-YunxiNeural',
-        name: 'Vân Hy (Yunxi) - Nam Tự Nhiên, Trầm Ấm',
+        name: 'Vân Hy (Yunxi) - Nam Thanh Niên / Bạn Học',
         gender: 'male',
         accent: 'Standard (Bắc Kinh)',
-        description: 'Giọng Nam Chuẩn, trầm ấm, phát âm tròn vành rõ chữ',
+        description: 'Giọng Nam Chuẩn, trầm ấm, phát âm tròn vành rõ chữ (Nam sinh viên, Bạn bè)',
       },
       {
         id: 'zh-CN-YunjianNeural',
-        name: 'Vân Kiện (Yunjian) - Nam Chuẩn Phát Thanh HSK',
+        name: 'Vân Kiện (Yunjian) - Nam Giáo Viên / Khảo Thí HSK',
         gender: 'male',
         accent: 'Standard (Bắc Kinh)',
-        description: 'Giọng Nam Đĩnh Đạc, phong thái phát thanh viên khảo thí',
+        description: 'Giọng Nam Đĩnh Đạc, phong thái thầy giáo, bố, bác sĩ, phát thanh viên khảo thí',
+      },
+      {
+        id: 'zh-CN-YunxiaNeural',
+        name: 'Vân Hạ (Yunxia) - Nam Học Sinh / Thiếu Niên',
+        gender: 'male',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nam Học Trò năng động, tự nhiên (Học sinh, Tiểu Minh, Em trai)',
+      },
+      {
+        id: 'zh-CN-YunyangNeural',
+        name: 'Vân Dương (Yunyang) - Nam Phát Thanh Viên / Công Sở',
+        gender: 'male',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nam Phát Thanh chuyên nghiệp, chuẩn mực (Bản tin, Quản lý, Nhân viên)',
+      },
+      {
+        id: 'zh-CN-liaoning-XiaobeiNeural',
+        name: 'Tiểu Bối (Xiaobei) - Nữ Sinh Động / Đời Thường',
+        gender: 'female',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nữ Sinh Động, gần gũi, tự nhiên trong hội thoại đời sống',
+      },
+      {
+        id: 'zh-CN-shaanxi-XiaoniNeural',
+        name: 'Tiểu Ni (Xiaoni) - Nữ Dịu Dàng / Trưởng Bối',
+        gender: 'female',
+        accent: 'Standard (Bắc Kinh)',
+        description: 'Giọng Nữ Dịu Dàng, truyền cảm, điềm đạm (Trưởng bối, Bà)',
       },
     ]);
   });
@@ -2237,7 +2265,9 @@ QUY TẮC BẮT BUỘC:
     const textToSynth = (cleanedText || rawText).slice(0, 1000);
     const isMultiDialogue =
       voice === 'auto' ||
-      /(?:^|[\r\n\s])(?:男|女|甲|乙|爸爸|妈妈|老师|学生|小明|小红|A|B)\s*[:：]/.test(textToSynth);
+      /(?:^|[\r\n\s])(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]/.test(
+        textToSynth
+      );
 
     const hash = crypto.createHash('md5').update(`${voice}:${textToSynth}`).digest('hex');
 

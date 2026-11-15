@@ -485,9 +485,32 @@ export function synthesizeLessonQuestions(
             };
         }
 
-        const speaker1 = `男：你好！今天你忙吗？`;
-        const speaker2 = `女：我不忙，我很${v2.hanzi}。`;
+        let speaker1 = `男：你好！今天你忙吗？`;
+        let speaker2 = `女：我不忙，我很${v2.hanzi}。`;
         const questionPrompt = `问：女的今天怎么样？`;
+        let explanationText = `Trong đoạn hội thoại đối thoại, người nữ nói: "我不忙，我很${v2.hanzi}." Do đó đáp án chính xác là "${v2.hanzi}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`;
+
+        if (i > 0) {
+          const scenarioIdx = i % 4;
+          if (scenarioIdx === 1) {
+            speaker1 = `王老师：你好！今天上课你觉得怎么样？`;
+            speaker2 = `女：王老师，您好！今天我很${v2.hanzi}。`;
+            explanationText = `Trong hội thoại trên lớp với thầy/cô Vương (王老师), bạn nữ trả lời: "今天我很${v2.hanzi}." Đáp án đúng là "${v2.hanzi}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`;
+          } else if (scenarioIdx === 2) {
+            speaker1 = `大卫：玛丽，今天你去学校怎么样？`;
+            speaker2 = `玛丽：大卫，你好！今天我很${v2.hanzi}。`;
+            explanationText = `Trong cuộc trò chuyện giữa David (大卫) và Mary (玛丽), Mary nói: "今天我很${v2.hanzi}." Đáp án đúng là "${v2.hanzi}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`;
+          } else if (scenarioIdx === 3) {
+            speaker1 = `爸爸：今天在学校学习忙吗？`;
+            speaker2 = `女儿：爸爸，我不忙，今天我很${v2.hanzi}。`;
+            explanationText = `Người con gái nói với bố (爸爸): "我不忙，今天我很${v2.hanzi}." Đáp án đúng là "${v2.hanzi}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`;
+          } else {
+            speaker1 = `男：AI小语，你好！今天你觉得怎么样？`;
+            speaker2 = `AI小语：你好！谢谢你，今天我很${v2.hanzi}。`;
+            explanationText = `AI Tiểu Ngữ (AI小语) trả lời: "今天我很${v2.hanzi}." Đáp án đúng là "${v2.hanzi}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`;
+          }
+        }
+
         const dialogueScript = `${speaker1}\n${speaker2}\n${questionPrompt}`;
         const audioText = `${speaker1}${speaker2}${questionPrompt}`;
 
@@ -506,7 +529,7 @@ export function synthesizeLessonQuestions(
           audio_url: audioUrl,
           options,
           correctAnswer: correct,
-          explanation: `Trong đoạn hội thoại đối thoại, người nữ nói: "我不忙，我很${v2.hanzi}." Do đó đáp án chính xác là "${correct}" (${v2.pinyin || ''} - ${getWordMeaning(v2) || 'nghĩa từ vựng'}).`,
+          explanation: explanationText,
           hskLevel: (level as HSKLevel) || 1,
           usageNotes: `Cấp độ: HSK ${level} • Giọng đọc: ${ttsVoice}`,
         });
@@ -632,10 +655,11 @@ Hãy biên soạn bộ bài tập về nhà gồm ${opts.questionCount} câu h�
 
 YÊU CẦU CẤU TRÚC ĐỀ ĐA DẠNG & ĐỊNH DẠNG CHUẨN CANONICAL (ĐỂ HỆ THỐNG BÓC TÁCH & TẠO AUDIO NGHE TỰ ĐỘNG 100%):
 Hãy kết hợp đầy đủ các dạng bài tập (bắt buộc có cả câu Nghe hội thoại 男/女/问, câu Điền từ vào chỗ trống ____, và câu Trắc nghiệm/Đọc hiểu) xoay quanh đúng từ vựng & cấu trúc trên:
-- Phần 1 — Câu Nghe hội thoại (Hệ thống sẽ tự động đọc lời thoại 男/女/问 bằng giọng chuẩn Bắc Kinh Edge TTS cho học viên nghe):
+- Phần 1 — Câu Nghe hội thoại (Hệ thống sẽ tự động phân vai giọng đọc Bắc Kinh Neural TTS theo từng nhân vật và ngữ cảnh bài học):
+  + Đa dạng hóa nhân vật và bối cảnh giao tiếp sát với Bài ${opts.lessonNumber} (ví dụ: thầy/cô giáo 王老师/李老师 với học sinh 学生/同学, trợ lý AI小语 với người học, bố mẹ 爸爸/妈妈 với con cái, bạn bè 大卫/玛丽/小明/小红, hoặc nhân vật 男/女).
   Câu [STT]:
-  男：[Lời thoại nhân vật Nam bằng chữ Hán dùng từ vựng/cấu trúc bài học]
-  女：[Lời thoại nhân vật Nữ bằng chữ Hán dùng từ vựng/cấu trúc bài học]
+  男：[Lời thoại nhân vật 1 (có thể ghi 男： hoặc tên nhân vật phù hợp ngữ cảnh như 王老师：, 学生：, 爸爸：, 大卫：) bằng chữ Hán dùng từ vựng/cấu trúc bài học]
+  女：[Lời thoại nhân vật 2 (có thể ghi 女： hoặc tên nhân vật đối đáp như 学生：, AI小语：, 妈妈：, 玛丽：) bằng chữ Hán dùng từ vựng/cấu trúc bài học]
   问：[Câu hỏi kiểm tra thông tin hội thoại]?
   A. [Phương án A]
   B. [Phương án B]
@@ -884,7 +908,7 @@ export function parseExternalAiHomeworkText(
         questionChinese: displayChinese,
         audioText: isListening ? audioTxt : sanitizedChineseAudio || undefined,
         audio_url: isListening
-          ? `/api/tts?text=${encodeURIComponent(audioTxt.replace(/(?:男|女)[:：]\s*/g, ''))}&voice=${encodeURIComponent(selectedVoice)}`
+          ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
           : undefined,
         options,
         correctAnswer,

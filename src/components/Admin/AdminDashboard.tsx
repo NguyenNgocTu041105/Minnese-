@@ -704,6 +704,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
       version: 1,
       is_active: true,
     },
+    {
+      id: 'listening_generation',
+      name: 'listening_dialogue_tts_generation',
+      system_prompt:
+        'Bạn là chuyên gia thiết kế đề thi Nghe HSK 3.0. Hãy biên soạn các đoạn hội thoại ngắn giữa 2 nhân vật (男：... / 女：...) kèm câu hỏi (问：...) và 4 phương án A, B, C, D bám sát từ vựng & cấu trúc bài học để hệ thống tự động tổng hợp giọng đọc AI Bắc Kinh (Edge TTS).',
+      variables: ['{{hsk_level}}', '{{lesson_vocab}}', '{{lesson_grammar}}', '{{count}}'],
+      target_store_names: ['store-tuvung-hsk', 'store-nguphap-hsk'],
+      version: 1,
+      is_active: true,
+    },
   ]);
 
   // RAG Docs & Tester

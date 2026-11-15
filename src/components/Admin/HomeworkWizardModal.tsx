@@ -622,19 +622,19 @@ Hãy biên soạn bộ bài tập về nhà gồm ${opts.questionCount} câu h�
 3. CẤU TRÚC NGỮ PHÁP & MẪU CÂU BẮT BUỘC KIỂM TRA (DO GIÁO VIÊN CHỌN / BỔ SUNG):
    ${grammarFormatted}${opts.teacherNote?.trim() ? `\n\n4. YÊU CẦU SƯ PHẠM RIÊNG CỦA GIÁO VIÊN:\n   ${opts.teacherNote.trim()}` : ''}
 
-YÊU CẦU CẤU TRÚC ĐỀ ĐA DẠNG & ĐỊNH DẠNG CHUẨN CANONICAL (ĐỂ HỆ THỐNG BÓC TÁCH TỰ ĐỘNG 100%):
-Hãy kết hợp linh hoạt các dạng bài tập (Trắc nghiệm từ vựng/ngữ pháp, Điền từ vào chỗ trống ____, Đọc hiểu câu/đoạn ngắn, và Nghe hội thoại 男/女/问) xoay quanh đúng từ vựng & cấu trúc trên:
-- Với câu Trắc nghiệm / Điền từ / Đọc hiểu:
-  Câu [STT]: [Câu tiếng Trung có ____ hoặc câu hỏi đọc hiểu]
+YÊU CẦU CẤU TRÚC ĐỀ ĐA DẠNG & ĐỊNH DẠNG CHUẨN CANONICAL (ĐỂ HỆ THỐNG BÓC TÁCH & TẠO AUDIO NGHE TỰ ĐỘNG 100%):
+Hãy kết hợp đầy đủ các dạng bài tập (bắt buộc có cả câu Nghe hội thoại 男/女/问, câu Điền từ vào chỗ trống ____, và câu Trắc nghiệm/Đọc hiểu) xoay quanh đúng từ vựng & cấu trúc trên:
+- Phần 1 — Câu Nghe hội thoại (Hệ thống sẽ tự động đọc lời thoại 男/女/问 bằng giọng chuẩn Bắc Kinh Edge TTS cho học viên nghe):
+  Câu [STT]:
+  男：[Lời thoại nhân vật Nam bằng chữ Hán dùng từ vựng/cấu trúc bài học]
+  女：[Lời thoại nhân vật Nữ bằng chữ Hán dùng từ vựng/cấu trúc bài học]
+  问：[Câu hỏi kiểm tra thông tin hội thoại]?
   A. [Phương án A]
   B. [Phương án B]
   C. [Phương án C]
   D. [Phương án D]
-- Với câu Nghe hội thoại (nếu có):
-  Câu [STT]:
-  男：[Lời thoại nhân vật Nam dùng từ vựng/cấu trúc bài học]
-  女：[Lời thoại nhân vật Nữ dùng từ vựng/cấu trúc bài học]
-  问：[Câu hỏi kiểm tra thông tin]?
+- Phần 2 — Câu Điền từ vào chỗ trống / Trắc nghiệm Đọc hiểu:
+  Câu [STT]: [Câu tiếng Trung có ____ hoặc câu hỏi đọc hiểu]
   A. [Phương án A]
   B. [Phương án B]
   C. [Phương án C]
@@ -1012,7 +1012,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showVocabGrammarCustomizer, setShowVocabGrammarCustomizer] = useState<boolean>(false);
-  const [showRawSystemPromptEditor, setShowRawSystemPromptEditor] = useState<boolean>(false);
+  const [showRawSystemPromptEditor, setShowRawSystemPromptEditor] = useState<boolean>(true);
 
   // Step 4: Review & Inline Edit States
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -1125,14 +1125,38 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
       // Fall through to text regex parser
     }
 
-    // 2. Standard numbered text parser (Câu 1:, Bài 1:, Question 1:, 1., 1))
+    // 2. Standard numbered text parser (supports both inline answers and bottom "ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT" table)
     const parsedLocal: QuizQuestion[] = [];
-    const questionBlocks = trimmed
-      .split(/(?:^|\n)\s*(?:\*\*?)?(?:Câu|Bài|Question)\s*\d+\s*[:.)]|\n\s*\d+\s*[:.)]\s+/i)
+    const footerSplit = trimmed.split(
+      /(?:^|\n)\s*(?:\*\*|#+\s*)?(?:ĐÁP\s*ÁN(?:\s*VÀ\s*GIẢI\s*THÍCH(?:\s*CHI\s*TIẾT)?)?|BẢNG\s*ĐÁP\s*ÁN|ANSWER\s*KEY)\s*[:：]?\s*(?:\*\*)?(?:\n|$)/i
+    );
+    const questionsBody = footerSplit[0] || trimmed;
+    const footerBody = footerSplit.slice(1).join('\n');
+
+    // Parse bottom answer key map: Câu 1: B. Giải thích: ...
+    const footerAnswerMap: Record<number, { ansChar: string; explanation: string }> = {};
+    if (footerBody.trim()) {
+      const footerLines = footerBody.split(/\n+/);
+      footerLines.forEach((line) => {
+        const m = line.match(
+          /(?:Câu|Bài|Question)?\s*(\d+)\s*[:.)]\s*\*?\*?([A-D])\*?\*?(?:[.\s-]*(?:Giải thích\s*[:：.]?\s*)?(.+))?/i
+        );
+        if (m) {
+          const qNum = parseInt(m[1], 10);
+          footerAnswerMap[qNum] = {
+            ansChar: m[2].toUpperCase(),
+            explanation: m[3]?.trim() || '',
+          };
+        }
+      });
+    }
+
+    const questionBlocks = questionsBody
+      .split(/(?:^|\n)\s*(?=(?:\*\*?)?(?:Câu|Bài|Question)\s*\d+\s*[:.)]|\d+\s*[:.)]\s+)/i)
       .map((b) => b.trim())
       .filter(Boolean);
 
-    const blocksToProcess = questionBlocks.length > 0 ? questionBlocks : [trimmed];
+    const blocksToProcess = questionBlocks.length > 0 ? questionBlocks : [questionsBody];
 
     blocksToProcess.forEach((block, idx) => {
       // Extract options (supports both multiline A. ... B. ... and inline A. ... B. ... C. ... D. ...)
@@ -1152,22 +1176,32 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           ? extractedOpts
           : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
 
+      const qNumMatch = block.match(/^(?:\*\*?)?(?:Câu|Bài|Question)?\s*(\d+)\s*[:.)]/i);
+      const qNum = qNumMatch ? parseInt(qNumMatch[1], 10) : idx + 1;
+      const footerEntry = footerAnswerMap[qNum] || footerAnswerMap[idx + 1];
+
       const ansMatch = block.match(/(?:Đáp án(?:\s*đúng)?|ĐA|Answer|正确答案)\s*[:：.]?\s*\*?\*?([A-D])/i);
-      const ansChar = ansMatch ? ansMatch[1].toUpperCase() : 'A';
+      const ansChar = ansMatch ? ansMatch[1].toUpperCase() : footerEntry?.ansChar || 'A';
       const ansIndex = ['A', 'B', 'C', 'D'].indexOf(ansChar);
       const correctAnswer = options[ansIndex >= 0 && ansIndex < options.length ? ansIndex : 0] || options[0];
 
       const expMatch = block.match(/(?:Giải thích|Explanation|解析)\s*[:：.]\s*([^\n]+)/i);
       const explanation = expMatch
         ? expMatch[1].trim()
+        : footerEntry?.explanation
+        ? footerEntry.explanation
         : `Đáp án đúng: ${ansChar} (${correctAnswer}).`;
 
       // Question stem is everything before option A.
       const stemPart = block.split(/(?:^|\n|\s)A[.:)]\s+/)[0]?.trim() || block.split('\n')[0]?.trim() || '';
       const cleanStem = stemPart.replace(/^(?:\*\*?)?(?:Câu|Bài|Question)?\s*\d*\s*[:.)]?\s*/i, '').trim();
-      const isListening = /男[:：]|女[:：]|问[:：]|\[Nghe\]/i.test(cleanStem);
+      const isListening = /男[:：]|女[:：]|问[:：]|\[Nghe\]|听力/i.test(cleanStem);
       const isFillBlank = cleanStem.includes('____') || cleanStem.includes('___') || cleanStem.includes('（ ）');
-      const audioTxt = cleanStem.replace(/\[Nghe[^\]]*\]/gi, '').replace(/\([^)]*\)/g, '').trim();
+      const audioTxt = cleanStem
+        .replace(/\[Nghe[^\]]*\]/gi, '')
+        .replace(/\([^)]*\)/g, '')
+        .replace(/\s*\n\s*/g, '')
+        .trim();
 
       parsedLocal.push({
         id: `raw-q-${Date.now()}-${idx + 1}`,
@@ -2211,14 +2245,31 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {[
                           { key: 'comprehensive', label: 'Toàn diện (Tổng hợp)' },
-                          { key: 'listening', label: 'Luyện Nghe phản xạ' },
+                          { key: 'listening', label: '🎧 Luyện Nghe phản xạ' },
                           { key: 'reading', label: 'Đọc hiểu & Đoạn văn' },
                           { key: 'grammar', label: 'Ngữ pháp & Điền từ' },
                         ].map((mode) => (
                           <button
                             key={mode.key}
                             type="button"
-                            onClick={() => setPracticeMode(mode.key as 'comprehensive' | 'listening' | 'reading' | 'grammar')}
+                            onClick={() => {
+                              const nextMode = mode.key as 'comprehensive' | 'listening' | 'reading' | 'grammar';
+                              setPracticeMode(nextMode);
+                              if (nextMode === 'listening') {
+                                setSelectedFormats(['listening']);
+                                setHomeworkPromptTemplate('listening_dialogue');
+                              } else if (nextMode === 'reading') {
+                                setSelectedFormats(['reading', 'mcq']);
+                                setHomeworkPromptTemplate('reading_mcq');
+                              } else if (nextMode === 'grammar') {
+                                setSelectedFormats(['fill_blank', 'mcq']);
+                                setHomeworkPromptTemplate('fill_in_blank');
+                              } else {
+                                setSelectedFormats(['mcq', 'fill_blank', 'reading', 'listening']);
+                                setHomeworkPromptTemplate('mixed_homework');
+                              }
+                              setIsPromptManuallyEdited(false);
+                            }}
                             className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                               practiceMode === mode.key
                                 ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-xs'
@@ -2317,9 +2368,9 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     {/* Prompt Format Template Switcher */}
                     <div className="flex flex-wrap items-center gap-1.5">
                       {[
-                        { key: 'mixed_homework' as HomeworkPromptTemplateKey, label: '✨ Tổng hợp (Khuyên dùng)' },
+                        { key: 'mixed_homework' as HomeworkPromptTemplateKey, label: '✨ Tổng hợp (Gồm cả Nghe & Đọc)' },
+                        { key: 'listening_dialogue' as HomeworkPromptTemplateKey, label: '🎧 Nghe hội thoại (Tự tạo Audio TTS)' },
                         { key: 'fill_in_blank' as HomeworkPromptTemplateKey, label: 'Điền từ (____)' },
-                        { key: 'listening_dialogue' as HomeworkPromptTemplateKey, label: 'Nghe hội thoại' },
                         { key: 'reading_mcq' as HomeworkPromptTemplateKey, label: 'Đọc hiểu bài học' },
                         { key: 'dialogue_matching' as HomeworkPromptTemplateKey, label: 'Ghép câu hội thoại' },
                         { key: 'json_strict' as HomeworkPromptTemplateKey, label: 'JSON Chuẩn HSK' },
@@ -2344,6 +2395,17 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                         );
                       })}
                     </div>
+
+                    {(homeworkPromptTemplate === 'listening_dialogue' ||
+                      homeworkPromptTemplate === 'mixed_homework') && (
+                      <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-[var(--color-text-primary)] flex items-start gap-2">
+                        <Volume2 className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Cơ chế tạo đề Nghe bằng AI ngoài:</strong> Prompt yêu cầu AI sinh kịch bản hội thoại chữ Hán chuẩn{' '}
+                          <code className="font-mono font-bold text-amber-700 dark:text-amber-300">男：... 女：... 问：...</code>. Khi bạn dán kết quả vào <strong>Bước 2</strong> bên dưới, hệ thống tự động chuyển lời thoại thành <strong>file âm thanh giọng đọc AI Bắc Kinh (Edge TTS)</strong> cho học viên nghe!
+                        </span>
+                      </div>
+                    )}
 
                     {/* Teacher pedagogical note input */}
                     <input

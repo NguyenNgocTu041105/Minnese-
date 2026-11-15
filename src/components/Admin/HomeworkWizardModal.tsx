@@ -47,6 +47,10 @@ import {
   stopChineseAudio,
 } from '../../utils/chineseAudio';
 import {
+  verifyAndFixQuizQuestionPinyin,
+  sanitizeAndVerifyPinyinInText,
+} from '../../utils/pinyinEngine';
+import {
   GoldenPromptLibraryModal,
   GoldenPromptFormatKey,
   buildGoldenPrompt,
@@ -608,7 +612,7 @@ export function buildHomeworkLessonSystemPrompt(opts: HomeworkLessonPromptOption
 
   const pinyinRule =
     opts.includePinyin ?? opts.level <= 3
-      ? 'BẮT BUỘC kèm phiên âm Pinyin có thanh điệu trong ngoặc đơn sau câu chữ Hán.'
+      ? 'BẮT BUỘC kèm phiên âm Pinyin chuẩn xác có dấu thanh điệu Unicode dựng sẵn (NFC: ā, á, ǎ, à; tuyệt đối KHÔNG tách dấu ˇ rời khỏi nguyên âm; lưu ý chuẩn chính tả: 大家 = dàjiā, 不客气 = bú kèqi, 谢谢 = xièxie, 你们 = nǐmen, 学生 = xuésheng) trong ngoặc đơn sau câu chữ Hán.'
       : 'Chỉ viết chữ Hán chuẩn, không kèm Pinyin ở câu dẫn.';
 
   return `Bạn là Giảng viên Tiếng Trung Sư phạm & Chuyên gia Thiết kế Bài tập Về nhà (Giáo trình New HSK ${opts.level}).
@@ -703,7 +707,7 @@ export function parseExternalAiHomeworkText(
             .replace(/\([^)]*\)/g, '')
             .trim();
 
-          return {
+          return verifyAndFixQuizQuestionPinyin({
             id: `ext-ai-q-${Date.now()}-${idx + 1}`,
             type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
             prompt: qPrompt,
@@ -716,7 +720,7 @@ export function parseExternalAiHomeworkText(
             correctAnswer: resolvedAnswer,
             explanation: String(item.explanation || 'Bóc tách từ kết quả AI ngoài.'),
             hskLevel: (targetLevel as HSKLevel) || 1,
-          };
+          });
         });
       }
     }
@@ -872,20 +876,22 @@ export function parseExternalAiHomeworkText(
       audioTxt = sanitizedChineseAudio || cleanStem.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
     }
 
-    parsedLocal.push({
-      id: `raw-q-${Date.now()}-${idx + 1}`,
-      type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
-      prompt: displayPrompt,
-      questionChinese: displayChinese,
-      audioText: isListening ? audioTxt : sanitizedChineseAudio || undefined,
-      audio_url: isListening
-        ? `/api/tts?text=${encodeURIComponent(audioTxt.replace(/(?:男|女)[:：]\s*/g, ''))}&voice=${encodeURIComponent(selectedVoice)}`
-        : undefined,
-      options,
-      correctAnswer,
-      explanation,
-      hskLevel: (targetLevel as HSKLevel) || 1,
-    });
+    parsedLocal.push(
+      verifyAndFixQuizQuestionPinyin({
+        id: `raw-q-${Date.now()}-${idx + 1}`,
+        type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+        prompt: displayPrompt,
+        questionChinese: displayChinese,
+        audioText: isListening ? audioTxt : sanitizedChineseAudio || undefined,
+        audio_url: isListening
+          ? `/api/tts?text=${encodeURIComponent(audioTxt.replace(/(?:男|女)[:：]\s*/g, ''))}&voice=${encodeURIComponent(selectedVoice)}`
+          : undefined,
+        options,
+        correctAnswer,
+        explanation,
+        hskLevel: (targetLevel as HSKLevel) || 1,
+      })
+    );
   });
 
   return parsedLocal;

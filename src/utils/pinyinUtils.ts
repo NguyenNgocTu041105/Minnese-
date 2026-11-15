@@ -7,9 +7,25 @@
  * Tone 5 (Neutral): Neutral Slate / Gray (#64748b)
  */
 import { pinyin as getPinyinPro } from 'pinyin-pro';
-import { generateAccuratePinyin, isPinyinAligned, normalizePinyinForAlignment } from './pinyinEngine';
+import {
+  generateAccuratePinyin,
+  isPinyinAligned,
+  normalizePinyinForAlignment,
+  normalizeBrokenPinyinMarks,
+  generateStandardOrthographicPinyin,
+  sanitizeAndVerifyPinyinInText,
+  verifyAndFixQuizQuestionPinyin,
+} from './pinyinEngine';
 
-export { generateAccuratePinyin, isPinyinAligned, normalizePinyinForAlignment };
+export {
+  generateAccuratePinyin,
+  isPinyinAligned,
+  normalizePinyinForAlignment,
+  normalizeBrokenPinyinMarks,
+  generateStandardOrthographicPinyin,
+  sanitizeAndVerifyPinyinInText,
+  verifyAndFixQuizQuestionPinyin,
+};
 
 export const TONE_COLORS = {
   1: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900',

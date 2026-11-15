@@ -67,11 +67,12 @@ body {
 }
 
 .font-chinese {
-  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', Roboto, system-ui, -apple-system, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-.font-serif-chinese {
-  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+.font-serif-chinese,
+.font-serif {
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', Roboto, system-ui, -apple-system, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 /* Custom silky modern scrollbars */

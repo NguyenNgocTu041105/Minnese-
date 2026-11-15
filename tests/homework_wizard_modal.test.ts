@@ -9,6 +9,7 @@ import {
 } from '../src/components/Admin/HomeworkWizardModal';
 import { buildGoldenPrompt } from '../src/components/Admin/GoldenPromptLibraryModal';
 import { EDGE_TTS_VOICES, sanitizeQuestionAudioText, parseDialogueTurns } from '../src/utils/chineseAudio';
+import { sanitizeAndVerifyPinyinInText, verifyAndFixQuizQuestionPinyin } from '../src/utils/pinyinEngine';
 
 describe('HomeworkWizardModal & Curriculum Question Synthesis', () => {
   describe('1. Curriculum Lesson Retrieval (HSK 1 - 6)', () => {
@@ -420,6 +421,27 @@ Câu 10: D. Giải thích: 再见 (zàijiàn) có nghĩa là "Tạm biệt, hẹ
       // Verify sanitizeQuestionAudioText never leaks Pinyin, underscores, or Vietnamese into TTS
       expect(sanitizeQuestionAudioText(parsed[0].questionChinese!)).toBe('王老师！');
       expect(sanitizeQuestionAudioText(parsed[5].prompt)).toBe('你好');
+    });
+
+    it('should automatically fix broken spacing tone marks (laˇ oshī, Niˇ haˇ o) and LLM Pinyin hallucinations like 大家 (dàijiā)', () => {
+      expect(sanitizeAndVerifyPinyinInText('大家 (dàijiā)')).toBe('大家 (dàjiā)');
+      expect(sanitizeAndVerifyPinyinInText('男：王老师，您好！(Wáng laˇ oshī, nín haˇ o!)')).toBe(
+        '男：王老师，您好！(Wáng lǎoshī, nín hǎo!)'
+      );
+      expect(sanitizeAndVerifyPinyinInText('女：你好！(Niˇ haˇ o!)')).toBe('女：你好！(Nǐ hǎo!)');
+      expect(sanitizeAndVerifyPinyinInText('谢谢 (xièxiè)')).toBe('谢谢 (xièxie)');
+      expect(sanitizeAndVerifyPinyinInText('不客气 (bù kèqì)')).toBe('不客气 (bú kèqi)');
+      expect(sanitizeAndVerifyPinyinInText('你们 (nǐmén)')).toBe('你们 (nǐmen)');
+      expect(sanitizeAndVerifyPinyinInText('学生 (xuéshēng)')).toBe('学生 (xuésheng)');
+
+      const fixedQ = verifyAndFixQuizQuestionPinyin({
+        prompt: 'Nghe hội thoại và trả lời: 男用什么称呼问候王老师？ (Nán yòng shénme chēnghu wènhòu Wáng laˇ oshī?)',
+        questionChinese: '男：王老师，您好！(Wáng laˇ oshī, nín haˇ o!)\n女：你好！(Niˇ haˇ o!)',
+        options: ['你 (nǐ)', '您 (nín)', '你们 (nǐmén)', '大家 (dàijiā)'],
+        correctAnswer: '您 (nín)',
+      });
+      expect(fixedQ.options).toEqual(['你 (nǐ)', '您 (nín)', '你们 (nǐmen)', '大家 (dàjiā)']);
+      expect(fixedQ.questionChinese).toBe('男：王老师，您好！(Wáng lǎoshī, nín hǎo!)\n女：你好！(Nǐ hǎo!)');
     });
   });
 });

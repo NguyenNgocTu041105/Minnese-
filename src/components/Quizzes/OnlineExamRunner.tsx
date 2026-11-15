@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Clock,
   CheckCircle2,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { OnlineExamDoc, QuizQuestion, UserProfile, AssignmentSubmissionDoc } from '../../types';
 import { playChineseAudio, stopChineseAudio, sanitizeQuestionAudioText } from '../../utils/chineseAudio';
+import { verifyAndFixQuizQuestionPinyin } from '../../utils/pinyinEngine';
 import { saveSubmissionToFirestore } from '../../lib/firebase';
 import { WritingWorkspace } from './WritingWorkspace';
 import { HSKIllustrationCanvas, resolveSceneKey } from '../HSKIllustrationCanvas';
@@ -67,7 +68,10 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
     earnedXp: number;
   } | null>(null);
 
-  const questions = exam.questions || [];
+  const questions = useMemo(
+    () => (exam.questions || []).map((q) => verifyAndFixQuizQuestionPinyin(q)),
+    [exam.questions]
+  );
   const currentQuestion = questions[currentIndex];
 
   // Stop any playing TTS/audio when switching questions or exiting the exam
@@ -311,7 +315,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                       <div className="space-y-3">
                         <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between gap-3 silk-card">
                           <div className="space-y-1 flex-1">
-                            <p className="text-lg sm:text-xl font-bold font-serif text-[var(--color-text-primary)] leading-relaxed whitespace-pre-line">
+                            <p className="text-lg sm:text-xl font-bold font-chinese text-[var(--color-text-primary)] leading-relaxed whitespace-pre-line">
                               {dialoguePart}
                             </p>
                             {(currentQuestion.exampleSentence?.pinyin || (currentQuestion as any).pinyin) && (

@@ -303,3 +303,420 @@ export function isPinyinAligned(actualPinyin: string, expectedPinyin: string): b
   const sandhiB = normalizePinyinForAlignment(expectedPinyin, true);
   return sandhiA === sandhiB;
 }
+
+/**
+ * Spacing modifier tone mark to precomposed vowel table.
+ */
+const SPACING_TONE_VOWEL_MAP: Record<string, Record<number, string>> = {
+  a: { 1: 'ā', 2: 'á', 3: 'ǎ', 4: 'à' },
+  A: { 1: 'Ā', 2: 'Á', 3: 'Ǎ', 4: 'À' },
+  e: { 1: 'ē', 2: 'é', 3: 'ě', 4: 'è' },
+  E: { 1: 'Ē', 2: 'É', 3: 'Ě', 4: 'È' },
+  i: { 1: 'ī', 2: 'í', 3: 'ǐ', 4: 'ì' },
+  I: { 1: 'Ī', 2: 'Í', 3: 'Ǐ', 4: 'Ì' },
+  o: { 1: 'ō', 2: 'ó', 3: 'ǒ', 4: 'ò' },
+  O: { 1: 'Ō', 2: 'Ó', 3: 'Ǒ', 4: 'Ò' },
+  u: { 1: 'ū', 2: 'ú', 3: 'ǔ', 4: 'ù' },
+  U: { 1: 'Ū', 2: 'Ú', 3: 'Ǔ', 4: 'Ù' },
+  ü: { 1: 'ǖ', 2: 'ǘ', 3: 'ǚ', 4: 'ǜ' },
+  Ü: { 1: 'Ǖ', 2: 'Ǘ', 3: 'Ǚ', 4: 'Ǜ' },
+  v: { 1: 'ǖ', 2: 'ǘ', 3: 'ǚ', 4: 'ǜ' },
+  V: { 1: 'Ǖ', 2: 'Ǘ', 3: 'Ǚ', 4: 'Ǜ' },
+};
+
+function toneCharToNum(mark: string): number {
+  if (mark === 'ˉ' || mark === '¯' || mark === '\u0304') return 1;
+  if (mark === 'ˊ' || mark === '´' || mark === '\u0301') return 2;
+  if (mark === 'ˇ' || mark === '˘' || mark === '\u030C' || mark === '\u0306') return 3;
+  if (mark === 'ˋ' || mark === '`' || mark === '\u0300') return 4;
+  return 0;
+}
+
+/**
+ * Normalizes decomposed / spacing modifier tone marks (e.g. "laˇ oshī" -> "lǎoshī", "Niˇ haˇ o!" -> "Nǐ hǎo!")
+ * into standard precomposed NFC Unicode Pinyin characters.
+ */
+export function normalizeBrokenPinyinMarks(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+
+  // 1. Replace <vowel> + optional space + <spacing tone mark> + accidental space before intra-syllable rime ending (o, i, n, ng)
+  let out = text.replace(
+    /([aAeEiIoOuUüÜvV])\s*([ˉ¯ˊ´ˇ˘ˋ`\u0304\u0301\u030C\u0306\u0300])\s+([oOiI](?![aAeEiIoOuUüÜāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])|[nN][gG]?(?![aAeEiIoOuUüÜāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]))/g,
+    (_m, vowel: string, mark: string, rimeTail: string) => {
+      const t = toneCharToNum(mark);
+      const mapped = SPACING_TONE_VOWEL_MAP[vowel]?.[t] || vowel;
+      return `${mapped}${rimeTail}`;
+    }
+  );
+
+  // 2. Replace any remaining <vowel> + optional space + <spacing tone mark>
+  out = out.replace(
+    /([aAeEiIoOuUüÜvV])\s*([ˉ¯ˊ´ˇ˘ˋ`\u0304\u0301\u030C\u0306\u0300])/g,
+    (_m, vowel: string, mark: string) => {
+      const t = toneCharToNum(mark);
+      return SPACING_TONE_VOWEL_MAP[vowel]?.[t] || vowel;
+    }
+  );
+
+  // 3. Also repair split precomposed diphthongs caused by CJK font copy-paste (e.g. "lǎ oshī" -> "lǎoshī", "hǎ o" -> "hǎo")
+  out = out.replace(
+    /\b([b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]?[āáǎàēéěèōóǒòĀÁǍÀĒÉĚÈŌÓǑÒ])\s+([oOiI](?![aAeEiIoOuUüÜāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])|[nN][gG]?(?![aAeEiIoOuUüÜāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]))/g,
+    '$1$2'
+  );
+
+  return out.normalize('NFC');
+}
+
+/**
+ * Authoritative HSK Standard Orthographic Pinyin Dictionary (GB/T 16159-2012 & New HSK 1-6).
+ */
+export const CANONICAL_ORTHOGRAPHIC_PINYIN_MAP: Record<string, string> = {
+  '你': 'nǐ',
+  '您': 'nín',
+  '好': 'hǎo',
+  '你好': 'nǐ hǎo',
+  '您好': 'nín hǎo',
+  '你们': 'nǐmen',
+  '你们好': 'nǐmen hǎo',
+  '我们': 'wǒmen',
+  '他们': 'tāmen',
+  '她们': 'tāmen',
+  '大家': 'dàjiā',
+  '大家好': 'dàjiā hǎo',
+  '老师': 'lǎoshī',
+  '王老师': 'Wáng lǎoshī',
+  '李老师': 'Lǐ lǎoshī',
+  '张老师': 'Zhāng lǎoshī',
+  '学生': 'xuésheng',
+  '学生们': 'xuéshengmen',
+  '同学': 'tóngxué',
+  '同学们': 'tóngxuémen',
+  '同学们好': 'tóngxuémen hǎo',
+  '谢谢': 'xièxie',
+  '谢谢你': 'xièxie nǐ',
+  '谢谢你们': 'xièxie nǐmen',
+  '谢谢老师': 'xièxie lǎoshī',
+  '不客气': 'bú kèqi',
+  '再见': 'zàijiàn',
+  '对不起': 'duìbuqǐ',
+  '没关系': 'méi guānxi',
+  '请问': 'qǐngwèn',
+  '什么': 'shénme',
+  '名字': 'míngzi',
+  '认识': 'rènshi',
+  '高兴': 'gāoxìng',
+  '称呼': 'chēnghu',
+  '问候': 'wènhòu',
+  '朋友': 'péngyou',
+  '喜欢': 'xǐhuan',
+  '漂亮': 'piàoliang',
+  '便宜': 'piányi',
+  '东西': 'dōngxi',
+  '时候': 'shíhou',
+  '衣服': 'yīfu',
+  '桌子': 'zhuōzi',
+  '椅子': 'yǐzi',
+  '杯子': 'bēizi',
+  '孩子': 'háizi',
+  '儿子': 'érzi',
+  '女儿': 'nǚ\'ér',
+  '爸爸': 'bàba',
+  '妈妈': 'māma',
+  '哥哥': 'gēge',
+  '姐姐': 'jiějie',
+  '弟弟': 'dìdi',
+  '妹妹': 'mèimei',
+  '爷爷': 'yéye',
+  '奶奶': 'nǎinai',
+  '先生': 'xiānsheng',
+  '小姐': 'xiǎojiě',
+  '大夫': 'dàifu',
+  '饺子': 'jiǎozi',
+  '米饭': 'mǐfàn',
+  '面条': 'miàntiáo',
+  '苹果': 'píngguǒ',
+  '水果': 'shuǐguǒ',
+  '可以': 'kěyǐ',
+  '没有': 'méiyǒu',
+  '不是': 'bú shì',
+  '不对': 'bú duì',
+  '不去': 'bú qù',
+  '不要': 'bú yào',
+  '不会': 'bú huì',
+  '不大': 'bú dà',
+  '不贵': 'bú guì',
+  '不太': 'bú tài',
+  '不错': 'bú cuò',
+  '们': 'men',
+};
+
+/**
+ * Common LLM Pinyin hallucinations and typos (e.g. "dàijiā" for 大家, "xièxiè" for 谢谢, "nǐmén" for 你们).
+ */
+const COMMON_LLM_PINYIN_TYPO_REPLACEMENTS: [RegExp, string][] = [
+  [/\bdàijiā\b/g, 'dàjiā'],
+  [/\bDàijiā\b/g, 'Dàjiā'],
+  [/\bdài\s+jiā\b/g, 'dàjiā'],
+  [/\bDài\s+jiā\b/g, 'Dàjiā'],
+  [/\bxièxiè\b/g, 'xièxie'],
+  [/\bXièxiè\b/g, 'Xièxie'],
+  [/\bnǐmén\b/g, 'nǐmen'],
+  [/\bNǐmén\b/g, 'Nǐmen'],
+  [/\bwǒmén\b/g, 'wǒmen'],
+  [/\bWǒmén\b/g, 'Wǒmen'],
+  [/\btāmén\b/g, 'tāmen'],
+  [/\bTāmén\b/g, 'Tāmen'],
+  [/\btóngxuémén\b/g, 'tóngxuémen'],
+  [/\bTóngxuémén\b/g, 'Tóngxuémen'],
+  [/\bxuéshēng\b/g, 'xuésheng'],
+  [/\bXuéshēng\b/g, 'Xuésheng'],
+  [/\bbù\s*kèqì\b/g, 'bú kèqi'],
+  [/\bBù\s*kèqì\b/g, 'Bú kèqi'],
+  [/\bbù\s*kèqi\b/g, 'bú kèqi'],
+  [/\bBù\s*kèqi\b/g, 'Bú kèqi'],
+  [/\bbú\s*kèqì\b/g, 'bú kèqi'],
+  [/\bBú\s*kèqì\b/g, 'Bú kèqi'],
+  [/\brènshí\b/g, 'rènshi'],
+  [/\bRènshí\b/g, 'Rènshi'],
+  [/\brènshì\b/g, 'rènshi'],
+  [/\bRènshì\b/g, 'Rènshi'],
+  [/\bmíngzì\b/g, 'míngzi'],
+  [/\bMíngzì\b/g, 'Míngzi'],
+  [/\bshénmé\b/g, 'shénme'],
+  [/\bShénmé\b/g, 'Shénme'],
+  [/\bchēnghū\b/g, 'chēnghu'],
+  [/\bpéngyǒu\b/g, 'péngyou'],
+  [/\bxǐhuān\b/g, 'xǐhuan'],
+  [/\bpiàoliàng\b/g, 'piàoliang'],
+];
+
+function stripPinyinTonesToAscii(s: string): string {
+  return s
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[āáǎà]/g, 'a')
+    .replace(/[ēéěè]/g, 'e')
+    .replace(/[īíǐì]/g, 'i')
+    .replace(/[ōóǒò]/g, 'o')
+    .replace(/[ūúǔù]/g, 'u')
+    .replace(/[ǖǘǚǜü]/g, 'v')
+    .replace(/[^a-zv]/g, '');
+}
+
+/**
+ * Generates standard orthographic Pinyin for a Chinese word or clause (keeping 3+3 as 3+3,
+ * applying standard neutral tones and 一/不 sandhi).
+ */
+export function generateStandardOrthographicPinyin(hanziText: string, capitalizeFirst = false): string {
+  const trimmed = hanziText.trim();
+  if (!trimmed) return '';
+
+  const punctStripped = trimmed.replace(/^[，。！？、：；,.!?:;\s]+|[，。！？、：；,.!?:;\s]+$/g, '');
+  const trailingPunctMatch = trimmed.match(/([！!？?。.]+)$/);
+  const trailingPunct = trailingPunctMatch
+    ? trailingPunctMatch[1].replace('！', '!').replace('？', '?').replace('。', '.')
+    : '';
+
+  if (CANONICAL_ORTHOGRAPHIC_PINYIN_MAP[punctStripped]) {
+    let exact = CANONICAL_ORTHOGRAPHIC_PINYIN_MAP[punctStripped];
+    if (capitalizeFirst && exact.length > 0) {
+      exact = exact.charAt(0).toUpperCase() + exact.slice(1);
+    }
+    return exact + trailingPunct;
+  }
+
+  // Replace known compound words in sequence and use pinyin-pro (without 3+3 sandhi) for remaining chars
+  let out = '';
+  let i = 0;
+  const sortedWords = Object.keys(CANONICAL_ORTHOGRAPHIC_PINYIN_MAP).sort((a, b) => b.length - a.length);
+
+  while (i < trimmed.length) {
+    let matchedWord = '';
+    for (const w of sortedWords) {
+      if (w.length >= 2 && trimmed.startsWith(w, i)) {
+        matchedWord = w;
+        break;
+      }
+    }
+    if (matchedWord) {
+      const py = CANONICAL_ORTHOGRAPHIC_PINYIN_MAP[matchedWord];
+      out += (out && !/[\s(\[“"']$/.test(out) ? ' ' : '') + py;
+      i += matchedWord.length;
+      continue;
+    }
+
+    const ch = trimmed[i];
+    if (/[\u4e00-\u9fa5]/.test(ch)) {
+      const py =
+        CANONICAL_ORTHOGRAPHIC_PINYIN_MAP[ch] ||
+        getPinyinPro(ch, { toneType: 'symbol', toneSandhi: false, v: true }) ||
+        ch;
+      out += (out && !/[\s(\[“"']$/.test(out) ? ' ' : '') + py;
+    } else if (ch === '，' || ch === ',') {
+      out = out.trimEnd() + ', ';
+    } else if (ch === '。' || ch === '.') {
+      out = out.trimEnd() + '. ';
+    } else if (ch === '！' || ch === '!') {
+      out = out.trimEnd() + '! ';
+    } else if (ch === '？' || ch === '?') {
+      out = out.trimEnd() + '? ';
+    } else if (ch === '：' || ch === ':') {
+      out = out.trimEnd() + ': ';
+    } else {
+      out += ch;
+    }
+    i++;
+  }
+
+  out = out.replace(/\s+/g, ' ').trim();
+  if (capitalizeFirst && out.length > 0) {
+    out = out.charAt(0).toUpperCase() + out.slice(1);
+  }
+  return out;
+}
+
+/**
+ * Sanitizes and verifies all Pinyin annotations inside a question/option/explanation string:
+ * 1. Fixes broken/spacing tone marks (e.g. "laˇ oshī" -> "lǎoshī", "Niˇ haˇ o!" -> "Nǐ hǎo!")
+ * 2. Fixes common LLM Pinyin hallucinations (e.g. "dàijiā" -> "dàjiā", "xièxiè" -> "xièxie", "bù kèqì" -> "bú kèqi")
+ * 3. Cross-checks <Chinese> (<Pinyin>) pairs against the authoritative HSK lexicon and pinyin-pro,
+ *    automatically correcting any wrong Pinyin syllable or tone!
+ */
+export function sanitizeAndVerifyPinyinInText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+
+  // Step 1: Fix decomposed/spacing tone marks
+  let out = normalizeBrokenPinyinMarks(text);
+
+  // Step 2: Fix common LLM Pinyin typos globally
+  for (const [pattern, replacement] of COMMON_LLM_PINYIN_TYPO_REPLACEMENTS) {
+    out = out.replace(pattern, replacement);
+  }
+
+  // Vietnamese-exclusive characters that never appear in Pinyin
+  const viExclusiveRegex = /[ăâđêôơưạảãấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏõốồổỗộớờởỡợụủũứừửữựỳỵỷỹ]/i;
+  const viWordRegex = /\b(là|của|và|có|không|trong|người|thầy|cô|bạn|chào|cảm|ơn|tạm|biệt|học|sinh|mọi|nhà|tốt|khỏe|ông|ngài|anh|chị|em|chúng|các)\b/i;
+
+  // Step 3: Verify <Chinese> (<Pinyin>) pairs line by line
+  out = out.replace(
+    /([\u4e00-\u9fa5](?:[^\r\n()（）]*?[^\r\n()（）\s])?)([ \t]*)([\(（])([^()（）\u4e00-\u9fa5]+)([\)）])/g,
+    (
+      fullMatch,
+      rawHanziPart: string,
+      spaceBeforeParen: string,
+      openParen: string,
+      rawParenContent: string,
+      closeParen: string
+    ) => {
+      const parenTrimmed = rawParenContent.trim();
+      if (!parenTrimmed) return fullMatch;
+
+      // Skip if parenthetical contains Vietnamese words or has no letters (e.g. "(3 + 3)")
+      if (viExclusiveRegex.test(parenTrimmed) || viWordRegex.test(parenTrimmed)) {
+        return fullMatch;
+      }
+      if (!/[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/.test(parenTrimmed)) {
+        return fullMatch;
+      }
+
+      // Extract the trailing Chinese clause right before the open parenthesis
+      let hanziClause = rawHanziPart.trim();
+      // If there were Vietnamese words before the Chinese phrase on the same line (e.g. "Trong cụm từ 你好 (nǐ hǎo)")
+      const trailingChineseMatch = hanziClause.match(/([\u4e00-\u9fa5A-Za-z0-9，。！？、：；“”‘’____\s]+)$/);
+      if (trailingChineseMatch) {
+        hanziClause = trailingChineseMatch[1].trim();
+      }
+
+      // If the Chinese line starts with 男：/ 女：/ 问： and the Pinyin does NOT include Nán:/Nǚ:/Wèn:, strip the speaker prefix for comparison
+      const hasRoleInHanzi = /^(男|女|问|甲|乙)\s*[:：]\s*/.test(hanziClause);
+      const hasRoleInPinyin = /^(?:Nán|Nǚ|Wèn|Nan|Nv)\s*[:：]/i.test(parenTrimmed);
+      const targetHanzi =
+        hasRoleInHanzi && !hasRoleInPinyin
+          ? hanziClause.replace(/^(男|女|问|甲|乙)\s*[:：]\s*/, '').trim()
+          : hanziClause;
+
+      const cleanHanziWord = targetHanzi.replace(/^[，。！？、：；,.!?:;\s]+|[，。！？、：；,.!?:;\s]+$/g, '');
+      const startsUpper = /^[A-ZĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ]/.test(parenTrimmed);
+
+      const leadingSpace = spaceBeforeParen || (/\s$/.test(rawHanziPart) ? ' ' : '');
+
+      // 3a. Direct hit in CANONICAL_ORTHOGRAPHIC_PINYIN_MAP (e.g. 大家 -> dàjiā, 不客气 -> bú kèqi, 你 -> nǐ, 您 -> nín)
+      if (CANONICAL_ORTHOGRAPHIC_PINYIN_MAP[cleanHanziWord]) {
+        // Allow intentional "ní hǎo" only when the line explicitly mentions tone sandhi (biến điệu / 2 + 3)
+        if (cleanHanziWord === '你好' && /^ní\s*hǎo$/i.test(parenTrimmed)) {
+          return fullMatch;
+        }
+        const trailingPunct = parenTrimmed.match(/([!?.]+)$/)?.[1] || '';
+        let canonical = CANONICAL_ORTHOGRAPHIC_PINYIN_MAP[cleanHanziWord];
+        if (startsUpper && canonical.length > 0) {
+          canonical = canonical.charAt(0).toUpperCase() + canonical.slice(1);
+        }
+        return `${rawHanziPart.trimEnd()}${leadingSpace}${openParen}${canonical}${trailingPunct}${closeParen}`;
+      }
+
+      // 3b. For longer phrases/sentences, verify base ASCII letters of Pinyin against pinyin-pro
+      const hanziCharsOnly = targetHanzi.replace(/[^\u4e00-\u9fa5]/g, '');
+      if (hanziCharsOnly.length > 0 && !targetHanzi.includes('____')) {
+        const expectedAscii = stripPinyinTonesToAscii(
+          generateStandardOrthographicPinyin(targetHanzi, startsUpper)
+        );
+        const actualAscii = stripPinyinTonesToAscii(parenTrimmed);
+        if (expectedAscii && actualAscii && expectedAscii !== actualAscii) {
+          const regenerated = generateStandardOrthographicPinyin(targetHanzi, startsUpper);
+          return `${rawHanziPart.trimEnd()}${leadingSpace}${openParen}${regenerated}${closeParen}`;
+        }
+      }
+
+      return `${rawHanziPart.trimEnd()}${leadingSpace}${openParen}${parenTrimmed}${closeParen}`;
+    }
+  );
+
+  return out;
+}
+
+/**
+ * Verifies and auto-fixes Pinyin across all fields of a QuizQuestion object.
+ */
+export function verifyAndFixQuizQuestionPinyin<
+  T extends {
+    prompt?: string;
+    questionChinese?: string;
+    options?: string[];
+    correctAnswer?: string | string[];
+    explanation?: string;
+    exampleSentence?: { hanzi: string; pinyin: string; meaning: string };
+  }
+>(q: T): T {
+  if (!q) return q;
+  const fixedOptions = Array.isArray(q.options)
+    ? q.options.map((opt) => sanitizeAndVerifyPinyinInText(opt))
+    : q.options;
+
+  let fixedAnswer = q.correctAnswer;
+  if (typeof q.correctAnswer === 'string') {
+    fixedAnswer = sanitizeAndVerifyPinyinInText(q.correctAnswer);
+    if (fixedOptions && !fixedOptions.includes(fixedAnswer)) {
+      const origIdx = Array.isArray(q.options) ? q.options.indexOf(q.correctAnswer) : -1;
+      if (origIdx >= 0 && fixedOptions[origIdx]) {
+        fixedAnswer = fixedOptions[origIdx];
+      }
+    }
+  } else if (Array.isArray(q.correctAnswer)) {
+    fixedAnswer = q.correctAnswer.map((a) => sanitizeAndVerifyPinyinInText(a));
+  }
+
+  return {
+    ...q,
+    prompt: q.prompt ? sanitizeAndVerifyPinyinInText(q.prompt) : q.prompt,
+    questionChinese: q.questionChinese ? sanitizeAndVerifyPinyinInText(q.questionChinese) : q.questionChinese,
+    options: fixedOptions,
+    correctAnswer: fixedAnswer,
+    explanation: q.explanation ? sanitizeAndVerifyPinyinInText(q.explanation) : q.explanation,
+    exampleSentence: q.exampleSentence
+      ? {
+          ...q.exampleSentence,
+          pinyin: sanitizeAndVerifyPinyinInText(q.exampleSentence.pinyin || ''),
+        }
+      : q.exampleSentence,
+  };
+}

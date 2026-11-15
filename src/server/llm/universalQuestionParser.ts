@@ -1484,6 +1484,7 @@ export function parseSingleQuestionBlock(
   const rawQuestion: any = {
     stem,
     stem_pinyin: pinyin,
+    audio_text: skill === 'listening' ? stem : undefined,
     options,
     options_pinyin: optionsPinyin.length === options.length ? optionsPinyin : undefined,
     answer_idx: answerIdx,

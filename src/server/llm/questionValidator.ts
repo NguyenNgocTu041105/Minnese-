@@ -1792,10 +1792,14 @@ export function validateCandidate(
   if (q.skill === 'listening') {
     const audioText = (q as any).audio_text || (q as any).transcript || q.passage || '';
     const hasAudioText = typeof audioText === 'string' && audioText.trim().length > 0;
+    const hasSpokenDialogueInStem =
+      typeof q.stem === 'string' &&
+      /(?:男|女|甲|乙|A|B)\s*[：:]/.test(q.stem) &&
+      cleanChineseText(q.stem).length >= 6;
     const stemHasAudio =
       typeof q.stem === 'string' &&
       cleanChineseText(q.stem).length >= 2 &&
-      !/请听|根据|选择正确|听录音/i.test(q.stem);
+      (hasSpokenDialogueInStem || !/^(?:请听|听录音)|选择正确/i.test(q.stem.trim()));
 
     if (!hasAudioText && !stemHasAudio) {
       errors.push('Listening question requires audio text, transcript, or dialogue passage');

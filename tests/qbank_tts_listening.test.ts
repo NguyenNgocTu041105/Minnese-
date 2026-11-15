@@ -195,6 +195,35 @@ Giải thích: B trả lời đã đến siêu thị.
       expect(q.options.length).toBe(3);
       expect(q.answer_idx).toBe(0);
     });
+
+    it('passes Gate 1 and populates audio_text for listen_dialogue_qa_4opt containing 问:根据... with ASCII colons', async () => {
+      const { evaluateCandidateSixGates } = await import('../src/server/llm/questionValidator');
+      const rawText = `
+男:听说你们部门最近实行了弹性工作制度，员工可以自由安排上下班时间？
+女:原则上是这样，但自由并不等于没有限制。只要保证核心工作时间内能够及时沟通，并且按时完成任务，员工就可以根据自己的情况调整工作时间。
+问:根据女的介绍，弹性工作制度的主要要求是什么？
+A. 员工可以完全自由决定是否上班。
+B. 员工必须每天提前到公司。
+C. 员工只要完成工作，就不需要与同事沟通。
+D. 员工需要保证工作沟通和任务完成。
+Đáp án: D
+Giải thích: Đáp án D đúng. Chế độ linh hoạt vẫn yêu cầu đảm bảo liên lạc và hoàn thành nhiệm vụ đúng hạn.
+      `;
+
+      const questions = parseUniversalQuestions(rawText, {
+        default_level: 1,
+        default_skill: 'listening',
+      });
+      expect(questions.length).toBe(1);
+      const q = questions[0];
+      expect(q.part_type).toBe('listen_dialogue_qa_4opt');
+      expect(q.audio_text).toContain('男:');
+      expect(q.audio_text).toContain('女:');
+
+      const gates = evaluateCandidateSixGates(q as any, [], { lenientImport: true });
+      expect(gates.gate1_schema.passed).toBe(true);
+      expect(gates.allPassed).toBe(true);
+    });
   });
 
   describe('3. RESTful API Endpoint Aliases: /api/qbank/tts/generate & /api/qbank/tts/voices', () => {

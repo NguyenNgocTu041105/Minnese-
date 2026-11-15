@@ -273,7 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]">
                       <span className="font-bold text-xs uppercase tracking-wider text-[var(--color-text-primary)] flex items-center gap-1.5">
                         <Bell className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                        Thông báo cần làm ({totalNotifications})
+                        Thông báo học tập ({totalNotifications})
                       </span>
                       <button
                         type="button"
@@ -284,8 +284,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </button>
                     </div>
 
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {/* Item ưu tiên số 1 đứng đầu: Ôn tập thẻ từ đến hạn (SM-2) */}
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                      {/* Item ưu tiên số 1 đứng đầu: Ôn tập thẻ từ đến hạn */}
                       <div
                         className={`p-3 rounded-xl border text-xs space-y-2 ${
                           dueStats.dueCount > 0
@@ -305,13 +305,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </div>
                           <div className="min-w-0 flex-1">
                             <h4 className="font-bold text-xs text-[var(--color-text-primary)] leading-tight">
-                              {dueStats.dueCount} từ vựng cần ôn tập hôm nay
+                              {dueStats.dueCount > 0
+                                ? `${dueStats.dueCount} từ vựng cần ôn tập hôm nay`
+                                : 'Đã hoàn thành ôn tập từ vựng hôm nay'}
                             </h4>
                             <p className="text-[11px] text-[var(--color-text-secondary)] truncate leading-tight mt-0.5">
-                              {dueStats.maxReachedLessonNum && dueStats.maxReachedLessonNum > 1
-                                ? `Bài 1 - ${dueStats.maxReachedLessonNum}`
-                                : 'Bài 1'}{' '}
-                              chuẩn New HSK {dueStats.activeLevel} · Thuật toán SM-2
+                              {dueStats.dueCount > 0
+                                ? `New HSK ${dueStats.activeLevel} · ${
+                                    dueStats.maxReachedLessonNum && dueStats.maxReachedLessonNum > 1
+                                      ? `Bài 1 – ${dueStats.maxReachedLessonNum}`
+                                      : 'Bài 1'
+                                  } · Ôn tập ghi nhớ`
+                                : `New HSK ${dueStats.activeLevel} · Không còn thẻ từ đến hạn`}
                             </p>
                           </div>
                         </div>
@@ -321,41 +326,79 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={handleStartDueReview}
                           className="w-full py-2 px-3 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white font-bold text-xs text-center transition-all shadow-xs cursor-pointer active:scale-[0.98]"
                         >
-                          Ôn tập ngay
+                          {dueStats.dueCount > 0 ? 'Ôn tập ngay' : 'Xem thẻ từ'}
                         </button>
                       </div>
 
                       {/* Danh sách bài tập cần làm */}
-                      {actionableAssignments.map((asg) => (
-                        <div
-                          key={asg.id}
-                          className="p-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs space-y-1.5"
-                        >
-                          <div className="flex items-center justify-between font-bold text-[var(--color-text-primary)]">
-                            <span className="truncate max-w-[200px]">{asg.title}</span>
-                            <span className="text-[10px] text-rose-500 font-mono">
-                              Hạn: {new Date(asg.due_date).toLocaleDateString('vi-VN')}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-1">
-                            {asg.description}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowNotifications(false);
-                              if (onStartAssignment) {
-                                onStartAssignment(asg);
-                              } else {
-                                onSelectTab('quizzes');
-                              }
-                            }}
-                            className="w-full py-1.5 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold text-[11px] text-center border border-[var(--color-border)] transition-colors cursor-pointer"
+                      {actionableAssignments.map((asg) => {
+                        const typeMeta =
+                          asg.content_type === 'speaking'
+                            ? { label: 'Luyện nói', cta: 'Ghi âm / Nộp bài nói →', badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' }
+                            : asg.content_type === 'writing'
+                            ? { label: 'Viết tay', cta: 'Làm bài viết →', badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20' }
+                            : asg.content_type === 'reading'
+                            ? { label: 'Đọc hiểu', cta: 'Đọc & trả lời →', badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20' }
+                            : asg.content_type === 'deck'
+                            ? { label: 'Flashcard', cta: 'Học bộ thẻ →', badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20' }
+                            : { label: 'Trắc nghiệm', cta: 'Làm bài ngay →', badgeClass: 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary)]/20' };
+
+                        const summaryText =
+                          asg.content_type === 'speaking'
+                            ? (asg.speaking_prompt ? `Đề nói: ${asg.speaking_prompt}` : 'Ghi âm trực tiếp hoặc tải file phát âm')
+                            : asg.description?.trim()
+                            ? asg.description.trim()
+                            : asg.content_type === 'quiz'
+                            ? `${asg.question_count || asg.questions?.length || 10} câu hỏi · ${asg.duration_minutes || 15} phút`
+                            : asg.content_type === 'deck'
+                            ? `${asg.vocab_words?.length || 15} từ vựng HSK ${asg.hsk_level}`
+                            : `Bài tập HSK ${asg.hsk_level}`;
+
+                        const dueDate = new Date(asg.due_date);
+                        const dueText = Number.isNaN(dueDate.getTime())
+                          ? ''
+                          : dueDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                        return (
+                          <div
+                            key={asg.id}
+                            className="p-3 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs space-y-2"
                           >
-                            Làm bài tập ngay →
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${typeMeta.badgeClass}`}>
+                                {typeMeta.label}
+                              </span>
+                              {dueText && (
+                                <span className="text-[10px] text-rose-500 font-semibold whitespace-nowrap">
+                                  Hạn: {dueText}
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-0.5">
+                              <h4 className="font-bold text-xs text-[var(--color-text-primary)] leading-snug line-clamp-2">
+                                {asg.title}
+                              </h4>
+                              <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 leading-snug">
+                                {summaryText}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowNotifications(false);
+                                if (onStartAssignment) {
+                                  onStartAssignment(asg);
+                                } else {
+                                  onSelectTab('quizzes');
+                                }
+                              }}
+                              className="w-full py-1.5 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold text-[11px] text-center border border-[var(--color-border)] transition-colors cursor-pointer"
+                            >
+                              {typeMeta.cta}
+                            </button>
+                          </div>
+                        );
+                      })}
 
                       {totalNotifications === 0 && actionableAssignments.length === 0 && (
                         <div className="py-2 text-center text-xs text-[var(--color-text-secondary)] space-y-1">

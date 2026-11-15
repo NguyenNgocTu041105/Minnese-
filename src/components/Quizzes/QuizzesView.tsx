@@ -46,13 +46,24 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   const [examSearchError, setExamSearchError] = useState<string | null>(null);
   const [selectedExamLevel, setSelectedExamLevel] = useState<number | 'all'>('all');
 
-  const filteredOnlineExams = useMemo(() => {
-    if (selectedExamLevel === 'all') return onlineExamsList;
+  // Exclude class homework assignments (HW-* / ASSIGN-*) from the public practice/mock exam list,
+  // since assigned homework lives exclusively in the "Bài tập được giao" section on the Home (Tổng quan) tab.
+  const publicPracticeExams = useMemo(() => {
     return onlineExamsList.filter((exam) => {
-      const lvl = exam.hsk_level ?? (exam as any).level;
-      return lvl === selectedExamLevel;
+      const code = (exam.exam_code || '').trim().toUpperCase();
+      if (code.startsWith('HW-') || code.startsWith('ASSIGN-')) return false;
+      if ((exam.id || '').startsWith('assign-')) return false;
+      return true;
     });
-  }, [onlineExamsList, selectedExamLevel]);
+  }, [onlineExamsList]);
+
+  const filteredOnlineExams = useMemo(() => {
+    if (selectedExamLevel === 'all') return publicPracticeExams;
+    return publicPracticeExams.filter((exam) => {
+      const lvl = exam.hsk_level ?? (exam as any).level;
+      return Number(lvl) === selectedExamLevel;
+    });
+  }, [publicPracticeExams, selectedExamLevel]);
 
   const [activeHskExamView, setActiveHskExamView] = useState<'hall' | 'mock' | 'practice' | 'notebook' | null>(null);
   const [hskExamInitialLevel, setHskExamInitialLevel] = useState<number>(1);
@@ -347,10 +358,10 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
           <div>
             <h2 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-purple-600" />
-              <span>Đề Thi Online & Sách Bài Tập</span>
+              <span>Đề Thi Online & Đề Tự Luyện</span>
             </h2>
             <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-              Nhập mã đề hoặc chọn đề đã phát hành từ QBank / Xưởng đề.
+              Chọn đề thi thử công khai từ QBank hoặc nhập mã đề thi. (Bài tập về nhà do giáo viên giao hiển thị tại mục Tổng quan)
             </p>
           </div>
 

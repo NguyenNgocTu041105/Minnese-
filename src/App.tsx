@@ -977,7 +977,16 @@ export default function App() {
                 onUpdateStats={handleUpdateStats}
                 userProfile={userProfile}
                 activeExamToRun={activeExamRunning}
-                onExitExam={() => setActiveExamRunning(null)}
+                onExitExam={() => {
+                  const wasHomework =
+                    activeExamRunning?.exam_code?.toUpperCase().startsWith('HW-') ||
+                    activeExamRunning?.exam_code?.toUpperCase().startsWith('ASSIGN-') ||
+                    activeExamRunning?.id?.startsWith('assign-');
+                  setActiveExamRunning(null);
+                  if (wasHomework) {
+                    setActiveTab('dashboard');
+                  }
+                }}
               />
             </ViewTransition>
           )}

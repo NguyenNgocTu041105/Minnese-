@@ -1011,6 +1011,8 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState<boolean>(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showVocabGrammarCustomizer, setShowVocabGrammarCustomizer] = useState<boolean>(false);
+  const [showRawSystemPromptEditor, setShowRawSystemPromptEditor] = useState<boolean>(false);
 
   // Step 4: Review & Inline Edit States
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -1634,42 +1636,14 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           {/* STEP 1: TARGET SELECTION (CLASS & CURRICULUM LESSON) */}
           {/* ============================================================== */}
           {currentStep === 1 && (
-            <div className="space-y-5 animate-fadeIn">
-              {/* Teacher Onboarding & Quick Guidance Banner */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[var(--color-primary-light)]/50 via-[var(--color-surface)] to-[var(--color-primary-light)]/30 border border-[var(--color-primary)]/20 text-xs text-[var(--color-text-primary)] space-y-1.5 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold text-[var(--color-primary)]">
-                    <Sparkles className="w-4 h-4 shrink-0" />
-                    <span>Chỉ Dẫn Cho Giáo Viên: 2 Cách Giao Bài Linh Hoạt</span>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold">
-                    Bước 1 / 4
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-[var(--color-text-secondary)] pt-1.5 border-t border-[var(--color-border)]/50">
-                  <div className="flex items-start gap-1.5">
-                    <span className="font-bold text-emerald-600 shrink-0">⚡ Tạo nhanh 1 chạm:</span>
-                    <span>Tự động soạn ngay 10 câu hỏi đa dạng (Trắc nghiệm, Điền từ, Đọc, Nghe TTS) theo đúng bài học đã chọn và chuyển thẳng sang duyệt để giao bài nhanh.</span>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="font-bold text-[var(--color-primary)] shrink-0">🛠️ Quy trình tiêu chuẩn:</span>
-                    <span>Bấm nút &quot;Tiếp tục: Chọn nguồn câu hỏi&quot; để tự chọn từ vựng, mẫu ngữ pháp trọng tâm, tùy biến AI System Prompt hoặc nạp từ kho đề.</span>
-                  </div>
-                </div>
-              </div>
-
+            <div className="space-y-4 animate-fadeIn">
               {/* Target Type Selector */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                    <span>1. Đối tượng giao bài tập:</span>
-                  </label>
-                  <span className="text-[10px] text-[var(--color-text-secondary)]">
-                    {targetType === 'class' ? 'Chỉ học viên trong lớp nhận bài' : 'Toàn bộ học viên theo cấp độ HSK'}
-                  </span>
-                </div>
-                <div className="w-full sm:w-auto grid grid-cols-1 sm:inline-flex p-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] gap-1 sm:gap-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-[var(--color-primary)]" />
+                  <span>1. Giao bài cho:</span>
+                </label>
+                <div className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex p-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] gap-1 sm:gap-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -1684,7 +1658,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     }`}
                   >
                     <Users className="w-3.5 h-3.5" />
-                    <span>Theo Lớp Học Quản Lý</span>
+                    <span>Lớp Học Quản Lý</span>
                   </button>
                   <button
                     type="button"
@@ -1700,7 +1674,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     }`}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>Theo Cấp Độ HSK (Toàn bộ)</span>
+                    <span>Theo Cấp Độ HSK</span>
                   </button>
                 </div>
               </div>
@@ -1953,22 +1927,16 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
           {/* ============================================================== */}
           {currentStep === 2 && (
             <div className="space-y-4 animate-fadeIn">
-              {/* Teacher Guidance for Source Selection */}
-              <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] space-y-1">
-                <div className="flex items-center gap-2 font-bold text-[var(--color-text-primary)]">
-                  <Info className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
-                  <span>Bước 2: Chọn Nguồn Biên Soạn & Tinh Chỉnh Nội Dung Bài Học</span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  Lựa chọn 1 trong 4 nguồn dưới đây để xây dựng bộ câu hỏi. Khuyên dùng <strong>&quot;Từ Bài học&quot;</strong> để hệ thống tự động bám sát từ vựng & ngữ pháp giáo trình; hoặc dùng <strong>&quot;System Prompt&quot;</strong> nếu bạn muốn AI hỗ trợ thiết kế đề thi theo chỉ thị sư phạm riêng.
-                </p>
-              </div>
-
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label className="text-xs font-bold text-[var(--color-text-primary)]">
-                  Nguồn tạo đề:
-                </label>
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 bg-[var(--color-background)] p-1 rounded-xl border border-[var(--color-border)]">
+                <div>
+                  <label className="text-xs font-bold text-[var(--color-text-primary)]">
+                    Chọn nguồn tạo câu hỏi:
+                  </label>
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">
+                    Khuyên dùng &quot;Từ Bài học&quot; để tự động bám sát giáo trình, hoặc &quot;System Prompt&quot; để ra đề bằng AI.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1 bg-[var(--color-background)] p-1 rounded-xl border border-[var(--color-border)]">
                   {[
                     { key: 'curriculum', label: 'Từ Bài học', hint: 'Khuyên dùng • Giáo trình', icon: BookOpen },
                     { key: 'golden_prompt', label: 'System Prompt', hint: 'AI Prompt chuẩn sư phạm', icon: Sparkles },
@@ -2000,224 +1968,235 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                 </div>
               </div>
 
-              {/* Shared Teacher Vocabulary & Grammar Customizer for Curriculum & Golden Prompt */}
+              {/* Compact Collapsible Lesson Summary & Customizer for Curriculum & Golden Prompt */}
               {(questionSource === 'curriculum' || questionSource === 'golden_prompt') && (
                 <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-3">
+                  {/* Top Summary Bar with 1-Click Expand/Collapse Toggle */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                      <BookOpen className="w-4 h-4 text-[var(--color-primary)]" />
-                      <span>
-                        Từ vựng & Ngữ pháp — Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})
-                      </span>
-                    </h4>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold">
-                      HSK {targetLevel} • Bài {selectedLesson.lessonNumber}
-                    </span>
-                  </div>
-
-                  {/* Scope Mode Selector */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
-                      1. Phạm vi kiến thức cho phép khi sinh đề:
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {[
-                        {
-                          key: 'strict_lesson' as HomeworkScopeMode,
-                          title: `🔒 Chỉ trong Bài ${selectedLesson.lessonNumber}`,
-                          desc: 'Cấm dùng từ vựng ở các bài sau chưa học',
-                        },
-                        {
-                          key: 'cumulative' as HomeworkScopeMode,
-                          title: `📚 Lũy tiến Bài 1 → Bài ${selectedLesson.lessonNumber}`,
-                          desc: 'Ôn tập kết hợp các bài đã dạy từ đầu',
-                        },
-                        {
-                          key: 'custom_only' as HomeworkScopeMode,
-                          title: '🎯 100% Từ & Cấu trúc giáo viên chọn',
-                          desc: 'Chỉ xoáy sâu vào đúng danh sách bên dưới',
-                        },
-                      ].map((sc) => {
-                        const isSelected = lessonScopeMode === sc.key;
-                        return (
-                          <button
-                            key={sc.key}
-                            type="button"
-                            onClick={() => {
-                              setLessonScopeMode(sc.key);
-                              setIsPromptManuallyEdited(false);
-                            }}
-                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                              isSelected
-                                ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]/40 ring-1 ring-[var(--color-primary)]'
-                                : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/50'
-                            }`}
-                          >
-                            <div className="text-xs font-bold text-[var(--color-text-primary)]">
-                              {sc.title}
-                            </div>
-                            <div className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">
-                              {sc.desc}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Teacher Vocabulary Picker & Custom Input */}
-                  <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-[var(--color-text-primary)]">
-                        2. Từ vựng đưa vào đề ({effectiveVocabList.length} từ đang áp dụng):
-                      </label>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedVocabHanzi((selectedLesson.vocabulary || []).map((v) => v.hanzi));
-                            setIsPromptManuallyEdited(false);
-                          }}
-                          className="text-[var(--color-primary)] font-semibold hover:underline cursor-pointer"
-                        >
-                          Chọn hết từ bài học
-                        </button>
-                        <span className="text-[var(--color-border)]">|</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedVocabHanzi([]);
-                            setIsPromptManuallyEdited(false);
-                          }}
-                          className="text-[var(--color-text-secondary)] hover:text-red-500 cursor-pointer"
-                        >
-                          Bỏ chọn
-                        </button>
-                      </div>
-                    </div>
-
-                    {lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0 && (
-                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-2 animate-fadeIn">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <div className="space-y-0.5">
-                          <p className="font-bold">Chưa chọn từ vựng cho chế độ &quot;100% Từ & Cấu trúc giáo viên chọn&quot;</p>
-                          <p className="text-[11px] leading-relaxed">
-                            Vui lòng tích chọn ít nhất 1 từ vựng trong danh sách hoặc gõ từ vựng vào ô nhập liệu bên dưới để hệ thống bám sát yêu cầu của bạn.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                      {(selectedLesson.vocabulary || []).length === 0 ? (
-                        <div className="p-3 text-center text-xs text-[var(--color-text-secondary)] flex flex-col items-center gap-1.5 w-full">
-                          <div className="flex items-center gap-1.5 text-amber-600 font-semibold">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            <span>Bài học này chưa có sẵn danh mục từ vựng trong giáo trình</span>
-                          </div>
-                          <p className="text-[11px]">
-                            Bạn có thể tự gõ từ vựng cần kiểm tra vào ô bên dưới, hoặc đổi phạm vi sang &quot;Lũy tiến&quot; để lấy từ vựng các bài trước.
-                          </p>
-                        </div>
-                      ) : (
-                        (selectedLesson.vocabulary || []).map((v) => {
-                          const checked = selectedVocabHanzi.includes(v.hanzi);
-                          return (
-                            <button
-                              key={v.id || v.hanzi}
-                              type="button"
-                              onClick={() => {
-                                setSelectedVocabHanzi((prev) =>
-                                  prev.includes(v.hanzi)
-                                    ? prev.filter((item) => item !== v.hanzi)
-                                    : [...prev, v.hanzi]
-                                );
-                                setIsPromptManuallyEdited(false);
-                              }}
-                              className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 ${
-                                checked
-                                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-2xs'
-                                  : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60 hover:opacity-100'
-                              }`}
-                            >
-                              <span>{checked ? '✓' : '+'}</span>
-                              <span className="font-bold">{v.hanzi}</span>
-                              <span className="text-[10px] opacity-85">({v.vietnamese})</span>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      value={customVocabInput}
-                      onChange={(e) => {
-                        setCustomVocabInput(e.target.value);
-                        setIsPromptManuallyEdited(false);
-                      }}
-                      placeholder="➕ Giáo viên tự nhập thêm từ vựng muốn kiểm tra (VD: 咖啡 (kāfēi - cà phê), 图书馆, 电脑)..."
-                      className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
-                    />
-                  </div>
-
-                  {/* Teacher Grammar Structure Picker & Custom Input */}
-                  <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
-                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
-                      3. Cấu trúc ngữ pháp & Mẫu câu muốn kiểm tra ({effectiveGrammarList.length} cấu trúc):
-                    </label>
-                    {(selectedLesson.grammarPoints || []).length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(selectedLesson.grammarPoints || []).map((g) => {
-                          const checked = selectedGrammarTitles.includes(g.title);
-                          return (
-                            <button
-                              key={g.id || g.title}
-                              type="button"
-                              onClick={() => {
-                                setSelectedGrammarTitles((prev) =>
-                                  prev.includes(g.title)
-                                    ? prev.filter((item) => item !== g.title)
-                                    : [...prev, g.title]
-                                );
-                                setIsPromptManuallyEdited(false);
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1.5 ${
-                                checked
-                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold'
-                                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60 hover:opacity-100'
-                              }`}
-                            >
-                              <span>{checked ? '✓' : '+'}</span>
-                              <span>{g.title}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-center text-xs text-[var(--color-text-secondary)]">
-                        <span className="text-[11px] text-[var(--color-text-secondary)]">
-                          Bài học này không có cấu trúc ngữ pháp mẫu trong dữ liệu. Bạn có thể tự nhập thêm mẫu câu bên dưới.
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                        <BookOpen className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
+                        <span>
+                          Bài {selectedLesson.lessonNumber}: {selectedLesson.titleHanzi} ({selectedLesson.titleVietnamese})
+                        </span>
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-text-secondary)]">
+                        <span className="font-semibold text-[var(--color-primary)]">
+                          Đã chọn {effectiveVocabList.length} từ vựng • {effectiveGrammarList.length} ngữ pháp
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {lessonScopeMode === 'strict_lesson'
+                            ? `🔒 Chỉ trong Bài ${selectedLesson.lessonNumber}`
+                            : lessonScopeMode === 'cumulative'
+                            ? `📚 Lũy tiến Bài 1 → ${selectedLesson.lessonNumber}`
+                            : '🎯 100% Từ giáo viên chọn'}
                         </span>
                       </div>
-                    )}
+                    </div>
 
-                    <input
-                      type="text"
-                      value={customGrammarInput}
-                      onChange={(e) => {
-                        setCustomGrammarInput(e.target.value);
-                        setIsPromptManuallyEdited(false);
-                      }}
-                      placeholder="➕ Giáo viên tự nhập thêm cấu trúc ngữ pháp / mẫu câu muốn xoáy sâu (cách nhau bằng dấu chấm phẩy ;)..."
-                      className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowVocabGrammarCustomizer((prev) => !prev)}
+                      className="px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)] text-xs font-semibold text-[var(--color-text-primary)] transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <span>
+                        {showVocabGrammarCustomizer || (selectedLesson.vocabulary || []).length === 0
+                          ? 'Thu gọn tùy chỉnh ▴'
+                          : '⚙️ Tùy chỉnh từ vựng & phạm vi ▾'}
+                      </span>
+                    </button>
                   </div>
+
+                  {/* Collapsible Detailed Vocab / Grammar / Scope Customizer */}
+                  {(showVocabGrammarCustomizer ||
+                    (selectedLesson.vocabulary || []).length === 0 ||
+                    (lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0)) && (
+                    <div className="space-y-3 pt-3 border-t border-[var(--color-border)] animate-fadeIn">
+                      {/* 1. Compact Scope Pills */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label className="text-[11px] font-bold text-[var(--color-text-primary)]">
+                          Phạm vi kiến thức:
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            {
+                              key: 'strict_lesson' as HomeworkScopeMode,
+                              title: `🔒 Chỉ trong Bài ${selectedLesson.lessonNumber}`,
+                              desc: 'Cấm dùng từ vựng ở các bài sau chưa học',
+                            },
+                            {
+                              key: 'cumulative' as HomeworkScopeMode,
+                              title: `📚 Lũy tiến Bài 1 → ${selectedLesson.lessonNumber}`,
+                              desc: 'Ôn tập kết hợp các bài đã dạy từ đầu',
+                            },
+                            {
+                              key: 'custom_only' as HomeworkScopeMode,
+                              title: '🎯 100% Từ giáo viên chọn',
+                              desc: 'Chỉ xoáy sâu vào đúng danh sách bên dưới',
+                            },
+                          ].map((sc) => {
+                            const isSelected = lessonScopeMode === sc.key;
+                            return (
+                              <button
+                                key={sc.key}
+                                type="button"
+                                title={sc.desc}
+                                onClick={() => {
+                                  setLessonScopeMode(sc.key);
+                                  setIsPromptManuallyEdited(false);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-2xs'
+                                    : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/50'
+                                }`}
+                              >
+                                {sc.title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 2. Teacher Vocabulary Picker & Custom Input */}
+                      <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]/60">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-[var(--color-text-primary)]">
+                            Từ vựng đưa vào đề ({effectiveVocabList.length} từ):
+                          </label>
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedVocabHanzi((selectedLesson.vocabulary || []).map((v) => v.hanzi));
+                                setIsPromptManuallyEdited(false);
+                              }}
+                              className="text-[var(--color-primary)] font-semibold hover:underline cursor-pointer"
+                            >
+                              Chọn hết
+                            </button>
+                            <span className="text-[var(--color-border)]">|</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedVocabHanzi([]);
+                                setIsPromptManuallyEdited(false);
+                              }}
+                              className="text-[var(--color-text-secondary)] hover:text-red-500 cursor-pointer"
+                            >
+                              Bỏ chọn
+                            </button>
+                          </div>
+                        </div>
+
+                        {lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0 && (
+                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>Vui lòng chọn ít nhất 1 từ vựng hoặc tự nhập từ vựng vào ô bên dưới.</span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                          {(selectedLesson.vocabulary || []).length === 0 ? (
+                            <div className="p-2 text-center text-xs text-[var(--color-text-secondary)] w-full">
+                              ⚠️ Bài học này chưa có sẵn từ vựng. Hãy gõ từ vựng vào ô bên dưới hoặc chọn phạm vi &quot;Lũy tiến&quot;.
+                            </div>
+                          ) : (
+                            (selectedLesson.vocabulary || []).map((v) => {
+                              const checked = selectedVocabHanzi.includes(v.hanzi);
+                              return (
+                                <button
+                                  key={v.id || v.hanzi}
+                                  type="button"
+                                  title={`${v.hanzi} (${v.pinyin}): ${v.vietnamese}`}
+                                  onClick={() => {
+                                    setSelectedVocabHanzi((prev) =>
+                                      prev.includes(v.hanzi)
+                                        ? prev.filter((item) => item !== v.hanzi)
+                                        : [...prev, v.hanzi]
+                                    );
+                                    setIsPromptManuallyEdited(false);
+                                  }}
+                                  className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 ${
+                                    checked
+                                      ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60 hover:opacity-100'
+                                  }`}
+                                >
+                                  <span>{checked ? '✓' : '+'}</span>
+                                  <span className="font-bold">{v.hanzi}</span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <input
+                          type="text"
+                          value={customVocabInput}
+                          onChange={(e) => {
+                            setCustomVocabInput(e.target.value);
+                            setIsPromptManuallyEdited(false);
+                          }}
+                          placeholder="➕ Nhập thêm từ vựng ngoài danh sách (VD: 咖啡, 图书馆, 电脑)..."
+                          className="w-full px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                        />
+                      </div>
+
+                      {/* 3. Teacher Grammar Structure Picker & Custom Input */}
+                      <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]/60">
+                        <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
+                          Ngữ pháp & Mẫu câu ({effectiveGrammarList.length} cấu trúc):
+                        </label>
+                        {(selectedLesson.grammarPoints || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {(selectedLesson.grammarPoints || []).map((g) => {
+                              const checked = selectedGrammarTitles.includes(g.title);
+                              return (
+                                <button
+                                  key={g.id || g.title}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedGrammarTitles((prev) =>
+                                      prev.includes(g.title)
+                                        ? prev.filter((item) => item !== g.title)
+                                        : [...prev, g.title]
+                                    );
+                                    setIsPromptManuallyEdited(false);
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 ${
+                                    checked
+                                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold'
+                                      : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] opacity-60 hover:opacity-100'
+                                  }`}
+                                >
+                                  <span>{checked ? '✓' : '+'}</span>
+                                  <span>{g.title}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <input
+                          type="text"
+                          value={customGrammarInput}
+                          onChange={(e) => {
+                            setCustomGrammarInput(e.target.value);
+                            setIsPromptManuallyEdited(false);
+                          }}
+                          placeholder="➕ Nhập thêm cấu trúc ngữ pháp muốn xoáy sâu (cách nhau bằng dấu ;)..."
+                          className="w-full px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {questionSource === 'curriculum' && (
                     <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)]">
                       <label className="block text-xs font-semibold text-[var(--color-text-primary)]">
-                        4. Trọng tâm rèn luyện bài học:
+                        Trọng tâm rèn luyện bài học:
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {[
@@ -2280,23 +2259,11 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     </label>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[11px] text-[var(--color-text-secondary)] space-y-1">
-                    <span className="font-bold text-[var(--color-text-primary)]">💡 Mẫu câu chuẩn tự động bóc tách:</span>
-                    <pre className="font-mono text-[10px] bg-[var(--color-background)] p-2 rounded-lg text-[var(--color-text-primary)] overflow-x-auto whitespace-pre-wrap">
-{`Câu 1: 他是我的____。
-A. 老师
-B. 朋友
-C. 医生
-D. 同学
-Đáp án: A. Giải thích: Anh ấy là giáo viên của tôi.`}
-                    </pre>
-                  </div>
-
                   <textarea
                     rows={6}
                     value={rawPastedText}
                     onChange={(e) => setRawPastedText(e.target.value)}
-                    placeholder="Dán câu hỏi hoặc văn bản bài khóa vào đây theo mẫu trên..."
+                    placeholder={`Dán câu hỏi vào đây (VD:\nCâu 1: 他是我的____。\nA. 老师  B. 朋友  C. 医生  D. 同学\nĐáp án: A)`}
                     className="w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-primary)]"
                   />
                 </div>
@@ -2305,16 +2272,11 @@ D. 同学
               {/* Source Mode 3: Lesson-Scoped System Prompt & Golden Prompt Studio */}
               {questionSource === 'golden_prompt' && (
                 <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span>System Prompt Cá Nhân Hóa Theo Bài Học & Ý Muốn Giáo Viên</span>
-                      </h4>
-                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
-                        System Prompt được tự động ràng buộc chặt chẽ theo các từ vựng và cấu trúc ngữ pháp của Bài {selectedLesson.lessonNumber} mà giáo viên đã chọn ở trên (không lấy lan man toàn bộ level).
-                      </p>
-                    </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>Thiết kế đề bằng AI theo Bài {selectedLesson.lessonNumber}</span>
+                    </h4>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -2322,7 +2284,7 @@ D. 同学
                         className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5" />
-                        <span>{copiedSystemPrompt ? 'Đã chép System Prompt!' : '📋 Sao chép System Prompt'}</span>
+                        <span>{copiedSystemPrompt ? 'Đã chép!' : '📋 Sao chép Prompt'}</span>
                       </button>
                       <button
                         type="button"
@@ -2330,7 +2292,7 @@ D. 同学
                         className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 hover:bg-amber-500/20 transition-all cursor-pointer"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
-                        <span>✨ Mở Thư Viện Prompt Chuẩn Vàng</span>
+                        <span>✨ Thư viện Prompt Mẫu</span>
                       </button>
                     </div>
                   </div>
@@ -2338,15 +2300,15 @@ D. 同学
                   {/* Prompt Format Template Switcher */}
                   <div className="space-y-1.5">
                     <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
-                      4. Chọn mẫu cấu trúc System Prompt bài tập:
+                      Kiểu bài tập muốn AI biên soạn:
                     </label>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        { key: 'mixed_homework' as HomeworkPromptTemplateKey, label: '✨ Tổng hợp Bài tập về nhà (Khuyên dùng)' },
-                        { key: 'fill_in_blank' as HomeworkPromptTemplateKey, label: 'Điền từ vào chỗ trống (____)' },
-                        { key: 'listening_dialogue' as HomeworkPromptTemplateKey, label: 'Nghe hội thoại (男/女/问)' },
-                        { key: 'reading_mcq' as HomeworkPromptTemplateKey, label: 'Trắc nghiệm Đọc hiểu bài học' },
-                        { key: 'dialogue_matching' as HomeworkPromptTemplateKey, label: 'Ghép nối câu hội thoại' },
+                        { key: 'mixed_homework' as HomeworkPromptTemplateKey, label: '✨ Tổng hợp (Khuyên dùng)' },
+                        { key: 'fill_in_blank' as HomeworkPromptTemplateKey, label: 'Điền từ (____)' },
+                        { key: 'listening_dialogue' as HomeworkPromptTemplateKey, label: 'Nghe hội thoại' },
+                        { key: 'reading_mcq' as HomeworkPromptTemplateKey, label: 'Đọc hiểu bài học' },
+                        { key: 'dialogue_matching' as HomeworkPromptTemplateKey, label: 'Ghép câu hội thoại' },
                         { key: 'json_strict' as HomeworkPromptTemplateKey, label: 'JSON Chuẩn HSK' },
                       ].map((tpl) => {
                         const active = homeworkPromptTemplate === tpl.key;
@@ -2374,7 +2336,7 @@ D. 同学
                   {/* Teacher pedagogical note input */}
                   <div className="space-y-1">
                     <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
-                      5. Ghi chú / Chỉ thị sư phạm riêng của giáo viên vào System Prompt (Tùy chọn):
+                      Ghi chú / Chỉ thị riêng cho AI (Tùy chọn):
                     </label>
                     <input
                       type="text"
@@ -2388,12 +2350,20 @@ D. 同学
                     />
                   </div>
 
-                  {/* Live Editable System Prompt Textarea */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
-                      <span className="font-bold text-[var(--color-text-primary)]">
-                        Nội dung System Prompt (Tự động cập nhật theo Từ vựng & Cấu trúc bài học — Có thể sửa trực tiếp):
-                      </span>
+                  {/* Collapsible Live Editable System Prompt Textarea */}
+                  <div className="pt-1 border-t border-[var(--color-border)]/60">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setShowRawSystemPromptEditor((prev) => !prev)}
+                        className="text-[11px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] cursor-pointer flex items-center gap-1"
+                      >
+                        <span>
+                          {showRawSystemPromptEditor
+                            ? 'Ẩn nội dung chi tiết System Prompt ▴'
+                            : '👁️ Xem / Chỉnh sửa trực tiếp câu lệnh System Prompt ▾'}
+                        </span>
+                      </button>
                       {isPromptManuallyEdited && (
                         <button
                           type="button"
@@ -2403,19 +2373,21 @@ D. 同学
                           }}
                           className="text-[11px] text-[var(--color-primary)] font-semibold hover:underline cursor-pointer"
                         >
-                          🔄 Khôi phục theo Từ vựng & Cấu trúc đã chọn
+                          🔄 Khôi phục mặc định
                         </button>
                       )}
                     </div>
-                    <textarea
-                      rows={8}
-                      value={appliedGoldenPrompt}
-                      onChange={(e) => {
-                        setAppliedGoldenPrompt(e.target.value);
-                        setIsPromptManuallyEdited(true);
-                      }}
-                      className="w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono leading-relaxed focus:outline-none focus:border-[var(--color-primary)]"
-                    />
+                    {showRawSystemPromptEditor && (
+                      <textarea
+                        rows={6}
+                        value={appliedGoldenPrompt}
+                        onChange={(e) => {
+                          setAppliedGoldenPrompt(e.target.value);
+                          setIsPromptManuallyEdited(true);
+                        }}
+                        className="mt-2 w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono leading-relaxed focus:outline-none focus:border-[var(--color-primary)] animate-fadeIn"
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -2532,18 +2504,7 @@ D. 同学
           {/* STEP 3: EXERCISE FORMATS, DIFFICULTY & NATURAL TTS VOICES */}
           {/* ============================================================== */}
           {currentStep === 3 && (
-            <div className="space-y-6 animate-fadeIn">
-              {/* Teacher Guidance for Formats & TTS */}
-              <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] space-y-1">
-                <div className="flex items-center gap-2 font-bold text-[var(--color-text-primary)]">
-                  <Info className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
-                  <span>Bước 3: Tùy Chỉnh Định Dạng Bài Tập, Độ Khó & Giọng Đọc Khảo Thí</span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  Thiết lập cơ cấu đề thi phù hợp với mục tiêu sư phạm: phối hợp 4 dạng bài tập cốt lõi (Trắc nghiệm, Điền từ, Đọc hiểu, Nghe), điều chỉnh tốc độ đọc (0.8x cho lớp mới, 0.9x chuẩn bài thi, 1.0x thử thách) và bấm <strong>&quot;Nghe thử giọng đọc&quot;</strong> để thẩm định ngữ điệu tự nhiên.
-                </p>
-              </div>
-
+            <div className="space-y-4 animate-fadeIn">
               {/* 1. 4 Core Exercise Formats (Requirement R3) */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -2769,18 +2730,7 @@ D. 同学
           {/* STEP 4: REVIEW, INLINE EDIT & PUBLISH */}
           {/* ============================================================== */}
           {currentStep === 4 && (
-            <div className="space-y-5 animate-fadeIn">
-              {/* Teacher Guidance for Question Review & Editing */}
-              <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] space-y-1">
-                <div className="flex items-center gap-2 font-bold text-[var(--color-text-primary)]">
-                  <Info className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
-                  <span>Bước 4: Kiểm Duyệt Toàn Diện, Nghe Thử & Sẵn Sàng Giao Bài</span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  Rà soát nội dung từng câu hỏi: bấm <span className="font-semibold text-[var(--color-text-primary)]">✏️</span> để chỉnh sửa nội dung, đáp án hoặc giải thích; với câu hỏi Nghe, bấm <span className="font-semibold text-[var(--color-primary)]">🎧 Nghe thử câu</span> để kiểm tra âm thanh TTS. Bạn cũng có thể bấm <strong>&quot;+ Thêm câu hỏi mới&quot;</strong> để bổ sung câu hỏi tự soạn.
-                </p>
-              </div>
-
+            <div className="space-y-4 animate-fadeIn">
               {/* Summary Bar */}
               <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-3">

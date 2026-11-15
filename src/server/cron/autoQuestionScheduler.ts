@@ -588,10 +588,17 @@ export async function runScheduledBatch(
           LIMIT 1
         `);
 
+        try {
+          const pendCols = (db.prepare('PRAGMA table_info(pending_questions)').all() as any[]).map((c) => c.name);
+          if (!pendCols.includes('audio_url')) {
+            db.exec('ALTER TABLE pending_questions ADD COLUMN audio_url TEXT;');
+          }
+        } catch {}
+
         const insertStmt = db.prepare(`
           INSERT INTO pending_questions (
-            id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, tested_vocab, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, 1)
+            id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, tested_vocab, audio_url, is_active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, 1)
         `);
 
         for (const item of validCandidates) {
@@ -602,6 +609,12 @@ export async function runScheduledBatch(
 
           const qId = `pend_${level}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
           const optJson = JSON.stringify(item.q.options);
+          const isListen = String(item.q.skill || '').toLowerCase() === 'listening' || String(item.q.part_type || '').toLowerCase().startsWith('listen_');
+          const rawAudioSource = String((item.q as any).audio_text || (item.q as any).passage || item.q.stem || '').trim();
+          const spokenBeforeQ = rawAudioSource.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim() || rawAudioSource;
+          const autoAudioUrl = isListen && spokenBeforeQ.length >= 2
+            ? ((item.q as any).audio_url || `/api/tts?text=${encodeURIComponent(spokenBeforeQ)}&voice=auto`)
+            : ((item.q as any).audio_url || null);
 
           const res: any = insertStmt.run(
             qId,
@@ -620,7 +633,8 @@ export async function runScheduledBatch(
             waterfallResult.providerUsed,
             item.contentHash,
             item.nearDupSig,
-            item.testedVocabJson
+            item.testedVocabJson,
+            autoAudioUrl
           );
           if (res?.changes > 0) savedCount++;
         }

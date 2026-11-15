@@ -63,7 +63,7 @@ import {
 } from '../data/hskMockExamFixtures';
 export type { HSKExamQuestion };
 import { HSKIllustrationCanvas } from './HSKIllustrationCanvas';
-import { playChineseAudio, stopChineseAudio, playAudioUrl, HSK_LEVEL_AUDIO_PACING } from '../utils/chineseAudio';
+import { playChineseAudio, stopChineseAudio, playAudioUrl, playDialogueSequence, HSK_LEVEL_AUDIO_PACING } from '../utils/chineseAudio';
 import { VoiceSettingsModal } from './VoiceSettingsModal';
 import { getSentencePinyin, splitHanziAndPinyin, sanitizeHanziOnly } from '../utils/pinyinUtils';
 
@@ -1776,7 +1776,11 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
         return;
       }
 
-      const textToPlay = q.audio_text || q.stem;
+      const rawTextToPlay = q.audio_text || q.stem || '';
+      const textToPlay =
+        q.skill === 'listening'
+          ? (rawTextToPlay.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim() || rawTextToPlay)
+          : rawTextToPlay;
       if (!textToPlay && !q.audio_url) return;
 
       const maxPlays = currentView === 'exam' ? (selectedLevel <= 3 ? 2 : 1) : 999;
@@ -1794,14 +1798,37 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
         : defaultPacing.rate;
       const pitch = defaultPacing.pitch;
 
+      const playSpokenScriptFallback = async () => {
+        if (!textToPlay) return;
+        const normalizedLines = textToPlay
+          .replace(/(?:^|[\r\n\s]+|(?<=[。？！?!]))(?=(?:男|女|甲|乙|老师|学生|爸爸|妈妈|A|B)\s*[:：])/g, '\n')
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const hasSpeakerTags = normalizedLines.some((l) =>
+          /^(?:男|女|甲|乙|老师|学生|爸爸|妈妈|A|B)\s*[:：]/i.test(l)
+        );
+        if (hasSpeakerTags && normalizedLines.length > 0) {
+          const dialogueItems = normalizedLines.map((line, idx) => {
+            const m = line.match(/^([^:：]+)[:：]\s*(.*)$/);
+            const speaker = m ? m[1].trim() : idx % 2 === 0 ? '男' : '女';
+            const hanzi = m ? m[2].trim() : line;
+            const gender: 'male' | 'female' =
+              /女|妈|姐|妹|小红|乙|b/i.test(speaker) ? 'female' : 'male';
+            return { speaker, gender, hanzi };
+          });
+          await playDialogueSequence(dialogueItems, undefined, undefined, rate);
+        } else {
+          await playChineseAudio(textToPlay, rate, pitch);
+        }
+      };
+
       const playSinglePass = async () => {
-        if (q.audio_url) {
+        if (q.audio_url && !q.audio_url.startsWith('/api/tts')) {
           await playAudioUrl(q.audio_url, rate);
         } else {
           await playClecPromptChime();
-          if (textToPlay) {
-            await playChineseAudio(textToPlay, rate, pitch);
-          }
+          await playSpokenScriptFallback();
         }
       };
 
@@ -1829,7 +1856,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
         if (q.audio_url && textToPlay) {
           try {
             await playClecPromptChime();
-            await playChineseAudio(textToPlay, rate, pitch);
+            await playSpokenScriptFallback();
           } catch {}
         }
       } finally {

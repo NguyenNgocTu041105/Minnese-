@@ -508,7 +508,9 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
       part_type TEXT NOT NULL,
       stem TEXT NOT NULL,
       passage TEXT,
+      audio_url TEXT,
       options TEXT NOT NULL,
+      options_images TEXT,
       answer_index INTEGER NOT NULL,
       explanation_vi TEXT NOT NULL,
       pinyin_stem TEXT,
@@ -581,6 +583,16 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
     }
     if (!qCols.includes('audio_url')) {
       targetDb.exec('ALTER TABLE questions ADD COLUMN audio_url TEXT;');
+    }
+  } catch {}
+
+  try {
+    const qbCols = (targetDb.prepare('PRAGMA table_info(qb_questions)').all() as any[]).map((c) => c.name);
+    if (!qbCols.includes('options_images')) {
+      targetDb.exec('ALTER TABLE qb_questions ADD COLUMN options_images TEXT;');
+    }
+    if (!qbCols.includes('audio_url')) {
+      targetDb.exec('ALTER TABLE qb_questions ADD COLUMN audio_url TEXT;');
     }
   } catch {}
 
@@ -659,6 +671,53 @@ export function setDbSyncForTesting(db: DatabaseSync | null): void {
 
 
 /**
+ * Automatically builds a cloud-ready streaming TTS URL (/api/tts?text=...&voice=auto)
+ * for any listening question that does not yet have a pre-generated static .mp3 audio_url.
+ * Strips the trailing question prompt (问：...) and parenthetical Pinyin so only pure dialogue/monologue is voiced.
+ */
+export function buildAutoListeningAudioUrl(q: {
+  skill?: string | null;
+  part_type?: string | null;
+  stem?: string | null;
+  passage?: string | null;
+  audio_text?: string | null;
+  audio_url?: string | null;
+}): string | null {
+  if (!q) return null;
+  if (typeof q.audio_url === 'string' && q.audio_url.trim().length > 0) {
+    return q.audio_url.trim();
+  }
+  const skill = String(q.skill || '').toLowerCase().trim();
+  const partType = String(q.part_type || '').toLowerCase().trim();
+  if (skill !== 'listening' && !partType.startsWith('listen_')) {
+    return null;
+  }
+
+  const rawSource = String(q.audio_text || q.passage || q.stem || '').trim();
+  if (!rawSource) return null;
+
+  // Exclude question prompt (问： / Question: / ★) so only the spoken dialogue/monologue is voiced
+  const beforeQuestion = rawSource.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim() || rawSource;
+
+  // Strip Vietnamese headers and parenthetical Pinyin if Chinese characters are present
+  let cleanScript = beforeQuestion
+    .replace(/^(?:Câu|Bài|Question|Part|Phần)\s*\d+\s*[:：.\-)\]]\s*/i, '')
+    .replace(/^(?:Đọc|Nghe)\s+(?:đoạn\s+)?(?:hội\s+thoại|câu|đoạn\s+văn)(?:\s+sau)?(?:\s+và\s+trả\s+lời(?:\s+câu\s+hỏi)?)?\s*[:：]?\s*/i, '')
+    .trim();
+
+  if (/[\u4e00-\u9fff]/.test(cleanScript)) {
+    cleanScript = cleanScript
+      .replace(/\([^()\u4e00-\u9fff]*\)/g, ' ')
+      .replace(/（[^（）\u4e00-\u9fff]*）/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  if (cleanScript.length < 2) return null;
+  return `/api/tts?text=${encodeURIComponent(cleanScript)}&voice=auto`;
+}
+
+/**
  * Formats a SQLite row from qb_questions into the full JSON question schema
  */
 function formatQuestionRow(row: any) {
@@ -735,7 +794,7 @@ function formatQuestionRow(row: any) {
     part_type: row.part_type,
     stem: row.stem,
     passage: row.passage,
-    audio_url: row.audio_url || null,
+    audio_url: row.audio_url || buildAutoListeningAudioUrl(row),
     options,
     options_images: Array.isArray(row.options_images)
       ? row.options_images
@@ -1286,8 +1345,8 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
         if (validCandidates.length > 0) {
           const insertStmt = db.prepare(`
             INSERT INTO pending_questions (
-              id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+              id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, audio_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
             ON CONFLICT(content_hash) DO NOTHING
           `);
 
@@ -1295,6 +1354,7 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
             const qId = `pend_${level}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
             const contentHash = computeContentHash(q.stem, q.options, q.answer_idx, q.options_images);
             const optionsJson = JSON.stringify(q.options);
+            const autoAudioUrl = (q as any).audio_url || buildAutoListeningAudioUrl(q);
 
             const info = insertStmt.run(
               qId,
@@ -1311,7 +1371,8 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
               JSON.stringify(q.options_images || []),
               q.topic || topic || null,
               waterfallResult.providerUsed,
-              contentHash
+              contentHash,
+              autoAudioUrl
             );
 
             if ((info as any)?.changes > 0) {
@@ -1535,11 +1596,11 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
     try {
       const insertSql = `
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url
           ${hasDiffCol ? ', difficulty_tier' : ''}
           ${hasSourceCol ? ', source' : ''}
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?
           ${hasDiffCol ? ', ?' : ''}
           ${hasSourceCol ? ', ?' : ''}
         )
@@ -1559,6 +1620,13 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
         let inserted = false;
         if (sixGate.allPassed) {
           const qId = `pend_${q.level || defaultLevel}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+          const effectiveSkill = q.skill || defaultSkill;
+          const effectivePartType = q.part_type || defaultPartType;
+          const autoAudioUrl = (q as any).audio_url || buildAutoListeningAudioUrl({
+            ...q,
+            skill: effectiveSkill,
+            part_type: effectivePartType,
+          });
           const insertParams: any[] = [
             qId,
             batchId,
@@ -1568,14 +1636,15 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
             q.pinyin || null,
             q.explanation_vi,
             q.level || defaultLevel,
-            q.skill || defaultSkill,
-            q.part_type || defaultPartType,
+            effectiveSkill,
+            effectivePartType,
             q.illustration_theme || null,
             JSON.stringify(q.options_images || []),
             q.topic || defaultTopic,
             'imported',
             contentHash,
             nearDupSig,
+            autoAudioUrl,
           ];
           if (hasDiffCol) {
             insertParams.push(q.difficulty_tier || null);
@@ -1728,11 +1797,11 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
     try {
       const insertSql = `
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url
           ${hasDiffCol ? ', difficulty_tier' : ''}
           ${hasSourceCol ? ', source' : ''}
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?
           ${hasDiffCol ? ', ?' : ''}
           ${hasSourceCol ? ', ?' : ''}
         )
@@ -1753,6 +1822,13 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
         if (sixGate.allPassed) {
           if (autoPersist) {
             const qId = `pend_${q.level || defaultLevel}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+            const effectiveSkill = q.skill || defaultSkill;
+            const effectivePartType = q.part_type || defaultPartType;
+            const autoAudioUrl = (q as any).audio_url || buildAutoListeningAudioUrl({
+              ...q,
+              skill: effectiveSkill,
+              part_type: effectivePartType,
+            });
             const insertParams: any[] = [
               qId,
               batchId,
@@ -1762,14 +1838,15 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
               q.pinyin || null,
               q.explanation_vi,
               q.level || defaultLevel,
-              q.skill || defaultSkill,
-              q.part_type || defaultPartType,
+              effectiveSkill,
+              effectivePartType,
               q.illustration_theme || null,
               JSON.stringify(q.options_images || []),
               q.topic || defaultTopic,
               'uploaded_file',
               contentHash,
               nearDupSig,
+              autoAudioUrl,
             ];
             if (hasDiffCol) {
               insertParams.push(q.difficulty_tier || null);
@@ -2044,11 +2121,11 @@ CHÚ Ý:
     try {
       const insertSql = `
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url
           ${hasDiffCol ? ', difficulty_tier' : ''}
           ${hasSourceCol ? ', source' : ''}
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?
           ${hasDiffCol ? ', ?' : ''}
           ${hasSourceCol ? ', ?' : ''}
         )
@@ -2065,6 +2142,13 @@ CHÚ Ý:
 
         let inserted = false;
         const qId = `pend_${q.level || targetLevel}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+        const effectiveSkill = q.skill || defaultSkill;
+        const effectivePartType = q.part_type || defaultPartType;
+        const autoAudioUrl = (q as any).audio_url || buildAutoListeningAudioUrl({
+          ...q,
+          skill: effectiveSkill,
+          part_type: effectivePartType,
+        });
 
         if (sixGate.allPassed) {
           const insertParams: any[] = [
@@ -2076,14 +2160,15 @@ CHÚ Ý:
             q.pinyin || null,
             q.explanation_vi,
             q.level || targetLevel,
-            q.skill || defaultSkill,
-            q.part_type || defaultPartType,
+            effectiveSkill,
+            effectivePartType,
             q.illustration_theme || null,
             JSON.stringify(q.options_images || []),
             q.topic || defaultTopic,
             providerUsed,
             contentHash,
             nearDupSig,
+            autoAudioUrl,
           ];
           if (hasDiffCol) {
             insertParams.push(q.difficulty_tier || null);
@@ -3007,6 +3092,19 @@ async function handleReviewOrStatus(req: Request, res: Response) {
     if (action === 'approve') {
       try {
         const db = getDbSync();
+        // Auto-bind listening audio_url if not yet set
+        try {
+          const qRow = (db.prepare('SELECT id, skill, part_type, stem, passage, audio_url FROM questions WHERE id = ?').get(questionId) ||
+            db.prepare('SELECT question_id as id, skill, part_type, stem, passage, audio_url FROM qb_questions WHERE question_id = ?').get(questionId)) as any;
+          if (qRow && !qRow.audio_url) {
+            const autoAudioUrl = buildAutoListeningAudioUrl(qRow);
+            if (autoAudioUrl) {
+              try { db.prepare('UPDATE questions SET audio_url = ? WHERE id = ? AND (audio_url IS NULL OR audio_url = "")').run(autoAudioUrl, questionId); } catch {}
+              try { db.prepare('UPDATE qb_questions SET audio_url = ? WHERE question_id = ? AND (audio_url IS NULL OR audio_url = "")').run(autoAudioUrl, questionId); } catch {}
+              try { db.prepare('UPDATE pending_questions SET audio_url = ? WHERE id = ? AND (audio_url IS NULL OR audio_url = "")').run(autoAudioUrl, questionId); } catch {}
+            }
+          }
+        } catch {}
         syncApprovedQuestionToPool(db, questionId);
       } catch (syncErr) {
         console.warn(`[QBank Review Sync Warning] Could not sync question ${questionId}:`, syncErr);
@@ -3196,7 +3294,7 @@ export function formatPendingRow(row: any) {
     difficulty_tier: metadata.difficulty_tier || row.difficulty_tier || null,
     trap_type: metadata.trap_type || row.trap_type || null,
     target_grammar: metadata.target_grammar || null,
-    audio_url: row.audio_url || null,
+    audio_url: row.audio_url || buildAutoListeningAudioUrl(row),
     validation_diagnostics,
   };
 }
@@ -3421,6 +3519,13 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           }
         }
 
+        const resolvedAudioUrl = row.audio_url || buildAutoListeningAudioUrl(row);
+        if (resolvedAudioUrl && !row.audio_url) {
+          try {
+            db.prepare('UPDATE pending_questions SET audio_url = ? WHERE id = ?').run(resolvedAudioUrl, row.id);
+          } catch {}
+        }
+
         upsertQuestionsStmt.run(
           row.id,
           row.stem,
@@ -3439,7 +3544,7 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           nearDupSig,
           testedVocabJson,
           row.passage || null,
-          row.audio_url || null,
+          resolvedAudioUrl || null,
           row.batch_id || null
         );
 
@@ -3465,7 +3570,7 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           row.part_type || 'read_fill_blank_4opt',
           row.stem,
           row.passage || null,
-          row.audio_url || null,
+          resolvedAudioUrl || null,
           optionsJson,
           Number(row.answer_idx),
           row.explanation_vi || '',
@@ -3643,6 +3748,7 @@ qbankRouter.post('/exam/assemble-or-supplement', async (req: Request, res: Respo
             level: Number(q.level),
             skill: q.skill,
             part_type: q.part_type,
+            audio_url: q.audio_url || buildAutoListeningAudioUrl(q),
           });
         }
       }
@@ -3720,8 +3826,8 @@ qbankRouter.post('/exam/assemble-or-supplement', async (req: Request, res: Respo
       let countSaved = 0;
       const insertStmt = db.prepare(`
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, provider_used, content_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, provider_used, content_hash, audio_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(content_hash) DO NOTHING
       `);
 
@@ -3730,6 +3836,7 @@ qbankRouter.post('/exam/assemble-or-supplement', async (req: Request, res: Respo
         const optionsArr = q.options || [];
         const contentHash = computeContentHash(q.stem, optionsArr, q.answer_idx, q.options_images);
         const optionsJson = JSON.stringify(optionsArr);
+        const autoAudioUrl = (q as any).audio_url || buildAutoListeningAudioUrl(q);
 
         const info: any = insertStmt.run(
           qId,
@@ -3746,7 +3853,8 @@ qbankRouter.post('/exam/assemble-or-supplement', async (req: Request, res: Respo
           JSON.stringify(q.options_images || []),
           q.topic || body.topic || null,
           waterfallResult.providerUsed,
-          contentHash
+          contentHash,
+          autoAudioUrl
         );
 
         if (info?.changes > 0) countSaved++;
@@ -4179,6 +4287,21 @@ async function handlePendingEdit(req: Request, res: Response) {
       newTestedVocabJson = JSON.stringify(verified.tested);
     } catch {}
 
+    // Auto-update audio_url when stem or skill changes on a listening question (unless a custom static .mp3 was preserved and stem did not change)
+    let updatedAudioUrl = existing.audio_url || null;
+    const isListeningTask = String(skill || '').toLowerCase() === 'listening' || String(partType || '').toLowerCase().startsWith('listen_');
+    if (isListeningTask) {
+      const hasStaticMp3 = typeof existing.audio_url === 'string' && existing.audio_url.startsWith('/audio/') && stem === existing.stem;
+      if (!hasStaticMp3) {
+        updatedAudioUrl = buildAutoListeningAudioUrl({
+          skill,
+          part_type: partType,
+          stem,
+          passage: existing.passage,
+        });
+      }
+    }
+
     const updateStmt = db.prepare(`
       UPDATE pending_questions SET
         stem = ?,
@@ -4194,6 +4317,7 @@ async function handlePendingEdit(req: Request, res: Response) {
         options_images = ?,
         near_duplicate_signature = ?,
         tested_vocab = ?,
+        audio_url = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
@@ -4212,6 +4336,7 @@ async function handlePendingEdit(req: Request, res: Response) {
       optionsImagesJson,
       newNearDupSig,
       newTestedVocabJson,
+      updatedAudioUrl,
       targetId
     );
 
@@ -4233,9 +4358,10 @@ async function handlePendingEdit(req: Request, res: Response) {
             content_hash = ?,
             near_duplicate_signature = ?,
             tested_vocab = ?,
+            audio_url = COALESCE(?, audio_url),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(stem, options, answerIdx, pinyin, explanationVi, level, skill, partType, illustrationTheme, optionsImagesJson, newContentHash, newNearDupSig, newTestedVocabJson, targetId);
+        `).run(stem, options, answerIdx, pinyin, explanationVi, level, skill, partType, illustrationTheme, optionsImagesJson, newContentHash, newNearDupSig, newTestedVocabJson, updatedAudioUrl, targetId);
 
         db.prepare(`
           UPDATE qb_questions SET
@@ -4248,9 +4374,10 @@ async function handlePendingEdit(req: Request, res: Response) {
             skill = ?,
             part_type = ?,
             topic = ?,
-            content_hash = ?
+            content_hash = ?,
+            audio_url = COALESCE(?, audio_url)
           WHERE question_id = ?
-        `).run(stem, options, answerIdx, pinyin, explanationVi, level, skill, partType, illustrationTheme || '', newContentHash, targetId);
+        `).run(stem, options, answerIdx, pinyin, explanationVi, level, skill, partType, illustrationTheme || '', newContentHash, updatedAudioUrl, targetId);
 
         syncApprovedQuestionToPool(db, targetId);
       } catch {}

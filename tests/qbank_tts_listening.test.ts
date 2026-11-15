@@ -24,6 +24,7 @@ import {
   setQBankAdminTokenForTesting,
   setDbSyncForTesting,
   ensurePendingSchema,
+  buildAutoListeningAudioUrl,
 } from '../src/server/qbankRoutes.js';
 import { normalizeQuestionAliases } from '../src/server/llm/jsonParser.js';
 import { parseUniversalQuestions } from '../src/server/llm/universalQuestionParser.js';
@@ -305,6 +306,29 @@ Giải thích: B trả lời đã đến siêu thị.
       });
 
       expect([401, 403]).toContain(res.status);
+    });
+
+    it('buildAutoListeningAudioUrl automatically populates cloud-ready /api/tts URL for listening questions and returns null for reading', () => {
+      const listeningUrl = buildAutoListeningAudioUrl({
+        skill: 'listening',
+        part_type: 'listen_dialogue_qa_4opt',
+        stem: 'Nghe hội thoại và trả lời: 男：王老师，您好！(Wáng lǎoshī, nín hǎo!)\n女：你好！(Nǐ hǎo!)\n问：男用什么称呼问候王老师？',
+      });
+      expect(listeningUrl).toBeTruthy();
+      expect(listeningUrl).toContain('/api/tts?text=');
+      expect(listeningUrl).toContain('&voice=auto');
+      const decoded = decodeURIComponent(listeningUrl!.split('text=')[1].split('&')[0]);
+      expect(decoded).toContain('男：王老师，您好！');
+      expect(decoded).toContain('女：你好！');
+      expect(decoded).not.toContain('Wáng lǎoshī');
+      expect(decoded).not.toContain('问：');
+
+      const readingUrl = buildAutoListeningAudioUrl({
+        skill: 'reading',
+        part_type: 'read_fill_blank_4opt',
+        stem: '王老师，____！',
+      });
+      expect(readingUrl).toBeNull();
     });
   });
 });

@@ -333,11 +333,10 @@ export function validateFormatCompatibility(q: any, level?: number): FormatCheck
             continue;
           }
 
-          // Check Audio requirement for listening (exam blueprint requires audio_text, audio_url, audio_playback, or dialogue script in stem)
+          // Check Audio requirement for listening (exam blueprint accepts audio_text, audio_url, audio_playback, or valid spoken stem)
           let hasAudioDeficit = false;
           if (rawSkill === 'listening') {
-            const hasDialogueAudio = typeof q.stem === 'string' && /(?:男|女|甲|乙|A|B)\s*[:：]|问[：:]/.test(q.stem);
-            const hasExamAudio = Boolean(q.audio_text || q.audio_url || q.audio_playback || hasDialogueAudio);
+            const hasExamAudio = Boolean(q.audio_text || q.audio_url || q.audio_playback || hasValidStem);
             if (!hasExamAudio) {
               hasAudioDeficit = true;
               if (!ineligible_reasons.some((r) => r.includes('audio_text') || r.includes('âm thanh'))) {

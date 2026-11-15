@@ -43,6 +43,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { AIExamStudio } from './Admin/AIExamStudio';
+import { playChineseAudio, playDialogueSequence, stopChineseAudio } from '../utils/chineseAudio';
 import { auth } from '../lib/firebase';
 import { HSKIllustrationCanvas, resolveSceneKey } from './HSKIllustrationCanvas';
 import { ExportExamModal, downloadExportFile } from './Admin/ExportExamModal';
@@ -2710,7 +2711,7 @@ export const QBankAdmin: React.FC = () => {
   };
 
   /**
-   * Phát âm thanh tiếng Trung qua Web Speech Synthesis có chuông dạo 1.2s trước khi đọc
+   * Phát âm thanh tiếng Trung qua Edge Neural TTS (hoặc Web Speech Synthesis dự phòng) có chuông dạo 1.2s trước khi đọc
    */
   const handlePlayWebSpeech = async (text: string, questionId?: string) => {
     if (typeof window === 'undefined') return;
@@ -2718,6 +2719,19 @@ export const QBankAdmin: React.FC = () => {
 
     if (withIntroChime) {
       await playIntroChime();
+    }
+
+    try {
+      stopChineseAudio();
+      await playDialogueSequence(text, {
+        rate: 0.9,
+        maleVoice: 'zh-CN-YunxiNeural',
+        femaleVoice: 'zh-CN-XiaoxiaoNeural',
+      });
+      setIsPlayingWebSpeechId(null);
+      return;
+    } catch {
+      // Fallback to browser Web Speech Synthesis if Edge TTS fails
     }
 
     if ('speechSynthesis' in window) {
@@ -2753,9 +2767,21 @@ export const QBankAdmin: React.FC = () => {
       await playIntroChime();
     }
 
+    const sampleText = '你好，这是普通话发音测试。';
+    try {
+      stopChineseAudio();
+      await playChineseAudio(sampleText, {
+        rate: 0.9,
+        voice: voiceId || 'zh-CN-XiaoxiaoNeural',
+      });
+      setIsAuditioningVoiceId(null);
+      return;
+    } catch {
+      // Fallback to Web Speech Synthesis
+    }
+
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const sampleText = '你好，这是普通话发音测试。';
       const utterance = new SpeechSynthesisUtterance(sampleText);
       utterance.lang = 'zh-CN';
       utterance.rate = 0.88;

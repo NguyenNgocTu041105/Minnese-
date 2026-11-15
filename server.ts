@@ -27,6 +27,7 @@ import {
   getQBankAdminToken,
   qbankSecurityMiddleware,
   requireAdminAuth,
+  getDbSync,
 } from './src/server/qbankRoutes';
 import { examRouter } from './src/server/examRoutes';
 import { initAutoQuestionScheduler } from './src/server/cron/autoQuestionScheduler';
@@ -589,6 +590,78 @@ async function startServer() {
   const audioDir = path.join(process.cwd(), 'public', 'audio');
   fs.mkdirSync(audioDir, { recursive: true });
   app.use('/audio', express.static(audioDir));
+
+  // Cloud Ephemeral Disk Auto-Recovery: If a static /audio/:filename.mp3 was wiped after container redeploy,
+  // automatically look up the question in QBank DB, re-synthesize via Edge-TTS, cache to disk, and stream it!
+  app.get('/audio/:filename', async (req: Request, res: Response, next) => {
+    try {
+      const filename = path.basename(String(req.params.filename || '').trim());
+      if (!filename || !filename.endsWith('.mp3') || !/^[a-zA-Z0-9_.-]+\.mp3$/.test(filename)) {
+        return next();
+      }
+      const targetFileAbs = path.join(audioDir, filename);
+      if (fs.existsSync(targetFileAbs) && fs.statSync(targetFileAbs).size > 200) {
+        return res.sendFile(targetFileAbs);
+      }
+
+      const audioUrlKey = `/audio/${filename}`;
+      const questionIdPrefix = filename.replace(/_\d+\.mp3$/, '').replace(/\.mp3$/, '');
+      const db = getDbSync();
+
+      let row: any = null;
+      try {
+        row = db.prepare('SELECT id, stem, passage FROM questions WHERE audio_url = ? OR id = ? LIMIT 1').get(audioUrlKey, questionIdPrefix);
+      } catch {}
+      if (!row) {
+        try {
+          row = db.prepare('SELECT id, stem, passage FROM pending_questions WHERE audio_url = ? OR id = ? LIMIT 1').get(audioUrlKey, questionIdPrefix);
+        } catch {}
+      }
+      if (!row) {
+        try {
+          row = db.prepare('SELECT question_id as id, stem, passage FROM qb_questions WHERE audio_url = ? OR question_id = ? LIMIT 1').get(audioUrlKey, questionIdPrefix);
+        } catch {}
+      }
+
+      const scriptToRead = String(row?.passage || row?.stem || '').trim();
+      if (!scriptToRead) {
+        return next();
+      }
+
+      const pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim() || process.env.PYTHON_PATH?.trim() || 'python';
+      const ttsServiceScript = path.join(process.cwd(), 'tts_service.py');
+      const targetFileRel = path.join('public', 'audio', filename);
+
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          pythonExec,
+          [ttsServiceScript, '--text', scriptToRead, '--output', targetFileRel, '--voice', 'auto', '--intro-chime'],
+          {
+            cwd: process.cwd(),
+            timeout: 30000,
+            env: {
+              ...process.env,
+              PYTHONIOENCODING: 'utf-8',
+              PYTHONUTF8: '1',
+            },
+          },
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+
+      if (fs.existsSync(targetFileAbs) && fs.statSync(targetFileAbs).size > 200) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=604800');
+        return res.sendFile(targetFileAbs);
+      }
+      return next();
+    } catch {
+      return next();
+    }
+  });
 
   // Health check (supports /health and /api/health for PaaS uptime monitoring)
   app.get(['/health', '/api/health'], (req: Request, res: Response) => {
@@ -2137,7 +2210,9 @@ QUY TẮC BẮT BUỘC:
 
     const requestedVoice = typeof req.query.voice === 'string' && req.query.voice.trim() ? req.query.voice.trim() : '';
     let voice = 'zh-CN-XiaoxiaoNeural';
-    if (ALLOWED_EDGE_VOICES.has(requestedVoice)) {
+    if (requestedVoice === 'auto') {
+      voice = 'auto';
+    } else if (ALLOWED_EDGE_VOICES.has(requestedVoice)) {
       voice = requestedVoice;
     } else if (requestedVoice.includes('Xiaoyi') || requestedVoice === 'edge-xiaoyi') {
       voice = 'zh-CN-XiaoyiNeural';
@@ -2147,7 +2222,23 @@ QUY TẮC BẮT BUỘC:
       voice = 'zh-CN-YunjianNeural';
     }
 
-    const textToSynth = rawText.slice(0, 1000);
+    // Sanitize parenthetical Pinyin annotations and Vietnamese headers if Chinese text is present
+    let cleanedText = rawText.slice(0, 1500);
+    if (/[\u4e00-\u9fff]/.test(cleanedText)) {
+      cleanedText = cleanedText
+        .replace(/^(?:Câu|Bài|Question|Part|Phần)\s*\d+\s*[:：.\-)\]]\s*/i, '')
+        .replace(/^(?:Đọc|Nghe)\s+(?:đoạn\s+)?(?:hội\s+thoại|câu|đoạn\s+văn)(?:\s+sau)?(?:\s+và\s+trả\s+lời(?:\s+câu\s+hỏi)?)?\s*[:：]?\s*/i, '')
+        .replace(/\([^()\u4e00-\u9fff]*\)/g, ' ')
+        .replace(/（[^（）\u4e00-\u9fff]*）/g, ' ')
+        .replace(/_{2,}/g, '，')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    }
+    const textToSynth = (cleanedText || rawText).slice(0, 1000);
+    const isMultiDialogue =
+      voice === 'auto' ||
+      /(?:^|[\r\n\s])(?:男|女|甲|乙|爸爸|妈妈|老师|学生|小明|小红|A|B)\s*[:：]/.test(textToSynth);
+
     const hash = crypto.createHash('md5').update(`${voice}:${textToSynth}`).digest('hex');
 
     // 1. Check in-memory LRU cache
@@ -2180,14 +2271,18 @@ QUY TẮC BẮT BUỘC:
         try {
           const pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim() || process.env.PYTHON_PATH?.trim() || 'python';
           const synthScript = path.join(process.cwd(), 'scripts', 'edge_tts_synth.py');
+          const multiTtsScript = path.join(process.cwd(), 'tts_service.py');
 
           await new Promise<void>((resolve, reject) => {
+            const args = isMultiDialogue
+              ? [multiTtsScript, '--text', textToSynth, '--output', diskPath, '--voice', voice, '--no-chime']
+              : [synthScript, textToSynth, diskPath, voice === 'auto' ? 'zh-CN-XiaoxiaoNeural' : voice, '+0%'];
             execFile(
               pythonExec,
-              [synthScript, textToSynth, diskPath, voice, '+0%'],
+              args,
               {
                 cwd: process.cwd(),
-                timeout: 15000,
+                timeout: isMultiDialogue ? 25000 : 15000,
                 env: {
                   ...process.env,
                   PYTHONIOENCODING: 'utf-8',

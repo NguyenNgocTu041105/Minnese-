@@ -690,11 +690,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[...userAssignments]
               .sort((a, b) => {
-                const aTime = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-                const bTime = b.due_date ? new Date(b.due_date).getTime() : Infinity;
-                return aTime - bTime;
+                const aSub = mySubmissions.some((s) => s.assignment_id === a.id);
+                const bSub = mySubmissions.some((s) => s.assignment_id === b.id);
+                if (aSub !== bSub) return aSub ? 1 : -1;
+                const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0;
+                if (bCreated !== aCreated) return bCreated - aCreated;
+                const aDue = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+                const bDue = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+                return aDue - bDue;
               })
-              .map((assign) => {
+              .map((assign, assignIdx) => {
                 const now = Date.now();
                 const dueTime = assign.due_date ? new Date(assign.due_date).getTime() : null;
                 const diffMs = dueTime ? dueTime - now : null;
@@ -704,6 +710,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 const mySub = mySubmissions.find((s) => s.assignment_id === assign.id);
                 const isSubmitted = !!mySub;
+                const isNewest = assignIdx === 0 && !isSubmitted;
+                const createdLabel = assign.created_at
+                  ? new Date(assign.created_at).toLocaleString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                    })
+                  : null;
 
                 let dueBadge = null;
                 if (isSubmitted) {
@@ -742,10 +757,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 return (
                   <div
                     key={assign.id}
-                    className="silk-card-interactive p-4.5 rounded-2xl flex flex-col justify-between gap-3"
+                    className={`silk-card-interactive p-4.5 rounded-2xl flex flex-col justify-between gap-3 ${
+                      isNewest ? 'ring-1 ring-[var(--color-primary)]/40' : ''
+                    }`}
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
+                        {isNewest && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500 text-white shadow-xs">
+                            ✨ Mới nhất
+                          </span>
+                        )}
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
                           {assign.content_type === 'quiz'
                             ? 'Trắc nghiệm & Đề thi'
@@ -758,6 +780,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {assign.exam_code && (
                           <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
                             Mã: {assign.exam_code}
+                          </span>
+                        )}
+                        {createdLabel && (
+                          <span className="text-[10px] text-[var(--color-text-secondary)]">
+                            Giao lúc {createdLabel}
                           </span>
                         )}
                         {dueBadge && (

@@ -19,7 +19,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { OnlineExamDoc, QuizQuestion, UserProfile, AssignmentSubmissionDoc } from '../../types';
-import { playChineseAudio } from '../../utils/chineseAudio';
+import { playChineseAudio, stopChineseAudio, sanitizeQuestionAudioText } from '../../utils/chineseAudio';
 import { saveSubmissionToFirestore } from '../../lib/firebase';
 import { WritingWorkspace } from './WritingWorkspace';
 import { HSKIllustrationCanvas, resolveSceneKey } from '../HSKIllustrationCanvas';
@@ -69,6 +69,14 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
 
   const questions = exam.questions || [];
   const currentQuestion = questions[currentIndex];
+
+  // Stop any playing TTS/audio when switching questions or exiting the exam
+  useEffect(() => {
+    stopChineseAudio();
+    return () => {
+      stopChineseAudio();
+    };
+  }, [currentIndex]);
 
   // Countdown timer
   useEffect(() => {
@@ -274,9 +282,24 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
 
                 {/* Prompt */}
                 <div className="space-y-3">
-                  <h3 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] leading-relaxed">
-                    {currentQuestion.prompt || (currentQuestion as any).stem || `Câu hỏi ${currentIndex + 1}`}
-                  </h3>
+                  {(() => {
+                    const rawPrompt = (currentQuestion.prompt || (currentQuestion as any).stem || `Câu hỏi ${currentIndex + 1}`).trim();
+                    const fullText = (currentQuestion.questionChinese || (currentQuestion as any).stem || '').trim();
+                    const isSameAsPrompt = Boolean(fullText && fullText === rawPrompt);
+                    const headerText = isSameAsPrompt
+                      ? currentQuestion.type === 'listening'
+                        ? 'Nghe đoạn hội thoại và chọn đáp án đúng:'
+                        : currentQuestion.type === 'fill_blank'
+                        ? 'Chọn từ thích hợp điền vào chỗ trống:'
+                        : 'Đọc ngữ cảnh sau và chọn đáp án đúng:'
+                      : rawPrompt;
+
+                    return (
+                      <h3 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] leading-relaxed whitespace-pre-line">
+                        {headerText}
+                      </h3>
+                    );
+                  })()}
 
                   {(currentQuestion.questionChinese || (currentQuestion as any).stem) && (() => {
                     const fullText = (currentQuestion.questionChinese || (currentQuestion as any).stem || '').trim();
@@ -288,7 +311,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                       <div className="space-y-3">
                         <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex items-center justify-between gap-3 silk-card">
                           <div className="space-y-1 flex-1">
-                            <p className="text-lg sm:text-xl font-bold font-serif text-[var(--color-text-primary)] leading-relaxed">
+                            <p className="text-lg sm:text-xl font-bold font-serif text-[var(--color-text-primary)] leading-relaxed whitespace-pre-line">
                               {dialoguePart}
                             </p>
                             {(currentQuestion.exampleSentence?.pinyin || (currentQuestion as any).pinyin) && (
@@ -301,16 +324,21 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                           <button
                             type="button"
                             onClick={() => {
+                              stopChineseAudio();
+                              const cleanSpeech =
+                                sanitizeQuestionAudioText(dialoguePart) ||
+                                sanitizeQuestionAudioText(currentQuestion.audioText || '') ||
+                                sanitizeQuestionAudioText(currentQuestion.prompt || '');
                               const audioUrl = (currentQuestion as any).audio_url;
-                              if (audioUrl) {
+                              if (audioUrl && !String(audioUrl).startsWith('/api/tts')) {
                                 const audio = new Audio(audioUrl);
-                                audio.play().catch(() => playChineseAudio(dialoguePart));
+                                audio.play().catch(() => playChineseAudio(cleanSpeech || dialoguePart));
                               } else {
-                                playChineseAudio(dialoguePart);
+                                playChineseAudio(cleanSpeech || dialoguePart);
                               }
                             }}
                             className="p-2.5 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer shrink-0 silk-btn"
-                            title="Nghe phát âm chuẩn (Chỉ phát nội dung đối thoại)"
+                            title="Nghe phát âm chuẩn (Chỉ phát nội dung tiếng Trung)"
                           >
                             <Volume2 className="w-5 h-5" />
                           </button>

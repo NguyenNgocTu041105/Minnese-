@@ -80,6 +80,7 @@ export const COMMON_PINYIN_PHRASES: Record<string, string> = {
   'nàr': '那儿',
   'yìdiǎnr': '一点儿',
   'fànguǎnr': '饭馆儿',
+  'miàntiáor': '面条儿',
   'nǚ xuésheng': '女学生',
   'liǎng gè háizi': '两个孩子',
   'xīngqītiān': '星期天',
@@ -592,11 +593,15 @@ export function isValidPinyinWord(token: string): boolean {
   const segmented = segmentPinyinWord(clean);
   if (segmented.length > 1) {
     return segmented.every((sw) => {
-      const psw = parsePinyinSyllable(sw);
+      const swClean =
+        sw.length > 2 && sw.endsWith('r') && !['er', 'ēr', 'ér', 'ěr', 'èr'].includes(sw)
+          ? sw.slice(0, -1)
+          : sw;
+      const psw = parsePinyinSyllable(swClean);
       return Boolean(
         PINYIN_BASE_TABLE[psw.base] ||
         PINYIN_NEUTRAL_MAP[psw.base] ||
-        EXACT_SINGLE_SYLLABLE_MAP[sw.toLowerCase()]
+        EXACT_SINGLE_SYLLABLE_MAP[swClean.toLowerCase()]
       );
     });
   }
@@ -676,13 +681,18 @@ export function pinyinPhraseToHanzi(text: string): string {
       continue;
     }
 
-    // Check exact single syllable (including numeric tones or normalized bases)
+    // Check exact single syllable (including numeric tones, normalized bases, or single-syllable Erhua)
     const parsed = parsePinyinSyllable(tokenNorm);
+    const isSingleErhua =
+      tokenNorm.length > 2 &&
+      tokenNorm.endsWith('r') &&
+      !tokenNorm.endsWith('er') &&
+      Boolean(PINYIN_BASE_TABLE[parsePinyinSyllable(tokenNorm.slice(0, -1)).base]);
     if (
       EXACT_SINGLE_SYLLABLE_MAP[tokenNorm] ||
       PINYIN_BASE_TABLE[stripToneMarks(tokenNorm)] ||
       PINYIN_BASE_TABLE[parsed.base] ||
-      (tokenNorm.endsWith('r') && !tokenNorm.endsWith('er'))
+      isSingleErhua
     ) {
       result.push(syllableToHanzi(token));
       continue;
@@ -737,6 +747,13 @@ export function sanitizeDialogueScript(raw: string): string {
   text = text.replace(/(?<=^|[^\p{L}])[\(（]\s*★\s*[\)）]\s*[:：]?\s*/gu, ' ★：');
   text = text.replace(/(?<=^|[^\p{L}])★\s*[:：]?\s*/gu, ' ★：');
 
+  // 3b. Strip any non-Hanzi parenthetical or bracketed notes / Pinyin / translations BEFORE speaker label conversion
+  // so parenthesized Pinyin like `(Nán: Wáng lǎoshī, nín hǎo!)` or `(Wáng lǎoshī, ____!)` is never converted into a fake speaker turn.
+  text = text.replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ');
+
+  // 3c. Strip fill-in-the-blank underscores (e.g. ____) so TTS never reads "underscore" aloud
+  text = text.replace(/_{2,}/g, ' ');
+
   // 4. Convert speaker labels to standard Chinese (with lookbehind to preserve preceding punctuation):
   // Male: `Nam:`, `Người nam:`, `Nán:`, `Man:`, `Boy:`, `M:` -> `男：`
   // Female: `Nữ:`, `Người nữ:`, `Nǚ:`, `Woman:`, `Girl:`, `W:`, `F:` -> `女：`
@@ -767,11 +784,10 @@ export function sanitizeDialogueScript(raw: string): string {
   // `男: ` -> `男：`, `女: ` -> `女：`, `问: ` -> `问：`, `★: ` -> `★：`
   text = text.replace(/(?<=^|[^\p{L}])(男|女|问|甲|乙|★)\s*[:：]\s*/gu, ' $1：');
 
-  // 7. Strip any non-Hanzi parenthetical or bracketed notes / translations
-  // (e.g. `(ba quả táo)`, `(three apples)`, `(Bạn có khỏe không?)`, `(David)`, `(xe hơi)`, `(cai ly)`)
+  // 8b. Strip any remaining non-Hanzi parenthetical or bracketed notes / translations
   text = text.replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ');
 
-  // 8. Clean Vietnamese topic placeholders in HSK 4 (e.g. Chất lượng hàng hóa -> 商品质量)
+  // 8c. Clean Vietnamese topic placeholders in HSK 4 (e.g. Chất lượng hàng hóa -> 商品质量)
   const TOPIC_REPLACEMENTS: Record<string, string> = {
     'Chất lượng hàng hóa': '商品质量',
     'Sức khỏe & Lối sống': '健康与生活',
@@ -802,6 +818,76 @@ export function sanitizeDialogueScript(raw: string): string {
 }
 
 /**
+ * Sanitizes any quiz/homework question text or dialogue into pure, speakable Mandarin Chinese
+ * for TTS playback. Strips parenthesized Pinyin/notes, fill-in-the-blank underscores,
+ * and Vietnamese instructions so the Chinese voice never reads Pinyin letters, underscores,
+ * or Vietnamese words aloud.
+ */
+export function sanitizeQuestionAudioText(raw: string): string {
+  if (!raw || typeof raw !== 'string') return '';
+
+  const viRegex = /[ăâđêôơưạảãấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏõốồổỗộớờởỡợụủũứừửữựỳỵỷỹ]/i;
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => {
+      // 1. Strip parenthesized or bracketed annotations that do NOT contain Chinese Hanzi
+      let cleaned = line.replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ');
+
+      // 2. Replace fill-in-the-blank underscores (____) or empty parens
+      cleaned = cleaned
+        .replace(/_{2,}/g, ' ')
+        .replace(/[\(（]\s*[\)）]/g, ' ')
+        .replace(/，\s*([，。！？,.?!])/g, '$1')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!cleaned) return '';
+
+      // 3. If line has no Chinese Hanzi at all, skip it if it's Vietnamese/English prose
+      if (!/[\u4e00-\u9fa5]/.test(cleaned)) {
+        if (!viRegex.test(cleaned) && isValidPinyinText(cleaned)) {
+          return resolveChineseTtsPayload(cleaned);
+        }
+        return '';
+      }
+
+      // 4. If line is a question line (问：...) that contains Vietnamese text, omit it from Chinese TTS
+      if (/^(?:问|问题|問題|問|Hỏi|Câu hỏi)\s*[:：]/i.test(cleaned) && viRegex.test(cleaned)) {
+        return '';
+      }
+
+      // 5. Preserve 男/女/问 speaker tags at the start of the line for multi-role dialogue TTS
+      const genderRoleMatch = cleaned.match(/^(男|女|问|甲|乙|★)\s*[:：]\s*(.*)$/);
+      if (genderRoleMatch) {
+        const roleTag = genderRoleMatch[1];
+        let body = genderRoleMatch[2].trim();
+        if (viRegex.test(body)) {
+          const hanziSegments = body.match(/[\u4e00-\u9fa5]+(?:[，。！？、；：“”‘’\s]*[\u4e00-\u9fa5]+)*/g);
+          body = hanziSegments ? hanziSegments.join('，') : '';
+        }
+        return body ? `${roleTag}：${body}` : '';
+      }
+
+      // Strip named character labels at the start of dialogue lines (e.g. "王老师：", "老师：", "学生：", "同学：", "你：")
+      // so the narrator reads the spoken sentences naturally without repeating character names on every line
+      cleaned = cleaned.replace(/^(?:王老师|李老师|张老师|老师|学生|同学们|同学|你|我|A|B)\s*[:：]\s*/i, '').trim();
+
+      // 6. If line mixes Vietnamese prose with embedded Chinese words (e.g. "Trong cụm từ 你好, cách phát âm..."),
+      // extract only the Chinese segments so TTS never reads Vietnamese words with a Chinese accent
+      if (viRegex.test(cleaned)) {
+        const hanziSegments = cleaned.match(/[\u4e00-\u9fa5]+(?:[，。！？、；：“”‘’\s]*[\u4e00-\u9fa5]+)*/g);
+        return hanziSegments ? hanziSegments.join('，').trim() : '';
+      }
+
+      return cleaned;
+    })
+    .filter(Boolean);
+
+  return lines.join('\n').trim();
+}
+
+/**
  * Core Resolver: converts any audio input (raw Pinyin, mixed Pinyin+Vietnamese,
  * dialogue script) into valid, speakable Chinese Hanzi (zh-CN) for the speech engine.
  *
@@ -820,16 +906,25 @@ export function resolveChineseTtsPayload(input: string): string {
   // If already pure Chinese Hanzi with standard punctuation
   const hasHanzi = /[\u4e00-\u9fa5]/.test(sanitized);
   const hasLatinLetters = /[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/.test(sanitized);
+  const hasVietnameseChars = /[ăâđêôơưạảãấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏõốồổỗộớờởỡợụủũứừửữựỳỵỷỹ]/i.test(sanitized);
 
   // If already contains Hanzi and NO Latin letters, return directly
   if (hasHanzi && !hasLatinLetters) {
     return sanitized;
   }
 
-  // If contains Hanzi but also some Latin words (e.g. "大卫 (David): 我叫大卫。")
+  // If contains Hanzi but also some Latin words (e.g. "大卫 (David): 我叫大卫。" or mixed Vietnamese+Chinese "Trong cụm từ 你好...")
   if (hasHanzi && hasLatinLetters) {
     // Strip leftover parentheticals without Hanzi
     sanitized = sanitized.replace(/[\(（][^()（）\u4e00-\u9fa5]+[\)）]/g, '');
+
+    // If the mixed string contains Vietnamese words, extract ONLY the Chinese Hanzi clauses so Vietnamese words
+    // are NEVER converted into random Chinese characters by pinyinPhraseToHanzi!
+    if (hasVietnameseChars) {
+      const hanziClauses = sanitized.match(/[\u4e00-\u9fa5]+(?:[，。！？、；：“”‘’\s]*[\u4e00-\u9fa5]+)*/g);
+      return hanziClauses ? hanziClauses.join('，').trim() : '';
+    }
+
     // If only Latin remaining is English names like "AI", keep it if alongside Hanzi
     if (!/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/.test(sanitized)) {
       sanitized = sanitized.replace(/\b[A-Za-z]\s*[.:：、\)]\s*/g, '');

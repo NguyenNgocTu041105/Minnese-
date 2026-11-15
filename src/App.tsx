@@ -533,11 +533,23 @@ export default function App() {
       }
     };
 
+    const handleAssignmentsUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ assignments?: AssignmentDoc[]; latest?: AssignmentDoc }>;
+      if (customEvent.detail?.assignments && Array.isArray(customEvent.detail.assignments)) {
+        setAssignments(customEvent.detail.assignments);
+      } else if (customEvent.detail?.latest) {
+        const latest = customEvent.detail.latest;
+        setAssignments((prev) => [latest, ...prev.filter((a) => a.id !== latest.id)]);
+      }
+    };
+
     window.addEventListener('minnie_switch_tab', handleSwitchTab);
     window.addEventListener('minnie_launch_exam', handleLaunchExam);
+    window.addEventListener('minnie_assignments_updated', handleAssignmentsUpdated);
     return () => {
       window.removeEventListener('minnie_switch_tab', handleSwitchTab);
       window.removeEventListener('minnie_launch_exam', handleLaunchExam);
+      window.removeEventListener('minnie_assignments_updated', handleAssignmentsUpdated);
     };
   }, []);
 

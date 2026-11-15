@@ -8,7 +8,7 @@ import {
   DIFFICULTY_LEVELS,
 } from '../src/components/Admin/HomeworkWizardModal';
 import { buildGoldenPrompt } from '../src/components/Admin/GoldenPromptLibraryModal';
-import { EDGE_TTS_VOICES } from '../src/utils/chineseAudio';
+import { EDGE_TTS_VOICES, sanitizeQuestionAudioText, parseDialogueTurns } from '../src/utils/chineseAudio';
 
 describe('HomeworkWizardModal & Curriculum Question Synthesis', () => {
   describe('1. Curriculum Lesson Retrieval (HSK 1 - 6)', () => {
@@ -404,10 +404,22 @@ Câu 10: D. Giải thích: 再见 (zàijiàn) có nghĩa là "Tạm biệt, hẹ
       expect(parsed[8].correctAnswer).toBe('不客气 (bú kèqi)'); // B
       expect(parsed[9].correctAnswer).toBe('再见 (zàijiàn)'); // D
 
-      // Check Question 10 is Listening with pure Chinese TTS audioText
+      // Check Question 10 is Listening with pure Chinese TTS audioText & multi-role dialogue turns
       expect(parsed[9].type).toBe('listening');
-      expect(parsed[9].audioText).toBe('王老师，您好！ 你好！谢谢你们。 不客气！再见！ 再见！');
+      expect(parsed[9].audioText).toBe('男：王老师，您好！\n女：你好！谢谢你们。\n男：不客气！再见！\n女：再见！');
       expect(parsed[9].audio_url).toContain('/api/tts?text=');
+
+      const turns = parseDialogueTurns(parsed[9].audioText!);
+      expect(turns).toEqual([
+        { role: 'male', text: '王老师，您好！' },
+        { role: 'female', text: '你好！谢谢你们。' },
+        { role: 'male', text: '不客气！再见！' },
+        { role: 'female', text: '再见！' },
+      ]);
+
+      // Verify sanitizeQuestionAudioText never leaks Pinyin, underscores, or Vietnamese into TTS
+      expect(sanitizeQuestionAudioText(parsed[0].questionChinese!)).toBe('王老师！');
+      expect(sanitizeQuestionAudioText(parsed[5].prompt)).toBe('你好');
     });
   });
 });

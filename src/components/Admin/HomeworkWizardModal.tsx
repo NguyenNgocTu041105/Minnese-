@@ -40,6 +40,10 @@ import {
 import {
   EDGE_TTS_VOICES,
   playPutonghuaAudioStream,
+  playDialogueSequence,
+  parseDialogueTurns,
+  sanitizeQuestionAudioText,
+  getSavedVoiceSettings,
   stopChineseAudio,
 } from '../../utils/chineseAudio';
 import {
@@ -861,22 +865,11 @@ export function parseExternalAiHomeworkText(
       displayChinese = '';
     }
 
-    // Build pure Chinese audio script for Listening questions (strip Pinyin in parens & speaker labels)
+    // Build pure Chinese audio script for questions (strip Pinyin in parens, underscores & Vietnamese, keep 男/女 dialogue tags)
+    const sanitizedChineseAudio = sanitizeQuestionAudioText(displayChinese || cleanStem);
     let audioTxt = '';
     if (isListening) {
-      const spokenLines = stemLines
-        .filter((l) => !/^问[:：]/i.test(l))
-        .map((l) =>
-          l
-            .replace(/^(?:男|女|A|B)[:：]\s*/i, '')
-            .replace(/\([^)]*\)/g, '')
-            .trim()
-        )
-        .filter(Boolean);
-      audioTxt = spokenLines.join(' ');
-      if (!audioTxt) {
-        audioTxt = cleanStem.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
-      }
+      audioTxt = sanitizedChineseAudio || cleanStem.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
     }
 
     parsedLocal.push({
@@ -884,9 +877,9 @@ export function parseExternalAiHomeworkText(
       type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
       prompt: displayPrompt,
       questionChinese: displayChinese,
-      audioText: isListening ? audioTxt : undefined,
+      audioText: isListening ? audioTxt : sanitizedChineseAudio || undefined,
       audio_url: isListening
-        ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
+        ? `/api/tts?text=${encodeURIComponent(audioTxt.replace(/(?:男|女)[:：]\s*/g, ''))}&voice=${encodeURIComponent(selectedVoice)}`
         : undefined,
       options,
       correctAnswer,
@@ -1527,11 +1520,11 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     // Update listening audio TTS voice and preserve teacher's imported questions
     const updated = questions.map((q) => {
       if (q.type === 'listening') {
-        const audioTxt = q.audioText || q.questionChinese || q.prompt;
+        const audioTxt = sanitizeQuestionAudioText(q.audioText || q.questionChinese || q.prompt);
         return {
           ...q,
           audioText: audioTxt,
-          audio_url: `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`,
+          audio_url: `/api/tts?text=${encodeURIComponent(audioTxt.replace(/(?:男|女)[:：]\s*/g, ''))}&voice=${encodeURIComponent(selectedVoice)}`,
           usageNotes: `Cấp độ: HSK ${targetLevel} • Giọng đọc: ${selectedVoice}`,
         };
       }
@@ -1647,11 +1640,22 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
       return;
     }
 
+    stopChineseAudio();
     setPlayingQuestionId(q.id);
-    const audioText = q.audioText || q.questionChinese || q.prompt;
+    const rawAudioCandidate = q.audioText || q.questionChinese || q.prompt || '';
+    let cleanAudioText = sanitizeQuestionAudioText(rawAudioCandidate);
+    if (!cleanAudioText && Array.isArray(q.options)) {
+      const optChinese = q.options.map((opt) => sanitizeQuestionAudioText(opt)).filter(Boolean);
+      cleanAudioText = optChinese.join('，');
+    }
     try {
       const speed = DIFFICULTY_LEVELS.find((d) => d.key === difficultyLevel)?.speechRate || 0.9;
-      await playPutonghuaAudioStream(audioText, speed, selectedVoice);
+      const dialogueTurns = parseDialogueTurns(cleanAudioText);
+      if (dialogueTurns && dialogueTurns.length > 0) {
+        await playDialogueSequence(dialogueTurns, getSavedVoiceSettings(), speed);
+      } else {
+        await playPutonghuaAudioStream(cleanAudioText || rawAudioCandidate, speed, selectedVoice);
+      }
     } catch (err) {
       console.warn('Error playing question audio:', err);
     } finally {
@@ -3263,7 +3267,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-background)] text-[var(--color-text-secondary)] border border-[var(--color-border)] font-mono">
                             10 điểm
                           </span>
-                          {q.type === 'listening' && (
+                          {(q.type === 'listening' || Boolean(q.questionChinese) || /[\u4e00-\u9fa5]/.test(q.prompt || '')) && (
                             <button
                               type="button"
                               onClick={() => handlePlayQuestionAudio(q)}

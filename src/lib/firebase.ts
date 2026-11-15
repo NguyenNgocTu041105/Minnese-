@@ -1036,29 +1036,61 @@ export async function deleteClassInFirestore(classId: string): Promise<boolean> 
 // ---------------------------------------------------------------------------
 // ADMIN & TEACHER: ASSIGNMENTS CRUD IN FIRESTORE
 // ---------------------------------------------------------------------------
+function mergeAndSortAssignments(primary: AssignmentDoc[], secondary: AssignmentDoc[] = []): AssignmentDoc[] {
+  const merged: AssignmentDoc[] = [];
+  const seenIds = new Set<string>();
+  const seenCodes = new Set<string>();
+
+  const addItem = (item: AssignmentDoc) => {
+    if (!item || !item.id) return;
+    const idKey = item.id.trim();
+    const codeKey = (item.exam_code || '').trim().toUpperCase();
+    if (seenIds.has(idKey)) return;
+    if (codeKey && seenCodes.has(codeKey)) return;
+    seenIds.add(idKey);
+    if (codeKey) seenCodes.add(codeKey);
+    merged.push(item);
+  };
+
+  primary.forEach(addItem);
+  secondary.forEach(addItem);
+
+  merged.sort(
+    (a, b) =>
+      new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  );
+  return merged;
+}
+
+function readLocalAssignmentsCache(): AssignmentDoc[] {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem('minnese_assignments_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch {}
+  return [];
+}
+
 export async function fetchAssignmentsFromFirestore(): Promise<AssignmentDoc[]> {
+  const list: AssignmentDoc[] = [];
   try {
     const q = collection(db, 'assignments');
     const snap = await getDocs(q);
-    const list: AssignmentDoc[] = [];
 
     snap.forEach((d) => {
       const data = d.data() as AssignmentDoc;
       const assign = { ...data, id: d.id };
       list.push(assign);
     });
-
-    list.sort(
-      (a, b) =>
-        new Date(a.due_date || 0).getTime() -
-        new Date(b.due_date || 0).getTime()
-    );
-
-    return list;
   } catch (err) {
     console.warn('Could not fetch assignments from firestore:', err);
-    return [];
   }
+
+  return mergeAndSortAssignments( readLocalAssignmentsCache(), list );
 }
 
 export function subscribeAssignmentsFromFirestore(
@@ -1077,14 +1109,13 @@ export function subscribeAssignmentsFromFirestore(
           list.push(assign);
         });
 
-        list.sort(
-          (a, b) =>
-            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-        );
-        callback(list);
+        const merged = mergeAndSortAssignments(readLocalAssignmentsCache(), list);
+        callback(merged);
       },
       (err) => {
         console.warn('subscribeAssignmentsFromFirestore error:', err);
+        const fallback = readLocalAssignmentsCache();
+        if (fallback.length > 0) callback(fallback);
       }
     );
   } catch (err) {
@@ -1094,6 +1125,20 @@ export function subscribeAssignmentsFromFirestore(
 }
 
 export async function saveAssignmentToFirestore(assignDoc: AssignmentDoc): Promise<boolean> {
+  // Always update local cache immediately so Home page (DashboardView) shows the newest assignment at once
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const current = readLocalAssignmentsCache();
+      const updated = mergeAndSortAssignments([assignDoc], current).slice(0, 60);
+      localStorage.setItem('minnese_assignments_v1', JSON.stringify(updated));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('minnie_assignments_updated', { detail: { assignments: updated, latest: assignDoc } })
+        );
+      }
+    }
+  } catch {}
+
   try {
     const ref = doc(db, 'assignments', assignDoc.id);
     await setDoc(ref, sanitizeForFirestore(assignDoc), { merge: true });
@@ -1105,6 +1150,18 @@ export async function saveAssignmentToFirestore(assignDoc: AssignmentDoc): Promi
 }
 
 export async function deleteAssignmentInFirestore(assignId: string): Promise<boolean> {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const current = readLocalAssignmentsCache().filter((a) => a.id !== assignId);
+      localStorage.setItem('minnese_assignments_v1', JSON.stringify(current));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('minnie_assignments_updated', { detail: { assignments: current } })
+        );
+      }
+    }
+  } catch {}
+
   try {
     const ref = doc(db, 'assignments', assignId);
     await deleteDoc(ref);

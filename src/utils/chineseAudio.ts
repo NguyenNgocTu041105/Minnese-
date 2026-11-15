@@ -7,9 +7,9 @@
  * 4. In-memory audio caching for zero-latency instant replays.
  */
 
-import { resolveChineseTtsPayload, sanitizeDialogueScript } from './pinyinConverter';
+import { resolveChineseTtsPayload, sanitizeDialogueScript, sanitizeQuestionAudioText } from './pinyinConverter';
 
-export { resolveChineseTtsPayload, sanitizeDialogueScript };
+export { resolveChineseTtsPayload, sanitizeDialogueScript, sanitizeQuestionAudioText };
 
 export interface VoiceOption {
   id: string;
@@ -574,8 +574,9 @@ export async function playDialogueSequence(
       if (controller.signal.aborted) break;
     }
 
-    const cleanText = cleanAudioText(turn.text);
-    if (!cleanText) continue;
+    const resolvedTurnText = resolveChineseTtsPayload(turn.text);
+    const cleanText = cleanAudioText(resolvedTurnText || turn.text);
+    if (!cleanText || !/[\u4e00-\u9fa50-9]/.test(cleanText)) continue;
 
     let turnPitch = overridePitch ?? settings.pitch ?? 1.0;
     if (turn.role === 'male') {
@@ -584,7 +585,20 @@ export async function playDialogueSequence(
       turnPitch = overridePitch ? overridePitch * 1.12 : 1.12;
     }
 
-    await playBrowserUtterance(cleanText, settings, overrideRate, turnPitch, turn.role, true);
+    const roleVoice =
+      turn.role === 'male'
+        ? 'zh-CN-YunxiNeural'
+        : turn.role === 'female'
+        ? 'zh-CN-XiaoxiaoNeural'
+        : 'zh-CN-YunjianNeural';
+
+    try {
+      await playPutonghuaAudioStream(cleanText, overrideRate ?? settings.rate ?? 0.9, roleVoice, true);
+    } catch {
+      if (!controller.signal.aborted) {
+        await playBrowserUtterance(cleanText, settings, overrideRate, turnPitch, turn.role, true);
+      }
+    }
     if (controller.signal.aborted) break;
   }
 
@@ -819,11 +833,34 @@ const ttsAudioCache = new Map<string, HTMLAudioElement>();
 export async function playPutonghuaAudioStream(
   text: string,
   rate: number = 1.0,
-  voice: string = 'zh-CN-XiaoxiaoNeural'
+  voice: string = 'zh-CN-XiaoxiaoNeural',
+  skipGlobalStop: boolean = false
 ): Promise<void> {
-  stopChineseAudio();
+  if (!skipGlobalStop) {
+    stopChineseAudio();
+  } else {
+    if (activePutonghuaStreamCancel) {
+      const cancel = activePutonghuaStreamCancel;
+      activePutonghuaStreamCancel = null;
+      try {
+        cancel();
+      } catch {}
+    }
+    if (activeHtmlAudio) {
+      try {
+        activeHtmlAudio.pause();
+        activeHtmlAudio.currentTime = 0;
+      } catch {}
+      activeHtmlAudio = null;
+    }
+  }
 
-  const trimmed = text.trim();
+  const sanitized = sanitizeQuestionAudioText(text) || resolveChineseTtsPayload(text) || text;
+  const trimmed = sanitized
+    .replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ')
+    .replace(/_{2,}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!trimmed) return;
 
   const url = `/api/tts?text=${encodeURIComponent(trimmed)}&voice=${encodeURIComponent(voice)}`;

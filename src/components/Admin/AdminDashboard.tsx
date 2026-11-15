@@ -2231,6 +2231,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                             ? '🗂️ Bộ Flashcard'
                             : asg.content_type === 'reading'
                             ? '📖 Đọc hiểu HSK'
+                            : asg.content_type === 'speaking'
+                            ? '🎙️ Luyện nói & Phát âm'
                             : '✍️ Viết tay OCR'}
                         </span>
                         {isOwner ? (
@@ -2283,6 +2285,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                       {asg.content_type === 'writing' && (
                         <span className="font-medium text-purple-600">
                           ✍️ Bài viết chữ Hán OCR
+                        </span>
+                      )}
+                      {asg.content_type === 'speaking' && (
+                        <span className="font-medium text-emerald-600">
+                          🎙️ {asg.speaking_prompt ? `Đề nói: ${asg.speaking_prompt}` : 'Ghi âm trực tiếp hoặc tải file phát âm'}
                         </span>
                       )}
                     </div>
@@ -3628,7 +3635,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                   >
                     <option value="">Tất cả học viên HSK {spkLevel}</option>
                     {myClasses.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.class_code})</option>
+                      <option key={c.id} value={c.id}>{c.class_name} ({c.class_code})</option>
                     ))}
                   </select>
                 </div>

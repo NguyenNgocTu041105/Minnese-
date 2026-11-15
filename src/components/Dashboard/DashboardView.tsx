@@ -543,6 +543,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             ? 'Bộ thẻ Flashcards'
                             : assign.content_type === 'reading'
                             ? 'Luyện Đọc hiểu'
+                            : assign.content_type === 'speaking'
+                            ? 'Luyện Nói & Phát âm'
                             : 'Luyện Viết chữ Hán'}
                         </span>
                         {assign.exam_code && (
@@ -592,6 +594,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {assign.content_type === 'writing' && (
                           <span className="font-medium text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">
                             ✍️ Viết tay nộp ảnh chấm nét OCR
+                          </span>
+                        )}
+                        {assign.content_type === 'speaking' && (
+                          <span className="font-medium text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded">
+                            🎙️ Ghi âm trực tiếp hoặc tải file nói lên web
                           </span>
                         )}
                       </div>

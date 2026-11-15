@@ -582,6 +582,57 @@ async function startServer() {
     app.use(routePath, largeUrlencodedParser);
   }
 
+  // Speaking / Pronunciation Homework Upload (scoped 25MB limit for audio/short video, 0 external API cost)
+  const speakingSubmissionsDir = path.join(process.cwd(), 'public', 'audio', 'submissions');
+  fs.mkdirSync(speakingSubmissionsDir, { recursive: true });
+  app.post('/api/speaking/upload', express.json({ limit: '25mb' }), (req: Request, res: Response) => {
+    try {
+      const { base64Data, mimeType, assignmentId, userId } = req.body || {};
+      if (!base64Data || typeof base64Data !== 'string') {
+        return res.status(400).json({ success: false, error: 'Thiếu dữ liệu âm thanh/video.' });
+      }
+      const allowedMimeExt: Record<string, string> = {
+        'audio/webm': 'webm',
+        'audio/ogg': 'ogg',
+        'audio/mpeg': 'mp3',
+        'audio/mp3': 'mp3',
+        'audio/mp4': 'm4a',
+        'audio/x-m4a': 'm4a',
+        'audio/m4a': 'm4a',
+        'audio/wav': 'wav',
+        'audio/x-wav': 'wav',
+        'video/mp4': 'mp4',
+        'video/webm': 'webm',
+      };
+      const cleanMime = String(mimeType || 'audio/webm').split(';')[0].trim().toLowerCase();
+      const ext = allowedMimeExt[cleanMime];
+      if (!ext) {
+        return res.status(400).json({ success: false, error: `Định dạng không hỗ trợ: ${cleanMime}` });
+      }
+
+      const rawBase64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+      const buffer = Buffer.from(rawBase64, 'base64');
+      if (buffer.length === 0 || buffer.length > 20 * 1024 * 1024) {
+        return res.status(400).json({ success: false, error: 'Dung lượng file phải từ 1B đến 20MB.' });
+      }
+
+      const safeAssign = String(assignmentId || 'asg').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'asg';
+      const safeUser = String(userId || 'stu').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'stu';
+      const filename = `spk_${safeAssign}_${safeUser}_${Date.now()}.${ext}`;
+      const absPath = path.join(speakingSubmissionsDir, filename);
+      fs.writeFileSync(absPath, buffer);
+
+      return res.json({
+        success: true,
+        url: `/audio/submissions/${filename}`,
+        sizeBytes: buffer.length,
+        mimeType: cleanMime,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || 'Lỗi lưu file thu âm.' });
+    }
+  });
+
   // Global body parsing lowered to 2MB to protect against payload memory exhaustion DoS
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ limit: '2mb', extended: true }));

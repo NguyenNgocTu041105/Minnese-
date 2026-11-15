@@ -119,6 +119,9 @@ const FlashcardsView = lazyWithRetry(() =>
 const DictionaryView = lazyWithRetry(() =>
   import('./components/Dictionary/DictionaryView').then((m) => ({ default: m.DictionaryView }))
 );
+const SpeakingAssignmentModal = lazyWithRetry(() =>
+  import('./components/Quizzes/SpeakingAssignmentModal').then((m) => ({ default: m.SpeakingAssignmentModal }))
+);
 const QuizzesView = lazyWithRetry(() =>
   import('./components/Quizzes/QuizzesView').then((m) => ({ default: m.QuizzesView }))
 );
@@ -389,6 +392,7 @@ export default function App() {
     return [];
   });
   const [activeExamRunning, setActiveExamRunning] = useState<OnlineExamDoc | null>(null);
+  const [activeSpeakingAssignment, setActiveSpeakingAssignment] = useState<AssignmentDoc | null>(null);
 
   // Sync assignments to localStorage whenever modified
   useEffect(() => {
@@ -450,6 +454,8 @@ export default function App() {
       }
       setSelectedFlashcardDeckId(`deck-asg-${asg.id}`);
       setActiveTab('flashcards');
+    } else if (asg.content_type === 'speaking') {
+      setActiveSpeakingAssignment(asg);
     } else if (asg.content_type === 'writing') {
       setActiveTab('quizzes');
     } else {
@@ -1117,6 +1123,23 @@ export default function App() {
             <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white" />
           </button>
         </div>
+      )}
+
+      {/* Speaking / Pronunciation Homework Modal */}
+      {activeSpeakingAssignment && (
+        <Suspense fallback={null}>
+          <SpeakingAssignmentModal
+            assignment={activeSpeakingAssignment}
+            userProfile={userProfile}
+            existingSubmission={submissions.find(
+              (s) => s.assignment_id === activeSpeakingAssignment.id && s.user_id === userProfile.id
+            )}
+            onClose={() => setActiveSpeakingAssignment(null)}
+            onSubmitted={(sub) => {
+              setSubmissions((prev) => [sub, ...prev.filter((s) => s.id !== sub.id)]);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Sleek Mobile Bottom Navigation Bar (< 768px) */}

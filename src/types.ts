@@ -159,7 +159,7 @@ export interface AssignmentDoc {
   target_type: 'class' | 'level' | 'all';
   target_class_id?: string;
   hsk_level: number;
-  content_type: 'quiz' | 'deck' | 'reading' | 'writing';
+  content_type: 'quiz' | 'deck' | 'reading' | 'writing' | 'speaking';
   content_ref_id: string;
   content_title?: string;
   exam_code?: string;
@@ -168,6 +168,7 @@ export interface AssignmentDoc {
   questions?: QuizQuestion[];
   reading_topic?: string;
   writing_prompt?: string;
+  speaking_prompt?: string;
   vocab_words?: string[];
   due_date: string;
   created_by: string;
@@ -197,6 +198,9 @@ export interface AssignmentSubmissionDoc {
   teacher_voice_created_at?: string;
   pronunciation_notes?: string[];
   teacher_name?: string;
+  student_audio_url?: string;
+  student_audio_duration?: number;
+  speaking_transcript?: string;
 }
 
 export interface QuizQuestion {

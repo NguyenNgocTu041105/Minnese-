@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Settings,
+  Mic,
   Database,
   BookOpen,
   Plus,
@@ -268,6 +269,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
 
   // New assignment form state
   const [showAddAssignModal, setShowAddAssignModal] = useState(false);
+  const [showSpeakingAssignModal, setShowSpeakingAssignModal] = useState(false);
+  const [spkTitle, setSpkTitle] = useState('');
+  const [spkPrompt, setSpkPrompt] = useState('');
+  const [spkLevel, setSpkLevel] = useState<number>(1);
+  const [spkTargetClass, setSpkTargetClass] = useState<string>('');
   const [selectedZaloAssignment, setSelectedZaloAssignment] = useState<AssignmentDoc | null>(null);
   const [newAssignTitle, setNewAssignTitle] = useState('');
   const [newAssignDesc, setNewAssignDesc] = useState('');
@@ -2164,6 +2170,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
               </div>
 
               <button
+                type="button"
+                onClick={() => setShowSpeakingAssignModal(true)}
+                className="px-3.5 py-2 rounded-xl bg-rose-500/10 text-rose-600 border border-rose-500/25 text-xs font-bold hover:bg-rose-500 hover:text-white flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+              >
+                <Mic className="w-4 h-4" />
+                <span>Giao Bài Luyện Nói</span>
+              </button>
+
+              <button
                 onClick={() => {
                   if (!newAssignDueDate) {
                     setNewAssignDueDate(getDefaultDueDateTimeString());
@@ -3499,6 +3514,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                                 ✍️ Chứa bài tự luận viết tay (OCR)
                               </span>
                             )}
+                            {sub.student_audio_url && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                                🎧 Học viên đã nộp bài nói
+                              </span>
+                            )}
                             {sub.teacher_voice_url && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20">
                                 🎙️ Đã có Voice chấm phát âm
@@ -3549,6 +3569,122 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                 className="px-4 py-2 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs font-bold text-[var(--color-text-primary)] cursor-pointer"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK SPEAKING ASSIGNMENT MODAL */}
+      {showSpeakingAssignModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[var(--color-surface)] max-w-lg w-full rounded-2xl border border-[var(--color-border)] p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <h3 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                <Mic className="w-4 h-4 text-rose-500" />
+                <span>Giao Bài Luyện Nói / Đọc Phát Âm</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowSpeakingAssignModal(false)}
+                className="p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--color-text-primary)]">Tiêu đề bài tập</label>
+                <input
+                  type="text"
+                  value={spkTitle}
+                  onChange={(e) => setSpkTitle(e.target.value)}
+                  placeholder="VD: Luyện đọc hội thoại Bài 1 - Chào hỏi"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[var(--color-text-primary)]">Cấp độ HSK</label>
+                  <select
+                    value={spkLevel}
+                    onChange={(e) => setSpkLevel(Number(e.target.value))}
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)]"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((l) => (
+                      <option key={l} value={l}>HSK {l}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[var(--color-text-primary)]">Giao cho lớp</label>
+                  <select
+                    value={spkTargetClass}
+                    onChange={(e) => setSpkTargetClass(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)]"
+                  >
+                    <option value="">Tất cả học viên HSK {spkLevel}</option>
+                    {myClasses.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.class_code})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--color-text-primary)]">
+                  Nội dung chữ Hán học viên cần đọc / nói
+                </label>
+                <textarea
+                  rows={4}
+                  value={spkPrompt}
+                  onChange={(e) => setSpkPrompt(e.target.value)}
+                  placeholder={'VD:\n王老师，您好！\n同学们，大家好！\n谢谢老师！不客气！再见！'}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)] font-chinese"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
+              <button
+                type="button"
+                onClick={() => setShowSpeakingAssignModal(false)}
+                className="px-4 py-2 rounded-xl border border-[var(--color-border)] text-xs font-bold text-[var(--color-text-secondary)] cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={!spkTitle.trim() || !spkPrompt.trim()}
+                onClick={async () => {
+                  const newAssign: AssignmentDoc = {
+                    id: `assign-${Date.now()}`,
+                    title: spkTitle.trim(),
+                    description: 'Ghi âm trực tiếp hoặc tải file đọc phát âm lên hệ thống để giáo viên chấm.',
+                    target_type: spkTargetClass ? 'class' : 'level',
+                    target_class_id: spkTargetClass || undefined,
+                    hsk_level: spkLevel,
+                    content_type: 'speaking',
+                    content_ref_id: `spk-${Date.now()}`,
+                    content_title: spkTitle.trim(),
+                    speaking_prompt: spkPrompt.trim(),
+                    due_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+                    created_by: currentAdminEmail,
+                    created_at: new Date().toISOString(),
+                    is_active: true,
+                  };
+                  setAssignments([newAssign, ...assignments]);
+                  setShowSpeakingAssignModal(false);
+                  setSpkTitle('');
+                  setSpkPrompt('');
+                  await saveAssignmentToFirestore(newAssign);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold disabled:opacity-50 cursor-pointer"
+              >
+                Giao bài nói ngay
               </button>
             </div>
           </div>
@@ -3617,6 +3753,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentAdmin }) 
                   </div>
                 </div>
               </div>
+
+              {/* Student Submitted Speaking Audio / Short Video Player */}
+              {selectedSubmissionForDetail.student_audio_url && (
+                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                      🎧 Bài thu âm / Video học viên đã nộp
+                    </span>
+                    {selectedSubmissionForDetail.student_audio_duration ? (
+                      <span className="text-[11px] font-mono text-[var(--color-text-secondary)]">
+                        Thời lượng: {selectedSubmissionForDetail.student_audio_duration}s
+                      </span>
+                    ) : null}
+                  </div>
+                  {selectedSubmissionForDetail.student_audio_url.endsWith('.mp4') ? (
+                    <video
+                      controls
+                      src={selectedSubmissionForDetail.student_audio_url}
+                      className="w-full max-h-60 rounded-xl bg-black"
+                    />
+                  ) : (
+                    <audio
+                      controls
+                      src={selectedSubmissionForDetail.student_audio_url}
+                      className="w-full h-10"
+                    />
+                  )}
+                  {selectedSubmissionForDetail.speaking_transcript && (
+                    <p className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-background)] p-2.5 rounded-xl border border-[var(--color-border)]">
+                      <strong className="text-[var(--color-primary)]">Nhận diện trình duyệt:</strong>{' '}
+                      <span className="font-chinese">{selectedSubmissionForDetail.speaking_transcript}</span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Dedicated Teacher Voice Feedback Recorder & Pronunciation Correction */}
               <TeacherVoiceRecorder

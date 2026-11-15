@@ -1068,90 +1068,144 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
     }
   };
 
+  // Universal instant parser for external AI output (ChatGPT/Claude/Gemini/DeepSeek JSON or numbered text)
+  const parseExternalAiOrRawText = (rawInput: string): QuizQuestion[] => {
+    const trimmed = rawInput.trim();
+    if (!trimmed) return [];
+
+    // 1. Try JSON extraction first (supports raw JSON or ```json ... ``` fenced blocks)
+    try {
+      const jsonFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const jsonCandidate = jsonFenceMatch ? jsonFenceMatch[1].trim() : trimmed;
+      if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
+        const parsedJson = JSON.parse(jsonCandidate);
+        const rawArr = Array.isArray(parsedJson)
+          ? parsedJson
+          : Array.isArray(parsedJson.questions)
+          ? parsedJson.questions
+          : Array.isArray(parsedJson.exercises)
+          ? parsedJson.exercises
+          : [];
+        if (rawArr.length > 0) {
+          return rawArr.map((item: Record<string, unknown>, idx: number) => {
+            const rawOpts = Array.isArray(item.options) ? item.options.map((o) => String(o).replace(/^[A-D][.:]\s*/i, '').trim()) : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
+            const qChinese = String(item.questionChinese || item.hanziPrompt || item.stem || item.question || '').trim();
+            const qPrompt = String(item.prompt || item.vietnamesePrompt || item.question || 'Chọn đáp án đúng:').trim();
+            const rawAns = String(item.correctAnswer ?? item.answer ?? 'A').trim();
+            const ansIdx = ['A', 'B', 'C', 'D'].indexOf(rawAns.toUpperCase());
+            const resolvedAnswer =
+              ansIdx >= 0 && rawOpts[ansIdx]
+                ? rawOpts[ansIdx]
+                : rawOpts.find((o) => o === rawAns.replace(/^[A-D][.:]\s*/i, '').trim()) || rawOpts[0];
+            const isListening =
+              item.type === 'listening' ||
+              /男[:：]|女[:：]|问[:：]|\[Nghe\]/i.test(qChinese) ||
+              Boolean(item.audioText);
+            const isFillBlank = item.type === 'fill_blank' || qChinese.includes('____') || qPrompt.includes('____');
+            const audioTxt = String(item.audioText || qChinese || qPrompt).replace(/\([^)]*\)/g, '').trim();
+
+            return {
+              id: `ext-ai-q-${Date.now()}-${idx + 1}`,
+              type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+              prompt: qPrompt,
+              questionChinese: qChinese || qPrompt,
+              audioText: isListening ? audioTxt : undefined,
+              audio_url: isListening
+                ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
+                : undefined,
+              options: rawOpts.length >= 2 ? rawOpts : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'],
+              correctAnswer: resolvedAnswer,
+              explanation: String(item.explanation || 'Bóc tách từ kết quả AI ngoài.'),
+              hskLevel: (targetLevel as HSKLevel) || 1,
+            };
+          });
+        }
+      }
+    } catch {
+      // Fall through to text regex parser
+    }
+
+    // 2. Standard numbered text parser (Câu 1:, Bài 1:, Question 1:, 1., 1))
+    const parsedLocal: QuizQuestion[] = [];
+    const questionBlocks = trimmed
+      .split(/(?:^|\n)\s*(?:\*\*?)?(?:Câu|Bài|Question)\s*\d+\s*[:.)]|\n\s*\d+\s*[:.)]\s+/i)
+      .map((b) => b.trim())
+      .filter(Boolean);
+
+    const blocksToProcess = questionBlocks.length > 0 ? questionBlocks : [trimmed];
+
+    blocksToProcess.forEach((block, idx) => {
+      // Extract options (supports both multiline A. ... B. ... and inline A. ... B. ... C. ... D. ...)
+      const optRegex = /(?:^|\s)[A-D][.:)]\s*([^\n]+?)(?=(?:\s+[A-D][.:)]\s+|\n|$))/g;
+      const extractedOpts: string[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = optRegex.exec(block)) !== null) {
+        const cleaned = match[1].replace(/\*\*$/g, '').trim();
+        if (cleaned && extractedOpts.length < 4) {
+          extractedOpts.push(cleaned);
+        }
+      }
+      if (extractedOpts.length === 0) return;
+
+      const options =
+        extractedOpts.length >= 2
+          ? extractedOpts
+          : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
+
+      const ansMatch = block.match(/(?:Đáp án(?:\s*đúng)?|ĐA|Answer|正确答案)\s*[:：.]?\s*\*?\*?([A-D])/i);
+      const ansChar = ansMatch ? ansMatch[1].toUpperCase() : 'A';
+      const ansIndex = ['A', 'B', 'C', 'D'].indexOf(ansChar);
+      const correctAnswer = options[ansIndex >= 0 && ansIndex < options.length ? ansIndex : 0] || options[0];
+
+      const expMatch = block.match(/(?:Giải thích|Explanation|解析)\s*[:：.]\s*([^\n]+)/i);
+      const explanation = expMatch
+        ? expMatch[1].trim()
+        : `Đáp án đúng: ${ansChar} (${correctAnswer}).`;
+
+      // Question stem is everything before option A.
+      const stemPart = block.split(/(?:^|\n|\s)A[.:)]\s+/)[0]?.trim() || block.split('\n')[0]?.trim() || '';
+      const cleanStem = stemPart.replace(/^(?:\*\*?)?(?:Câu|Bài|Question)?\s*\d*\s*[:.)]?\s*/i, '').trim();
+      const isListening = /男[:：]|女[:：]|问[:：]|\[Nghe\]/i.test(cleanStem);
+      const isFillBlank = cleanStem.includes('____') || cleanStem.includes('___') || cleanStem.includes('（ ）');
+      const audioTxt = cleanStem.replace(/\[Nghe[^\]]*\]/gi, '').replace(/\([^)]*\)/g, '').trim();
+
+      parsedLocal.push({
+        id: `raw-q-${Date.now()}-${idx + 1}`,
+        type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+        prompt: isListening
+          ? 'Nghe hội thoại và chọn đáp án đúng:'
+          : isFillBlank
+          ? 'Chọn từ thích hợp điền vào chỗ trống:'
+          : cleanStem,
+        questionChinese: cleanStem,
+        audioText: isListening ? audioTxt : undefined,
+        audio_url: isListening
+          ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
+          : undefined,
+        options,
+        correctAnswer,
+        explanation,
+        hskLevel: (targetLevel as HSKLevel) || 1,
+      });
+    });
+
+    return parsedLocal;
+  };
+
   // Generate / Load questions handler
   const handleGenerateQuestions = async () => {
     setIsGeneratingQuestions(true);
     setErrorMsg(null);
 
     try {
-      if (questionSource === 'curriculum' || questionSource === 'golden_prompt') {
+      if (questionSource === 'curriculum') {
         if (lessonScopeMode === 'custom_only' && effectiveVocabList.length === 0) {
-          setErrorMsg('Ở chế độ "100% Từ & Cấu trúc giáo viên chọn", vui lòng tích chọn ít nhất 1 từ vựng trong bài học hoặc tự nhập từ vựng muốn kiểm tra vào ô bên dưới trước khi tạo câu hỏi.');
+          setErrorMsg('Ở chế độ "100% Từ giáo viên chọn", vui lòng tích chọn ít nhất 1 từ vựng hoặc tự nhập từ vựng vào ô bên dưới.');
           setIsGeneratingQuestions(false);
           return;
         }
 
-        if (questionSource === 'golden_prompt') {
-          setIsGeneratingGoldenPrompt(true);
-        }
-
-        // Attempt backend endpoint /api/gemini/generate-lesson-exercises with teacher's exact vocab, grammar & custom system prompt
-        try {
-          const res = await fetch('/api/gemini/generate-lesson-exercises', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              hskLevel: targetLevel,
-              lessonNumber: selectedLesson.lessonNumber,
-              titleHanzi: selectedLesson.titleHanzi,
-              titleVietnamese: selectedLesson.titleVietnamese,
-              vocabulary: effectiveVocabList,
-              grammarPoints: effectiveGrammarList,
-              count: questionCount,
-              practiceMode,
-              scopeMode: lessonScopeMode,
-              teacherNote: teacherPromptNote,
-              customSystemPrompt:
-                questionSource === 'golden_prompt'
-                  ? appliedGoldenPrompt || autoGeneratedLessonPrompt
-                  : autoGeneratedLessonPrompt,
-            }),
-          });
-          const data = await res.json();
-          if (data.exercises && data.exercises.length > 0) {
-            interface ExerciseApiResponse {
-              id?: string;
-              type?: string;
-              question?: string;
-              vietnamesePrompt?: string;
-              hanziPrompt?: string;
-              questionChinese?: string;
-              audioText?: string;
-              options?: string[];
-              correctAnswer?: string;
-              explanation?: string;
-            }
-            const mapped: QuizQuestion[] = data.exercises.map((ex: ExerciseApiResponse, idx: number) => {
-              const audioTxt = ex.audioText || ex.hanziPrompt || '';
-              return {
-                id: ex.id || `gen-q-${Date.now()}-${idx}`,
-                type:
-                  ex.type === 'fill_blank'
-                    ? 'fill_blank'
-                    : ex.type === 'listening'
-                    ? 'listening'
-                    : 'meaning',
-                prompt: ex.question || ex.vietnamesePrompt || 'Chọn đáp án đúng:',
-                questionChinese: ex.hanziPrompt || ex.questionChinese || '',
-                audioText: audioTxt,
-                audio_url: `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`,
-                options: ex.options || ['A', 'B', 'C', 'D'],
-                correctAnswer: ex.correctAnswer || (ex.options ? ex.options[0] : 'A'),
-                explanation: ex.explanation || 'Giải thích chuẩn theo bài học.',
-                hskLevel: (targetLevel as HSKLevel) || 1,
-              };
-            });
-            setQuestions(mapped);
-            setCurrentStep(3);
-            setIsGeneratingGoldenPrompt(false);
-            setIsGeneratingQuestions(false);
-            return;
-          }
-        } catch (apiErr) {
-          console.warn('API generate-lesson-exercises fallback to local synthesis:', apiErr);
-        }
-
-        // Guaranteed local algorithmic synthesis strictly using teacher's selected & custom vocab/grammar
+        // Instant algorithmic synthesis strictly using teacher's selected & custom vocab/grammar (0ms latency)
         const synthetic = synthesizeLessonQuestions(
           effectiveLessonForGeneration,
           targetLevel,
@@ -1162,16 +1216,30 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
         );
         setQuestions(synthetic);
         setCurrentStep(3);
-        setIsGeneratingGoldenPrompt(false);
-      } else if (questionSource === 'raw_text') {
+      } else if (questionSource === 'golden_prompt' || questionSource === 'raw_text') {
         if (!rawPastedText.trim()) {
-          setErrorMsg('Vui lòng dán văn bản bài tập hoặc tải file tài liệu lên.');
+          setErrorMsg(
+            questionSource === 'golden_prompt'
+              ? 'Hãy bấm "📋 Bước 1: Sao chép Prompt" để gửi cho AI bên ngoài (ChatGPT / Claude / Gemini / DeepSeek), sau đó dán kết quả câu hỏi AI trả về vào ô "Bước 2" bên dưới trước khi tiếp tục!'
+              : 'Vui lòng dán văn bản câu hỏi hoặc tải file tài liệu (.txt) lên trước khi tiếp tục.'
+          );
           setIsGeneratingQuestions(false);
           return;
         }
 
         setIsParsingRawText(true);
-        // Call /api/workbooks/parse-and-remix or parse client-side
+        // 1. Instant local parse for external AI output (JSON or standard Câu 1... A. B. C. D. Đáp án: text)
+        const parsedInstant = parseExternalAiOrRawText(rawPastedText);
+        if (parsedInstant.length > 0) {
+          setQuestions(parsedInstant);
+          setQuestionCount(parsedInstant.length);
+          setCurrentStep(3);
+          setIsParsingRawText(false);
+          setIsGeneratingQuestions(false);
+          return;
+        }
+
+        // 2. Fallback to backend parser if unstructured prose was pasted
         try {
           const res = await fetch('/api/workbooks/parse-and-remix', {
             method: 'POST',
@@ -1191,54 +1259,10 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
             return;
           }
         } catch (parseErr) {
-          console.warn('Server parse failed, falling back to local regex parser:', parseErr);
+          console.warn('Server parse failed:', parseErr);
         }
 
-        // Local Regex Parser fallback for standard questions
-        const parsedLocal: QuizQuestion[] = [];
-        const questionBlocks = rawPastedText.split(/(?:Câu\s+\d+[:.]|\d+[:.])/i).filter(Boolean);
-        questionBlocks.forEach((block, idx) => {
-          const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
-          if (lines.length > 0) {
-            const promptLine = lines[0];
-            const optMatches = block.match(/[A-D][.:]\s*([^\n]+)/g);
-            const options = optMatches
-              ? optMatches.map((o) => o.replace(/^[A-D][.:]\s*/, '').trim())
-              : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
-
-            const ansMatch = block.match(/(?:Đáp án|ĐA|Answer)[:.]\s*([A-D])/i);
-            const ansChar = ansMatch ? ansMatch[1].toUpperCase() : 'A';
-            const ansIndex = ['A', 'B', 'C', 'D'].indexOf(ansChar);
-            const correctAnswer = options[ansIndex >= 0 ? ansIndex : 0] || options[0];
-
-            parsedLocal.push({
-              id: `raw-q-${Date.now()}-${idx + 1}`,
-              type: promptLine.includes('____') ? 'fill_blank' : 'meaning',
-              prompt: promptLine,
-              questionChinese: promptLine,
-              options,
-              correctAnswer,
-              explanation: `Đáp án: ${ansChar}. Bóc tách từ văn bản tài liệu đã nạp.`,
-              hskLevel: (targetLevel as HSKLevel) || 1,
-            });
-          }
-        });
-
-        if (parsedLocal.length > 0) {
-          setQuestions(parsedLocal);
-          setCurrentStep(3);
-        } else {
-          const fallbackQ = synthesizeLessonQuestions(
-            effectiveLessonForGeneration,
-            targetLevel,
-            selectedFormats,
-            questionCount,
-            difficultyLevel,
-            selectedVoice
-          );
-          setQuestions(fallbackQ);
-          setCurrentStep(3);
-        }
+        setErrorMsg('Không nhận diện được cấu trúc câu hỏi (Câu 1: ... A. ... B. ... Đáp án: ... hoặc JSON). Vui lòng kiểm tra lại nội dung vừa dán.');
         setIsParsingRawText(false);
       } else if (questionSource === 'exam_bank') {
         if (matchingExams.length === 0) {
@@ -1265,9 +1289,9 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
 
   // Re-bind TTS voice, formats and difficulty when user advances from Step 3 to Step 4
   const handleProceedToStep4 = () => {
-    // If questions were synthesized from curriculum or golden prompt (without manual edits),
-    // re-synthesize so that teacher's Step 3 choices (formats, questionCount, difficultyLevel, voice) are 100% honored
-    if (questionSource === 'curriculum' || (questionSource === 'golden_prompt' && !isPromptManuallyEdited)) {
+    // Only re-synthesize when source is 'curriculum'.
+    // For 'golden_prompt' (External AI output), 'raw_text', and 'exam_bank', preserve the exact questions!
+    if (questionSource === 'curriculum') {
       const refreshed = synthesizeLessonQuestions(
         effectiveLessonForGeneration,
         targetLevel,
@@ -1281,9 +1305,9 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
       return;
     }
 
-    // For imported raw_text, exam_bank, or manually modified Golden Prompt:
-    // Update listening audio TTS and enforce questionCount limit
-    const updated = questions.slice(0, questionCount).map((q) => {
+    // For external AI (golden_prompt), raw_text, or exam_bank:
+    // Update listening audio TTS voice and preserve teacher's imported questions
+    const updated = questions.map((q) => {
       if (q.type === 'listening') {
         const audioTxt = q.audioText || q.questionChinese || q.prompt;
         return {
@@ -1296,21 +1320,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
       return q;
     });
 
-    // If questions count is less than target, supplement
-    if (updated.length < questionCount) {
-      const extra = synthesizeLessonQuestions(
-        effectiveLessonForGeneration,
-        targetLevel,
-        selectedFormats.length > 0 ? selectedFormats : ['mcq', 'fill_blank'],
-        questionCount,
-        difficultyLevel,
-        selectedVoice
-      );
-      setQuestions([...updated, ...extra.slice(0, questionCount - updated.length)]);
-    } else {
-      setQuestions(updated);
-    }
-
+    setQuestions(updated);
     setCurrentStep(4);
   };
 
@@ -2269,40 +2279,43 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                 </div>
               )}
 
-              {/* Source Mode 3: Lesson-Scoped System Prompt & Golden Prompt Studio */}
+              {/* Source Mode 3: Lesson-Scoped System Prompt for External AI Models */}
               {questionSource === 'golden_prompt' && (
-                <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>Thiết kế đề bằng AI theo Bài {selectedLesson.lessonNumber}</span>
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleCopySystemPrompt}
-                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>{copiedSystemPrompt ? 'Đã chép!' : '📋 Sao chép Prompt'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsGoldenPromptModalOpen(true)}
-                        className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 hover:bg-amber-500/20 transition-all cursor-pointer"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>✨ Thư viện Prompt Mẫu</span>
-                      </button>
+                <div className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] space-y-3.5">
+                  {/* STEP A: Copy Prompt for External AI */}
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span>Bước 1: Sao chép Prompt gửi cho AI ngoài (ChatGPT, Claude, Gemini, DeepSeek...)</span>
+                        </h4>
+                        <p className="text-[11px] text-[var(--color-text-secondary)]">
+                          Prompt đã khóa chặt theo từ vựng & ngữ pháp Bài {selectedLesson.lessonNumber} để bạn dùng trên các model ngoài mà không tốn quota hệ thống.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCopySystemPrompt}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{copiedSystemPrompt ? 'Đã chép Prompt!' : '📋 Sao chép Prompt'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsGoldenPromptModalOpen(true)}
+                          className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 hover:bg-amber-500/20 transition-all cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>✨ Thư viện Prompt Mẫu</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Prompt Format Template Switcher */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
-                      Kiểu bài tập muốn AI biên soạn:
-                    </label>
-                    <div className="flex flex-wrap gap-1.5">
+                    {/* Prompt Format Template Switcher */}
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {[
                         { key: 'mixed_homework' as HomeworkPromptTemplateKey, label: '✨ Tổng hợp (Khuyên dùng)' },
                         { key: 'fill_in_blank' as HomeworkPromptTemplateKey, label: 'Điền từ (____)' },
@@ -2320,7 +2333,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                               setHomeworkPromptTemplate(tpl.key);
                               setIsPromptManuallyEdited(false);
                             }}
-                            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
                               active
                                 ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
                                 : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-amber-500/50'
@@ -2331,13 +2344,8 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                         );
                       })}
                     </div>
-                  </div>
 
-                  {/* Teacher pedagogical note input */}
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-[var(--color-text-primary)]">
-                      Ghi chú / Chỉ thị riêng cho AI (Tùy chọn):
-                    </label>
+                    {/* Teacher pedagogical note input */}
                     <input
                       type="text"
                       value={teacherPromptNote}
@@ -2345,13 +2353,11 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                         setTeacherPromptNote(e.target.value);
                         setIsPromptManuallyEdited(false);
                       }}
-                      placeholder="VD: Đặt câu xoay quanh tình huống ở trường học, cài bẫy phân biệt vị trí phó từ..."
-                      className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                      placeholder="➕ Ghi chú riêng thêm vào Prompt (VD: Đặt câu tình huống trường học, cài bẫy phân biệt vị trí phó từ)..."
+                      className="w-full px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
                     />
-                  </div>
 
-                  {/* Collapsible Live Editable System Prompt Textarea */}
-                  <div className="pt-1 border-t border-[var(--color-border)]/60">
+                    {/* Collapsible Live Editable System Prompt Textarea */}
                     <div className="flex items-center justify-between">
                       <button
                         type="button"
@@ -2379,15 +2385,44 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                     </div>
                     {showRawSystemPromptEditor && (
                       <textarea
-                        rows={6}
+                        rows={5}
                         value={appliedGoldenPrompt}
                         onChange={(e) => {
                           setAppliedGoldenPrompt(e.target.value);
                           setIsPromptManuallyEdited(true);
                         }}
-                        className="mt-2 w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono leading-relaxed focus:outline-none focus:border-[var(--color-primary)] animate-fadeIn"
+                        className="w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono leading-relaxed focus:outline-none focus:border-[var(--color-primary)] animate-fadeIn"
                       />
                     )}
+                  </div>
+
+                  {/* STEP B: Paste Output from External AI */}
+                  <div className="pt-3 border-t border-[var(--color-border)] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                        <span>Bước 2: Dán kết quả câu hỏi do AI ngoài vừa sinh vào đây:</span>
+                      </label>
+                      {rawPastedText.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => setRawPastedText('')}
+                          className="text-[11px] text-[var(--color-text-secondary)] hover:text-red-500 cursor-pointer"
+                        >
+                          Xóa nội dung dán
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      rows={5}
+                      value={rawPastedText}
+                      onChange={(e) => {
+                        setRawPastedText(e.target.value);
+                        setErrorMsg(null);
+                      }}
+                      placeholder={`Sau khi dán Prompt vào ChatGPT / Claude / Gemini bên ngoài, hãy copy toàn bộ câu hỏi AI trả về và dán vào đây...\n(Hỗ trợ tự động nhận diện cả dạng văn bản "Câu 1: ... A. B. C. D. Đáp án: A" lẫn dạng JSON)`}
+                      className="w-full p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-primary)]"
+                    />
                   </div>
                 </div>
               )}
@@ -2487,11 +2522,17 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
                   {isGeneratingQuestions ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Đang nạp câu hỏi...</span>
+                      <span>Đang bóc tách câu hỏi...</span>
                     </>
                   ) : (
                     <>
-                      <span>Tiếp tục: Cấu hình định dạng & Giọng đọc TTS</span>
+                      <span>
+                        {questionSource === 'golden_prompt'
+                          ? 'Tiếp tục: Bóc tách câu hỏi AI đã dán & Cấu hình TTS'
+                          : questionSource === 'raw_text'
+                          ? 'Tiếp tục: Bóc tách văn bản & Cấu hình TTS'
+                          : 'Tiếp tục: Cấu hình định dạng & Giọng đọc TTS'}
+                      </span>
                       <ChevronRight className="w-4 h-4" />
                     </>
                   )}

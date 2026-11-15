@@ -1544,7 +1544,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
       {/* Main Layout: Left Lessons List Sidebar + Right Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Left Column: Lessons Navigation - Sticky when scrolling */}
-        <div className="lg:col-span-4 2xl:col-span-3 space-y-4 lg:sticky lg:top-[68px] sm:lg:top-[72px] z-20 self-start">
+        <div className="lg:col-span-4 2xl:col-span-3 space-y-4 lg:sticky lg:top-[76px] z-20 self-start">
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-4 shadow-xs">
             <div className="flex items-center justify-between mb-3 px-2">
               <h3 className="text-xs font-black uppercase tracking-wider text-[var(--color-text-secondary)] flex items-center gap-1.5">
@@ -1662,8 +1662,8 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
             {/* Sticky Lesson Module Navigation Tabs Bar */}
           </div>
 
-          <div id="lesson-module-tabs" className="sticky top-[60px] sm:top-[64px] z-30 transition-all">
-            <div className="bg-[var(--color-surface)]/95 backdrop-blur-md rounded-2xl border border-[var(--color-border)] p-2 shadow-md transition-all">
+          <div id="lesson-module-tabs" className="sticky top-[60px] sm:top-[64px] z-30 pt-3 pb-1 -mt-3 bg-[var(--color-background)] transition-all">
+            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-2 shadow-md transition-all">
               <div className="flex items-center justify-between gap-3">
                 {/* Module Tabs */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto">
@@ -1687,7 +1687,7 @@ export const CoursebookView: React.FC<CoursebookViewProps> = ({
                           setActiveTab(tab.key as any);
                           const el = document.getElementById('lesson-module-tabs');
                           if (el) {
-                            const y = el.getBoundingClientRect().top + window.pageYOffset - 68;
+                            const y = el.getBoundingClientRect().top + window.pageYOffset - 76;
                             window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
                           }
                         }}

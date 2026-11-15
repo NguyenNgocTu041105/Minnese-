@@ -1068,6 +1068,89 @@ Trả về DUY NHẤT một JSON Array hợp lệ chứa đúng ${targetCount} c
     }
   });
 
+  // Local Ollama Homework Prompt Runner (100% Free Offline Local LLM - e.g. qwen2.5:7b)
+  app.post('/api/ollama/generate-homework', async (req: Request, res: Response) => {
+    const { prompt = '', model = 'qwen2.5:7b' } = req.body || {};
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ success: false, error: 'Prompt không được để trống.' });
+    }
+
+    const ollamaBaseUrl = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
+
+    try {
+      // 1. Discover installed local models so we automatically pick an available one if requested model isn't found
+      let selectedModel = String(model || 'qwen2.5:7b').trim();
+      try {
+        const tagsRes = await fetch(`${ollamaBaseUrl}/api/tags`);
+        if (tagsRes.ok) {
+          const tagsData: any = await tagsRes.json();
+          const installedModels: string[] = Array.isArray(tagsData?.models)
+            ? tagsData.models.map((m: any) => String(m.name || m.model || '')).filter(Boolean)
+            : [];
+          if (installedModels.length > 0 && !installedModels.includes(selectedModel)) {
+            const qwenMatch = installedModels.find((m) => m.toLowerCase().includes('qwen'));
+            selectedModel = qwenMatch || installedModels[0];
+          }
+        }
+      } catch {
+        // Proceed with selectedModel
+      }
+
+      // 2. Call local Ollama /api/chat
+      const chatRes = await fetch(`${ollamaBaseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: selectedModel,
+          stream: false,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Bạn là Giảng viên Tiếng Trung Sư phạm HSK. Hãy biên soạn câu hỏi bài tập tuân thủ 100% định dạng "Câu 1: ... A. ... B. ... C. ... D. ..." kèm bảng "ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:" ở cuối bài theo đúng yêu cầu.',
+            },
+            {
+              role: 'user',
+              content: prompt.trim(),
+            },
+          ],
+          options: {
+            temperature: 0.3,
+            num_predict: 2048,
+          },
+        }),
+      });
+
+      if (!chatRes.ok) {
+        const errBody = await chatRes.text();
+        return res.status(502).json({
+          success: false,
+          error: `Ollama trả về lỗi (${chatRes.status}): ${errBody.slice(0, 200)}`,
+        });
+      }
+
+      const data: any = await chatRes.json();
+      const output = String(data?.message?.content || data?.response || '').trim();
+      if (!output) {
+        return res.status(502).json({
+          success: false,
+          error: 'Ollama không trả về nội dung câu hỏi.',
+        });
+      }
+
+      return res.json({
+        success: true,
+        model: selectedModel,
+        output,
+      });
+    } catch (err: any) {
+      return res.status(503).json({
+        success: false,
+        error: `Không kết nối được với dịch vụ Ollama tại ${ollamaBaseUrl}. Hãy đảm bảo lệnh "ollama serve" đang chạy (${err?.message || 'Connection refused'}).`,
+      });
+    }
+  });
+
   // Dedicated AI Lesson Exercise Generator (Multi-Format, Rich Sentence Patterns & Contextual Application)
   app.post('/api/gemini/generate-lesson-exercises', async (req: Request, res: Response) => {
     const {

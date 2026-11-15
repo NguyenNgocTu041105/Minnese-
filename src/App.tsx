@@ -1173,7 +1173,7 @@ export default function App() {
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)] py-4 mb-14 md:mb-0 text-center text-xs text-[var(--color-text-secondary)] relative z-10 transition-colors">
         <p className="flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] shadow-[0_0_8px_rgba(15,155,132,0.6)]"></span>
-          <span className="font-semibold text-[var(--color-text-primary)]">Minnese 敏思中文</span> • Powered by Gemini AI RAG & SuperMemo SM-2 Spaced Repetition
+          <span className="font-semibold text-[var(--color-text-primary)]">Minnese 敏思中文</span> • Nền tảng học tiếng Trung &amp; luyện thi HSK 3.0
         </p>
       </footer>
     </div>

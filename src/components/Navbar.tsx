@@ -42,7 +42,7 @@ interface NavbarProps {
   isQbankEnabled?: boolean;
   assignments?: AssignmentDoc[];
   srsCards?: Record<string, SRSCardState>;
-  onStartReview?: (mode?: 'due_only' | 'all') => void;
+  onStartReview?: (mode?: 'due_only' | 'all', level?: 1 | 2 | 3 | 4, lessonNumber?: number) => void;
   onStartAssignment?: (asg: AssignmentDoc) => void;
 }
 
@@ -145,16 +145,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     setShowUserMenu(false);
     const mode = dueStats.dueCount > 0 ? 'due_only' : 'all';
     if (onStartReview) {
-      onStartReview(mode);
+      onStartReview(mode, dueStats.activeLevel, dueStats.currentLessonNum || 1);
     } else {
-      onSelectTab('flashcards');
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('minnie_start_srs_review', {
-            detail: { deckId: 'deck-coursebook-progress', mode },
-          })
-        );
-      }
+      onSelectTab('coursebook');
     }
   };
 
@@ -326,7 +319,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={handleStartDueReview}
                           className="w-full py-2 px-3 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white font-bold text-xs text-center transition-all shadow-xs cursor-pointer active:scale-[0.98]"
                         >
-                          {dueStats.dueCount > 0 ? 'Ôn tập ngay' : 'Xem thẻ từ'}
+                          {dueStats.dueCount > 0 ? 'Ôn tập ngay' : 'Xem từ vựng bài học'}
                         </button>
                       </div>
 

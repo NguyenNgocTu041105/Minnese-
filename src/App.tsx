@@ -851,17 +851,11 @@ export default function App() {
         isQbankEnabled={isQbankEnabled}
         assignments={assignments}
         srsCards={srsCards}
-        onStartReview={(mode) => {
-          const m = mode || 'due_only';
-          setSelectedFlashcardDeckId('deck-coursebook-progress');
-          setSelectedFlashcardMode(m);
-          setFlashcardReturnOrigin(null);
-          setActiveTab('flashcards');
-          window.dispatchEvent(
-            new CustomEvent('minnie_start_srs_review', {
-              detail: { deckId: 'deck-coursebook-progress', mode: m },
-            })
-          );
+        onStartReview={(_mode, level, lessonNumber) => {
+          const hskLevel = (level || Math.min(4, Math.max(1, Math.round(Number(userProfile.current_level)) || 1))) as 1 | 2 | 3 | 4;
+          const targetLessonIndex = Math.max(0, (lessonNumber || 1) - 1);
+          setCoursebookInitialState({ level: hskLevel, lessonIndex: targetLessonIndex, tab: 'vocab' });
+          setActiveTab('coursebook');
         }}
         onStartAssignment={handleStartAssignment}
       />

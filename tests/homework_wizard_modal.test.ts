@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { getEnrichedWorkbookLessons } from '../src/data/workbookEnricher';
 import {
   getCurriculumLessonsForLevel,
   synthesizeLessonQuestions,
@@ -472,6 +473,43 @@ Câu 10: D. Giải thích: 再见 (zàijiàn) có nghĩa là "Tạm biệt, hẹ
 
       expect(selectContextualSingleVoice('AI小语，你好！')).toBe('zh-CN-XiaoyiNeural');
       expect(selectContextualSingleVoice('爸爸今天去医院看医生。')).toBe('zh-CN-YunjianNeural');
+    });
+
+    it('should unify 3-option listening MCQs to 4 options (A, B, C, D) in both external AI parser and workbook enricher', () => {
+      const threeOptionRaw = `Câu 1:
+男：王老师，您好！(Wáng lǎoshī, nín hǎo!)
+女：你好！(Nǐ hǎo!)
+问：男用什么称呼问候王老师？
+A. 你 (nǐ)
+B. 您 (nín)
+C. 你们 (nǐmen)
+
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: B. Giải thích: Học sinh dùng 您 để thể hiện sự kính trọng.`;
+
+      const parsed = parseExternalAiHomeworkText(threeOptionRaw, 1, 'zh-CN-XiaoxiaoNeural');
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0].type).toBe('listening');
+      expect(parsed[0].options).toHaveLength(4);
+      expect(new Set(parsed[0].options).size).toBe(4);
+      expect(parsed[0].correctAnswer).toBe('您 (nín)');
+
+      const enrichedHsk1 = getEnrichedWorkbookLessons(1);
+      enrichedHsk1.forEach((lesson) => {
+        lesson.listeningExercises.forEach((ex) => {
+          const isTf =
+            ex.options.length === 2 &&
+            ex.options.some((o) => /[对错√×]|đúng|sai/i.test(`${o.textChinese || ''} ${o.textVietnamese || ''}`));
+          if (!isTf) {
+            expect(ex.options.length, `HSK 1 L${lesson.lessonNumber} ${ex.id}`).toBe(4);
+          }
+        });
+        lesson.listenAndReadDrills.forEach((drill) => {
+          drill.items.forEach((item) => {
+            expect(item.options.length, `HSK 1 L${lesson.lessonNumber} ${item.id}`).toBe(4);
+          });
+        });
+      });
     });
   });
 });

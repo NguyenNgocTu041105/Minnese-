@@ -655,7 +655,7 @@ Hãy biên soạn bộ bài tập về nhà gồm ${opts.questionCount} câu h�
 
 YÊU CẦU CẤU TRÚC ĐỀ ĐA DẠNG & ĐỊNH DẠNG CHUẨN CANONICAL (ĐỂ HỆ THỐNG BÓC TÁCH & TẠO AUDIO NGHE TỰ ĐỘNG 100%):
 Hãy kết hợp đầy đủ các dạng bài tập (bắt buộc có cả câu Nghe hội thoại 男/女/问, câu Điền từ vào chỗ trống ____, và câu Trắc nghiệm/Đọc hiểu) xoay quanh đúng từ vựng & cấu trúc trên:
-- Phần 1 — Câu Nghe hội thoại (Hệ thống sẽ tự động phân vai giọng đọc Bắc Kinh Neural TTS theo từng nhân vật và ngữ cảnh bài học):
+- Phần 1 — Câu Nghe hội thoại (Hệ thống sẽ tự động phân vai giọng đọc Bắc Kinh Neural TTS theo từng nhân vật và ngữ cảnh bài học; BẮT BUỘC đủ 4 phương án A, B, C, D, tuyệt đối không chỉ có 3 đáp án):
   + Đa dạng hóa nhân vật và bối cảnh giao tiếp sát với Bài ${opts.lessonNumber} (ví dụ: thầy/cô giáo 王老师/李老师 với học sinh 学生/同学, trợ lý AI小语 với người học, bố mẹ 爸爸/妈妈 với con cái, bạn bè 大卫/玛丽/小明/小红, hoặc nhân vật 男/女).
   Câu [STT]:
   男：[Lời thoại nhân vật 1 (có thể ghi 男： hoặc tên nhân vật phù hợp ngữ cảnh như 王老师：, 学生：, 爸爸：, 大卫：) bằng chữ Hán dùng từ vựng/cấu trúc bài học]
@@ -676,6 +676,47 @@ BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo 
 ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
 Câu 1: [A/B/C/D]. Giải thích: [Dịch nghĩa tiếng Việt, chỉ rõ từ vựng/cấu trúc thuộc Bài ${opts.lessonNumber} được kiểm tra và lý do chọn đáp án].
 Câu 2: [A/B/C/D]. Giải thích: ...`;
+}
+
+/**
+ * Ensures non-True/False multiple-choice questions with 3 options are padded to 4 options (A, B, C, D)
+ * using authentic curriculum vocabulary distractors for the target HSK level.
+ */
+function padThreeOptionsToFour(options: string[], level: HSKLevel): string[] {
+  if (options.length !== 3) return options;
+  const joined = options.join(' ').toLowerCase();
+  if (/[对错√×]/.test(joined) && options.length <= 2) return options;
+
+  const hasHanzi = options.some((o) => /[\u4e00-\u9fa5]/.test(o));
+  const hasParenPinyin = options.some((o) => /[\u4e00-\u9fa5].*\([^)]+\)/.test(o));
+  const existingNorm = new Set(options.map((o) => o.trim().toLowerCase()));
+
+  const curriculumVocab = getCurriculumLessonsForLevel(level).flatMap((l) => l.vocabulary || []);
+  const pool = [...curriculumVocab, ...FALLBACK_VOCAB_BANK];
+  const next = [...options];
+
+  for (const w of pool) {
+    if (next.length >= 4) break;
+    const hanzi = (w.hanzi || '').trim();
+    const pinyin = (w.pinyin || '').trim();
+    const meaning = (w.vietnamese || '').trim();
+    const candidate = hasHanzi
+      ? hasParenPinyin && pinyin
+        ? `${hanzi} (${pinyin})`
+        : hanzi
+      : meaning;
+
+    if (!candidate) continue;
+    const normCand = candidate.toLowerCase();
+    const overlapsExisting = options.some(
+      (o) => o.toLowerCase().includes(hanzi.toLowerCase()) && hanzi.length > 0
+    );
+    if (!existingNorm.has(normCand) && !(hasHanzi && overlapsExisting)) {
+      existingNorm.add(normCand);
+      next.push(candidate);
+    }
+  }
+  return next;
 }
 
 /**
@@ -731,6 +772,9 @@ export function parseExternalAiHomeworkText(
             .replace(/\([^)]*\)/g, '')
             .trim();
 
+          const baseOpts = rawOpts.length >= 2 ? rawOpts : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
+          const normalizedOpts = padThreeOptionsToFour(baseOpts, targetLevel);
+
           return verifyAndFixQuizQuestionPinyin({
             id: `ext-ai-q-${Date.now()}-${idx + 1}`,
             type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
@@ -740,7 +784,7 @@ export function parseExternalAiHomeworkText(
             audio_url: isListening
               ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
               : undefined,
-            options: rawOpts.length >= 2 ? rawOpts : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'],
+            options: normalizedOpts,
             correctAnswer: resolvedAnswer,
             explanation: String(item.explanation || 'Bóc tách từ kết quả AI ngoài.'),
             hskLevel: (targetLevel as HSKLevel) || 1,
@@ -832,7 +876,7 @@ export function parseExternalAiHomeworkText(
     // Require at least 2 valid options to be considered a real question
     if (extractedOpts.length < 2) return;
 
-    const options = extractedOpts;
+    const options = padThreeOptionsToFour(extractedOpts, targetLevel);
     const footerEntry = footerAnswerMap[qNum] || footerAnswerMap[idx + 1];
 
     const inlineAnsMatch = rawBlock.match(

@@ -210,7 +210,7 @@ const LEVEL_FALLBACK_WORDS: Record<number, { hanzi: string; pinyin: string; vi: 
   ],
 };
 
-function getDistractors(level: number, correctHanzi: string, lessonVocab: WordItem[], count: number = 2): { hanzi: string; pinyin: string; vi: string }[] {
+function getDistractors(level: number, correctHanzi: string, lessonVocab: WordItem[], count: number = 3): { hanzi: string; pinyin: string; vi: string }[] {
   const result: { hanzi: string; pinyin: string; vi: string }[] = [];
   // First try other words in the same lesson
   for (const v of lessonVocab) {
@@ -219,8 +219,8 @@ function getDistractors(level: number, correctHanzi: string, lessonVocab: WordIt
       if (result.length >= count) return result;
     }
   }
-  // Fallback words
-  const fallback = LEVEL_FALLBACK_WORDS[level] || LEVEL_FALLBACK_WORDS[1];
+  // Fallback words for current level, then HSK 1
+  const fallback = [...(LEVEL_FALLBACK_WORDS[level] || []), ...(LEVEL_FALLBACK_WORDS[1] || [])];
   for (const f of fallback) {
     if (f.hanzi !== correctHanzi && !result.some((r) => r.hanzi === f.hanzi)) {
       result.push(f);
@@ -228,6 +228,61 @@ function getDistractors(level: number, correctHanzi: string, lessonVocab: WordIt
     }
   }
   return result;
+}
+
+function isTrueFalseOptionList(opts: Array<{ textChinese?: string; textVietnamese?: string } | string>): boolean {
+  if (opts.length !== 2) return false;
+  const joined = opts
+    .map((o) => (typeof o === 'string' ? o : `${o.textChinese || ''} ${o.textVietnamese || ''}`))
+    .join(' ')
+    .toLowerCase();
+  return /[对错√×]|đúng|sai|true|false/.test(joined);
+}
+
+function ensureFourListeningOptions(
+  options: EnrichedListeningExercise['options'],
+  level: number,
+  lessonVocab: WordItem[]
+): EnrichedListeningExercise['options'] {
+  if (options.length !== 3 || isTrueFalseOptionList(options)) return options;
+  const existingTexts = new Set(options.map((o) => (o.textChinese || o.textVietnamese || '').trim()));
+  const hasVietnameseOnly = options.every((o) => !o.textChinese && o.textVietnamese);
+  const candidates = getDistractors(level, '', lessonVocab, 8);
+  const nextOpts = [...options];
+  const keys = ['A', 'B', 'C', 'D'];
+  for (const c of candidates) {
+    if (nextOpts.length >= 4) break;
+    const label = hasVietnameseOnly ? c.vi : c.hanzi;
+    if (label && !existingTexts.has(label)) {
+      existingTexts.add(label);
+      nextOpts.push({
+        key: keys[nextOpts.length] || 'D',
+        textChinese: hasVietnameseOnly ? undefined : c.hanzi,
+        textPinyin: hasVietnameseOnly ? undefined : c.pinyin,
+        textVietnamese: c.vi,
+      });
+    }
+  }
+  return nextOpts;
+}
+
+function ensureFourStringOptions(
+  options: string[],
+  correctAnswer: string,
+  level: number,
+  lessonVocab: WordItem[]
+): string[] {
+  const unique = Array.from(new Set(options.filter(Boolean)));
+  if (unique.length === 2 && isTrueFalseOptionList(unique)) return unique;
+  if (unique.length >= 4) return unique.slice(0, 4);
+  const candidates = getDistractors(level, correctAnswer, lessonVocab, 8);
+  for (const c of candidates) {
+    if (unique.length >= 4) break;
+    if (c.hanzi && !unique.includes(c.hanzi)) {
+      unique.push(c.hanzi);
+    }
+  }
+  return unique;
 }
 
 /**
@@ -269,19 +324,20 @@ export function enrichWorkbookLesson(
   for (const q of rawListening) {
     if (q && q.id && !seenListeningIds.has(q.id)) {
       seenListeningIds.add(q.id);
+      const mappedOptions = (q.options || []).map((opt: any) => ({
+        key: opt.key,
+        textChinese: opt.textChinese,
+        textPinyin: opt.textPinyin,
+        textVietnamese: opt.textVietnamese,
+        imageEmoji: opt.imageEmoji,
+      }));
       existingListening.push({
         id: q.id,
         part: q.part || 1,
         questionNumber: q.questionNumber || existingListening.length + 1,
         promptText: q.promptText || q.promptChinese || 'Nghe đoạn âm thanh và chọn câu trả lời đúng:',
         audioScript: q.audioScript || q.promptChinese || titleChinese,
-        options: (q.options || []).map((opt: any) => ({
-          key: opt.key,
-          textChinese: opt.textChinese,
-          textPinyin: opt.textPinyin,
-          textVietnamese: opt.textVietnamese,
-          imageEmoji: opt.imageEmoji,
-        })),
+        options: ensureFourListeningOptions(mappedOptions, level, vocab),
         correctKey: q.correctKey || (q.options?.[0]?.key ?? 'A'),
         explanation: q.explanation || 'Đáp án chính xác theo nội dung bài nghe.',
       });
@@ -337,7 +393,12 @@ export function enrichWorkbookLesson(
     items: (d.items || []).map((it: any) => ({
       id: it.id,
       audioText: it.audioText || it.correctAnswer,
-      options: it.options || [it.correctAnswer],
+      options: ensureFourStringOptions(
+        it.options || [it.correctAnswer],
+        it.correctAnswer,
+        level,
+        vocab
+      ),
       correctAnswer: it.correctAnswer,
       pinyinPrompt: it.pinyinPrompt,
       vietnamesePrompt: it.vietnamesePrompt,
@@ -349,11 +410,16 @@ export function enrichWorkbookLesson(
   // Drill 1: Key vocabulary listening & pronunciation
   if (enrichedDrills.length < 1) {
     const drill1Items = vocab.slice(0, 3).map((v, i) => {
-      const distractors = getDistractors(level, v.hanzi, vocab, 2);
+      const distractors = getDistractors(level, v.hanzi, vocab, 3);
       return {
         id: `enrich_lrd_l${level}_n${lessonNumber}_d1_${i + 1}`,
         audioText: v.hanzi,
-        options: [v.hanzi, distractors[0]?.hanzi || '好的', distractors[1]?.hanzi || '谢谢'],
+        options: ensureFourStringOptions(
+          [v.hanzi, distractors[0]?.hanzi || '好的', distractors[1]?.hanzi || '谢谢', distractors[2]?.hanzi || '再见'],
+          v.hanzi,
+          level,
+          vocab
+        ),
         correctAnswer: v.hanzi,
         pinyinPrompt: v.pinyin,
         vietnamesePrompt: v.vietnamese,
@@ -363,7 +429,7 @@ export function enrichWorkbookLesson(
       drill1Items.push({
         id: `enrich_lrd_l${level}_n${lessonNumber}_d1_1`,
         audioText: titleChinese,
-        options: [titleChinese, '你好', '再见'],
+        options: ensureFourStringOptions([titleChinese, '你好', '谢谢', '再见'], titleChinese, level, vocab),
         correctAnswer: titleChinese,
         pinyinPrompt: titlePinyin,
         vietnamesePrompt: titleVietnamese,
@@ -383,14 +449,21 @@ export function enrichWorkbookLesson(
     const sampleLines = texts[0]?.lines?.slice(0, 3) || [];
     if (sampleLines.length > 0) {
       sampleLines.forEach((l, idx) => {
+        const distractors = getDistractors(level, l.hanzi, vocab, 3);
         drill2Items.push({
           id: `enrich_lrd_l${level}_n${lessonNumber}_d2_${idx + 1}`,
           audioText: l.hanzi,
-          options: [
+          options: ensureFourStringOptions(
+            [
+              l.hanzi,
+              distractors[0]?.hanzi || '是的',
+              distractors[1]?.hanzi || '不是',
+              distractors[2]?.hanzi || '谢谢',
+            ],
             l.hanzi,
-            vocab[idx % (vocab.length || 1)]?.hanzi || '是的',
-            '不是',
-          ],
+            level,
+            vocab
+          ),
           correctAnswer: l.hanzi,
           pinyinPrompt: l.pinyin,
           vietnamesePrompt: l.vietnamese,
@@ -400,7 +473,7 @@ export function enrichWorkbookLesson(
       drill2Items.push({
         id: `enrich_lrd_l${level}_n${lessonNumber}_d2_1`,
         audioText: titleChinese,
-        options: [titleChinese, '我想去', '好的'],
+        options: ensureFourStringOptions([titleChinese, '我想去', '好的', '谢谢'], titleChinese, level, vocab),
         correctAnswer: titleChinese,
         pinyinPrompt: titlePinyin,
         vietnamesePrompt: titleVietnamese,
@@ -441,7 +514,7 @@ export function enrichWorkbookLesson(
       example: `${titleChinese}。`,
       exampleTranslation: titleVietnamese,
     };
-    const distractors = getDistractors(level, target.hanzi, vocab, 2);
+    const distractors = getDistractors(level, target.hanzi, vocab, 3);
 
     let sentenceWithBlank = target.example
       ? target.example.replace(new RegExp(target.hanzi, 'g'), '（    ）')
@@ -454,7 +527,12 @@ export function enrichWorkbookLesson(
       id: `enrich_fib_l${level}_n${lessonNumber}_${idx + 1}`,
       sentenceWithBlank,
       pinyinSentence: target.pinyin,
-      options: [target.hanzi, distractors[0]?.hanzi || '高兴', distractors[1]?.hanzi || '现在'],
+      options: ensureFourStringOptions(
+        [target.hanzi, distractors[0]?.hanzi || '高兴', distractors[1]?.hanzi || '现在', distractors[2]?.hanzi || '谢谢'],
+        target.hanzi,
+        level,
+        vocab
+      ),
       correctAnswer: target.hanzi,
       vietnameseTranslation: target.exampleTranslation || target.vietnamese,
       explanation: `Điền "${target.hanzi}" (${target.pinyin}): ${target.vietnamese}.`,

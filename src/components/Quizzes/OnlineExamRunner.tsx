@@ -44,6 +44,27 @@ const isAnswerMatch = (userAns: string | undefined, correctAns: string | string[
   return false;
 };
 
+const FALLBACK_FOURTH_OPTIONS = ['谢谢 (xièxie)', '再见 (zàijiàn)', '不客气 (bú kèqi)', '好的 (hǎo de)', '老师 (lǎoshī)'];
+
+const normalizeListeningMcqOptions = (q: QuizQuestion): QuizQuestion => {
+  const opts = Array.isArray(q.options) ? [...q.options] : [];
+  if (opts.length !== 3) return q;
+  const isTrueFalse = opts.some((o) => /[对错√×]|đúng|sai/i.test(o)) && opts.length <= 2;
+  if (isTrueFalse) return q;
+
+  const hasHanzi = opts.some((o) => /[\u4e00-\u9fa5]/.test(o));
+  if (hasHanzi) {
+    for (const candidate of FALLBACK_FOURTH_OPTIONS) {
+      const hanziOnly = candidate.split(' ')[0];
+      if (!opts.some((o) => o.includes(hanziOnly))) {
+        opts.push(candidate);
+        break;
+      }
+    }
+  }
+  return { ...q, options: opts };
+};
+
 export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
   exam,
   userProfile,
@@ -69,7 +90,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
   } | null>(null);
 
   const questions = useMemo(
-    () => (exam.questions || []).map((q) => verifyAndFixQuizQuestionPinyin(q)),
+    () => (exam.questions || []).map((q) => normalizeListeningMcqOptions(verifyAndFixQuizQuestionPinyin(q))),
     [exam.questions]
   );
   const currentQuestion = questions[currentIndex];

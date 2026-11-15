@@ -239,7 +239,7 @@ Hãy tạo ${questionCount} câu hỏi Nghe hiểu hội thoại đa dạng nhâ
 
 YÊU CẦU KỸ THUẬT VÀ ĐỊNH DẠNG BẮT BUỘC (TUÂN THỦ 100% ĐỂ HỆ THỐNG TỰ ĐỘNG BÓC TÁCH VÀ PHÂN VAI GIỌNG ĐỌC NEURAL TTS THEO NHÂN VẬT):
 1. Đa dạng hóa tình huống và tuyến nhân vật sát hợp với bài học (ví dụ: thầy/cô giáo 王老师/李老师 với học sinh 学生/同学, AI小语 với bạn học, bố mẹ 爸爸/妈妈 với con cái, đồng nghiệp/bạn bè 大卫/玛丽, nhân viên 服务员 với khách 客人, hoặc cặp nhân vật 男/女).
-2. Mỗi câu hỏi gồm lời thoại đối đáp của 2 nhân vật, sau đó là câu hỏi 问：
+2. Mỗi câu hỏi gồm lời thoại đối đáp của 2 nhân vật, sau đó là câu hỏi 问： và BẮT BUỘC đủ 4 phương án A, B, C, D (tuyệt đối không chỉ có 3 đáp án):
    Câu [STT]:
    男：[Lời thoại nhân vật 1 bằng chữ Hán (có thể dùng 男： hoặc tên nhân vật phù hợp bài học như 王老师：, 学生：, 爸爸：)]${pinyinExample}
    女：[Lời thoại nhân vật 2 bằng chữ Hán (có thể dùng 女： hoặc tên nhân vật đối đáp như 学生：, AI小语：, 妈妈：)]${pinyinExample}

@@ -172,7 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     });
   }, [assignments, userProfile]);
 
-  const totalNotifications = (dueStats.dueCount > 0 ? 1 : 0) + actionableAssignments.length;
+  const totalNotifications = actionableAssignments.length;
 
   const isGuestOrDemo = !userProfile || userProfile.id === 'demo-user-123' || userProfile.id.startsWith('guest-');
 
@@ -266,7 +266,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]">
                       <span className="font-bold text-xs uppercase tracking-wider text-[var(--color-text-primary)] flex items-center gap-1.5">
                         <Bell className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                        Thông báo học tập ({totalNotifications})
+                        Thông báo bài tập ({totalNotifications})
                       </span>
                       <button
                         type="button"
@@ -278,51 +278,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                      {/* Item ưu tiên số 1 đứng đầu: Ôn tập thẻ từ đến hạn */}
-                      <div
-                        className={`p-3 rounded-xl border text-xs space-y-2 ${
-                          dueStats.dueCount > 0
-                            ? 'bg-amber-500/10 border-amber-500/20'
-                            : 'bg-emerald-500/10 border-emerald-500/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                              dueStats.dueCount > 0
-                                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                                : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                            }`}
-                          >
-                            <Layers className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-bold text-xs text-[var(--color-text-primary)] leading-tight">
-                              {dueStats.dueCount > 0
-                                ? `${dueStats.dueCount} từ vựng cần ôn tập hôm nay`
-                                : 'Đã hoàn thành ôn tập từ vựng hôm nay'}
-                            </h4>
-                            <p className="text-[11px] text-[var(--color-text-secondary)] truncate leading-tight mt-0.5">
-                              {dueStats.dueCount > 0
-                                ? `New HSK ${dueStats.activeLevel} · ${
-                                    dueStats.maxReachedLessonNum && dueStats.maxReachedLessonNum > 1
-                                      ? `Bài 1 – ${dueStats.maxReachedLessonNum}`
-                                      : 'Bài 1'
-                                  } · Ôn tập ghi nhớ`
-                                : `New HSK ${dueStats.activeLevel} · Không còn thẻ từ đến hạn`}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          id="navbar-notification-due-review-btn"
-                          onClick={handleStartDueReview}
-                          className="w-full py-2 px-3 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white font-bold text-xs text-center transition-all shadow-xs cursor-pointer active:scale-[0.98]"
-                        >
-                          {dueStats.dueCount > 0 ? 'Ôn tập ngay' : 'Xem từ vựng bài học'}
-                        </button>
-                      </div>
-
                       {/* Danh sách bài tập cần làm */}
                       {actionableAssignments.map((asg) => {
                         const typeMeta =

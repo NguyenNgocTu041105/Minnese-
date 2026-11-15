@@ -5,7 +5,6 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
-  TrendingUp,
   FileText,
   GraduationCap,
   Volume2,
@@ -13,16 +12,6 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { isUserAdmin } from '../../lib/firebase';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ReferenceLine,
-} from 'recharts';
 import { UserProfile, SRSCardState, UserStats, AssignmentDoc, AssignmentSubmissionDoc } from '../../types';
 import { NEW_HSK1_FULL_LESSONS } from '../../data/newHsk1BookData';
 import { NEW_HSK2_FULL_LESSONS } from '../../data/newHsk2BookData';
@@ -30,7 +19,6 @@ import { NEW_HSK3_FULL_LESSONS } from '../../data/newHsk3BookData';
 import { NEW_HSK4_FULL_LESSONS } from '../../data/newHsk4BookData';
 import { getCoursebookDueStats } from '../../utils/coursebookVocab';
 import { TeacherVoicePlayer } from '../Feedback/TeacherVoicePlayer';
-import { get7DayActivityStats, DayActivityAggregate } from '../../utils/activityLogger';
 import { getCalendarDayDiff } from '../../utils/streak';
 
 interface DashboardViewProps {
@@ -159,33 +147,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         Math.round(((completedCount > 0 ? completedCount : (activeLessonIndex + 1)) / totalLessons) * 100)
       );
 
-  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
-
-  useEffect(() => {
-    const handleActivityLogUpdate = () => {
-      setActivityRefreshKey((prev) => prev + 1);
-    };
-    window.addEventListener('minnie_activity_log_updated', handleActivityLogUpdate);
-    window.addEventListener('storage', handleActivityLogUpdate);
-    return () => {
-      window.removeEventListener('minnie_activity_log_updated', handleActivityLogUpdate);
-      window.removeEventListener('storage', handleActivityLogUpdate);
-    };
-  }, []);
-
-  // 7-Day learning activity stacked data showing:
-  // 1. Học bài mới (newLessonCount)
-  // 2. Ôn tập & luyện tập (reviewCount)
-  // Ordered strictly from T2 (Thứ Hai) to CN (Chủ Nhật)
-  const { days: chartData, averagePrevious7Days } = React.useMemo(() => {
-    return get7DayActivityStats(stats.cardsReviewedToday ?? 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats.cardsReviewedToday, activityRefreshKey]);
-
-  // Check if today has 0 total activities
-  const todayActivity = chartData.find((d) => d.isToday) || chartData[0];
-  const isTodayZeroActivity = (todayActivity?.total ?? 0) === 0;
-
   // Filter assignments matching user's official HSK level, enrolled class, or created assignments
   const userAssignments = assignments.filter((a) => {
     if (!a.is_active) return false;
@@ -298,201 +259,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: 7-Day Chart & Coursebook Level Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 7-Day Learning Chart */}
-        <div className="lg:col-span-2 silk-card p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[var(--color-primary)] shrink-0" />
-              <div>
-                <h2 className="font-bold text-base text-[var(--color-text-primary)]">
-                  Tiến độ học trong tuần (T2 - CN)
-                </h2>
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
-                  Phân loại bài học mới và hoạt động ôn tập từ Thứ Hai đến Chủ Nhật
-                </p>
-              </div>
-            </div>
-            {/* Legend - 2 clear items */}
-            <div className="flex items-center gap-3.5 text-xs">
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-[#059669] inline-block shadow-xs" />
-                <span className="text-[var(--color-text-primary)] font-medium text-xs">
-                  Học bài mới
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-[#6ee7b7] inline-block shadow-xs border border-emerald-300" />
-                <span className="text-[var(--color-text-primary)] font-medium text-xs">
-                  Ôn tập & luyện tập
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-64 w-full pt-2 min-h-[256px]">
-            <ResponsiveContainer width="100%" height={240} minHeight={240} debounce={50}>
-              <BarChart data={chartData} margin={{ top: 12, right: 12, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.6} />
-                <XAxis
-                  dataKey="dayLabel"
-                  tick={(props) => {
-                    const { x, y, payload, index } = props;
-                    const item = chartData[index];
-                    const isToday = item?.isToday;
-                    return (
-                      <g transform={`translate(${x},${y})`}>
-                        <text
-                          x={0}
-                          y={0}
-                          dy={14}
-                          textAnchor="middle"
-                          fill={isToday ? 'var(--color-primary)' : 'var(--color-text-secondary)'}
-                          fontWeight={isToday ? 700 : 500}
-                          fontSize={12}
-                        >
-                          {payload.value}
-                        </text>
-                        {isToday && (
-                          <circle cx={0} cy={22} r={2.5} fill="var(--color-primary)" />
-                        )}
-                      </g>
-                    );
-                  }}
-                />
-                <YAxis tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} />
-                {averagePrevious7Days > 0 && (
-                  <ReferenceLine
-                    y={averagePrevious7Days}
-                    stroke="#10b981"
-                    strokeDasharray="4 4"
-                    strokeOpacity={0.6}
-                    label={{
-                      value: `TB: ${averagePrevious7Days}`,
-                      position: 'insideTopRight',
-                      fill: '#059669',
-                      fontSize: 10,
-                      fontWeight: 600,
-                    }}
-                  />
-                )}
-                <Tooltip
-                  cursor={{ fill: 'rgba(16, 185, 129, 0.08)', radius: 8 }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload as DayActivityAggregate;
-                      return (
-                        <div className="bg-[#0f172a] text-white p-3.5 rounded-xl border border-emerald-500/30 shadow-2xl space-y-2 text-xs z-50 min-w-[200px]">
-                          <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-                            <span className="font-bold text-white text-sm">
-                              {data.fullDateLabel}
-                            </span>
-                            {data.isToday ? (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                Hôm nay
-                              </span>
-                            ) : data.isFuture ? (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                                Chưa diễn ra
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <div className="space-y-1.5 pt-0.5">
-                            <div className="flex items-center justify-between text-slate-200">
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-sm bg-[#059669] inline-block" />
-                                <span>Học bài mới:</span>
-                              </span>
-                              <span className="font-bold text-white font-mono">
-                                {data.newLessonCount} hoạt động
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between text-slate-200">
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-sm bg-[#6ee7b7] inline-block" />
-                                <span>Ôn tập:</span>
-                              </span>
-                              <span className="font-bold text-white font-mono">
-                                {data.reviewCount} hoạt động
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between text-emerald-400 font-semibold border-t border-slate-700/80 pt-1.5 text-[13px]">
-                              <span>Tổng cộng:</span>
-                              <span className="font-bold font-mono text-white">
-                                {data.total} hoạt động
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                {/* Stacked Bar 1: Học bài mới (dark green) */}
-                <Bar
-                  dataKey="newLessonCount"
-                  stackId="studyActivity"
-                  fill="#059669"
-                  radius={[0, 0, 0, 0]}
-                  name="Học bài mới"
-                />
-                {/* Stacked Bar 2: Ôn tập & luyện tập (light green), rounded on top */}
-                <Bar
-                  dataKey="reviewCount"
-                  stackId="studyActivity"
-                  fill="#6ee7b7"
-                  radius={[6, 6, 0, 0]}
-                  name="Ôn tập & luyện tập"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Dynamic Note for 0 activity today */}
-          {isTodayZeroActivity ? (
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-300">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">💡</span>
-                <span>
-                  Bạn chưa ôn tập hôm nay —{' '}
-                  <strong className="font-semibold text-amber-800 dark:text-amber-200">
-                    {coursebookDue.dueCount > 0
-                      ? `${coursebookDue.dueCount} từ đang chờ ôn`
-                      : 'hãy mở giáo trình hoặc làm bài tập để tích lũy kiến thức'}
-                  </strong>.
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onStartReview) {
-                    onStartReview(coursebookDue.dueCount > 0 ? 'due_only' : 'all');
-                  } else {
-                    onNavigate('flashcards');
-                  }
-                }}
-                className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[11px] shrink-0 transition-colors cursor-pointer"
-              >
-                Ôn ngay
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between text-[11px] text-[var(--color-text-secondary)] pt-1 px-1">
-              <span>Đường nét đứt (TB): Trung bình 7 ngày gần nhất</span>
-              <span className="font-medium text-emerald-600">
-                Hôm nay: {todayActivity?.total ?? 0} hoạt động
-              </span>
-            </div>
-          )}
-        </div>
-
+      {/* Main Grid: Coursebook Level Progress (Left) & Assigned Homework (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Coursebook Level Progress & Current Lesson Widget */}
-        <div className="silk-card p-6 flex flex-col justify-between space-y-5">
+        <div className="lg:col-span-1 silk-card p-6 flex flex-col justify-between space-y-5">
           {!hasEnrolledClass && !isAdmin ? (
             <div className="flex flex-col h-full justify-between space-y-4">
               <div>
@@ -670,10 +440,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </>
           )}
         </div>
-      </div>
-
-      {/* Homework / Assigned Tasks (Module 7 Feature) */}
-      <div className="silk-card p-5 sm:p-6 space-y-4">
+        {/* Homework / Assigned Tasks (Right 2/3 Column) */}
+        <div className="lg:col-span-2 silk-card p-5 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-[var(--color-primary)]" />
@@ -882,6 +650,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             Bạn đã hoàn thành tất cả bài tập được giao cho cấp độ HSK {userProfile.current_level}!
           </div>
         )}
+        </div>
       </div>
 
       {/* Teacher Voice Pronunciation & Homework Feedback Lab - Only shown when teacher has left voice feedback */}

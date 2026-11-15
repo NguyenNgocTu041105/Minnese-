@@ -646,6 +646,258 @@ Câu 1: [A/B/C/D]. Giải thích: [Dịch nghĩa tiếng Việt, chỉ rõ từ 
 Câu 2: [A/B/C/D]. Giải thích: ...`;
 }
 
+/**
+ * Universal instant parser for external AI output (ChatGPT, Claude, Gemini, DeepSeek)
+ * Supports JSON arrays/objects and numbered HSK text with either inline answers or
+ * a bottom "ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:" section.
+ */
+export function parseExternalAiHomeworkText(
+  rawInput: string,
+  targetLevel: HSKLevel = 1,
+  selectedVoice: string = 'zh-CN-XiaoxiaoNeural'
+): QuizQuestion[] {
+  const trimmed = rawInput.trim();
+  if (!trimmed) return [];
+
+  // 1. Try JSON extraction first (supports raw JSON or ```json ... ``` fenced blocks)
+  try {
+    const jsonFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const jsonCandidate = jsonFenceMatch ? jsonFenceMatch[1].trim() : trimmed;
+    if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
+      const parsedJson = JSON.parse(jsonCandidate);
+      const rawArr = Array.isArray(parsedJson)
+        ? parsedJson
+        : Array.isArray(parsedJson.questions)
+        ? parsedJson.questions
+        : Array.isArray(parsedJson.exercises)
+        ? parsedJson.exercises
+        : [];
+      if (rawArr.length > 0) {
+        return rawArr.map((item: Record<string, unknown>, idx: number) => {
+          const rawOpts = Array.isArray(item.options)
+            ? item.options.map((o) => String(o).replace(/^[A-D][.:)]\s*/i, '').trim())
+            : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
+          const qChinese = String(
+            item.questionChinese || item.hanziPrompt || item.stem || item.question || ''
+          ).trim();
+          const qPrompt = String(
+            item.prompt || item.vietnamesePrompt || item.question || 'Chọn đáp án đúng:'
+          ).trim();
+          const rawAns = String(item.correctAnswer ?? item.answer ?? 'A').trim();
+          const ansIdx = ['A', 'B', 'C', 'D'].indexOf(rawAns.toUpperCase());
+          const resolvedAnswer =
+            ansIdx >= 0 && rawOpts[ansIdx]
+              ? rawOpts[ansIdx]
+              : rawOpts.find((o) => o === rawAns.replace(/^[A-D][.:)]\s*/i, '').trim()) || rawOpts[0];
+          const isListening =
+            item.type === 'listening' ||
+            /男[:：]|女[:：]|问[:：]|\[Nghe\]/i.test(qChinese) ||
+            Boolean(item.audioText);
+          const isFillBlank =
+            item.type === 'fill_blank' || qChinese.includes('____') || qPrompt.includes('____');
+          const audioTxt = String(item.audioText || qChinese || qPrompt)
+            .replace(/\([^)]*\)/g, '')
+            .trim();
+
+          return {
+            id: `ext-ai-q-${Date.now()}-${idx + 1}`,
+            type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+            prompt: qPrompt,
+            questionChinese: qChinese !== qPrompt ? qChinese : '',
+            audioText: isListening ? audioTxt : undefined,
+            audio_url: isListening
+              ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
+              : undefined,
+            options: rawOpts.length >= 2 ? rawOpts : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'],
+            correctAnswer: resolvedAnswer,
+            explanation: String(item.explanation || 'Bóc tách từ kết quả AI ngoài.'),
+            hskLevel: (targetLevel as HSKLevel) || 1,
+          };
+        });
+      }
+    }
+  } catch {
+    // Fall through to text parser
+  }
+
+  // 2. Pre-scan ALL lines in the document for answer-key entries like:
+  //    "Câu 1: B. Giải thích: ..." or "1. B - Giải thích: ..."
+  const footerAnswerMap: Record<number, { ansChar: string; explanation: string }> = {};
+  const allLines = trimmed.split(/\r?\n/);
+  allLines.forEach((line) => {
+    const cleanLine = line.trim();
+    const m = cleanLine.match(
+      /^(?:\*\*|#+\s*)?(?:Câu|Bài|Question)?\s*(\d+)\s*[:.)]\s*\*?\*?([A-D])\*?\*?(?:\s*[.:,-]\s*(?:Giải\s*thích\s*[:：.]?\s*)?(.+))?$/i
+    );
+    if (m) {
+      const qNum = parseInt(m[1], 10);
+      footerAnswerMap[qNum] = {
+        ansChar: m[2].toUpperCase(),
+        explanation: (m[3] || '').replace(/\*\*$/g, '').trim(),
+      };
+    }
+  });
+
+  // 3. Strip bottom Answer Key section header and everything after it
+  const footerHeaderRegex =
+    /(?:^|\r?\n)[ \t]*(?:\*\*|#+\s*)?(?:ĐÁP\s*ÁN(?:\s*(?:VÀ|&|-)\s*GIẢI\s*THÍCH(?:\s*CHI\s*TIẾT)?)?|BẢNG\s*ĐÁP\s*ÁN|ANSWER\s*KEY|LỜI\s*GIẢI\s*CHI\s*TIẾT)[^\r\n]*/i;
+  const footerMatch = trimmed.match(footerHeaderRegex);
+  const questionsBody =
+    footerMatch && typeof footerMatch.index === 'number'
+      ? trimmed.slice(0, footerMatch.index).trim()
+      : trimmed;
+
+  // 4. Split questionsBody into individual question blocks by matching line-start "Câu X:" / "Bài X:" / "Question X:"
+  const headerMatches = Array.from(
+    questionsBody.matchAll(/(?:^|\r?\n)[ \t]*(?:\*\*?)?(?:Câu|Bài|Question)\s*(\d+)\s*[:.)]/gi)
+  );
+
+  const blocksToProcess: { qNum: number; rawBlock: string }[] = [];
+  if (headerMatches.length > 0) {
+    headerMatches.forEach((hm, i) => {
+      const startIdx = hm.index ?? 0;
+      const endIdx = i + 1 < headerMatches.length ? (headerMatches[i + 1].index ?? questionsBody.length) : questionsBody.length;
+      const slice = questionsBody.slice(startIdx, endIdx).trim();
+      const qNum = parseInt(hm[1], 10) || i + 1;
+      if (slice) {
+        blocksToProcess.push({ qNum, rawBlock: slice });
+      }
+    });
+  } else {
+    blocksToProcess.push({ qNum: 1, rawBlock: questionsBody });
+  }
+
+  const parsedLocal: QuizQuestion[] = [];
+
+  blocksToProcess.forEach(({ qNum, rawBlock }, idx) => {
+    // Skip standalone answer-key lines if any were pasted without a section header
+    if (
+      /^(?:\*\*?)?(?:Câu|Bài|Question)?\s*\d+\s*[:.)]\s*\*?\*?[A-D]\*?\*?(?:\s*[.:,-]\s*Giải\s*thích|\s*$)/i.test(
+        rawBlock.split(/\r?\n/)[0].trim()
+      ) &&
+      !/(?:^|\r?\n)\s*A[.:)]\s+/i.test(rawBlock)
+    ) {
+      return;
+    }
+
+    // Must contain at least option A. and B.
+    const optStartMatch = rawBlock.match(/(?:^|\r?\n|\s)A[.:)]\s+/);
+    if (!optStartMatch || typeof optStartMatch.index !== 'number') return;
+
+    const stemRegion = rawBlock.slice(0, optStartMatch.index).trim();
+    const optionsRegion = rawBlock.slice(optStartMatch.index).trim();
+
+    const optRegex = /(?:^|\s)([A-D])[.:)]\s*([^\r\n]+?)(?=(?:\s+[A-D][.:)]\s+|\r?\n|$))/g;
+    const extractedOpts: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = optRegex.exec(optionsRegion)) !== null) {
+      const cleaned = match[2].replace(/\*\*$/g, '').trim();
+      if (cleaned && extractedOpts.length < 4) {
+        extractedOpts.push(cleaned);
+      }
+    }
+
+    // Require at least 2 valid options to be considered a real question
+    if (extractedOpts.length < 2) return;
+
+    const options = extractedOpts;
+    const footerEntry = footerAnswerMap[qNum] || footerAnswerMap[idx + 1];
+
+    const inlineAnsMatch = rawBlock.match(
+      /(?:Đáp án(?:\s*đúng)?|ĐA|Answer|正确答案)\s*[:：.]?\s*\*?\*?([A-D])/i
+    );
+    const ansChar = inlineAnsMatch ? inlineAnsMatch[1].toUpperCase() : footerEntry?.ansChar || 'A';
+    const ansIndex = ['A', 'B', 'C', 'D'].indexOf(ansChar);
+    const correctAnswer =
+      options[ansIndex >= 0 && ansIndex < options.length ? ansIndex : 0] || options[0];
+
+    const inlineExpMatch = rawBlock.match(/(?:Giải thích|Explanation|解析)\s*[:：.]\s*([^\r\n]+)/i);
+    const explanation = inlineExpMatch
+      ? inlineExpMatch[1].trim()
+      : footerEntry?.explanation
+      ? footerEntry.explanation
+      : `Đáp án đúng: ${ansChar} (${correctAnswer}).`;
+
+    const cleanStem = stemRegion
+      .replace(/^(?:\*\*?)?(?:Câu|Bài|Question)?\s*\d*\s*[:.)]?\s*/i, '')
+      .trim();
+
+    const isListening = /男[:：]|女[:：]|问[:：]|\[Nghe\]|听力/i.test(cleanStem);
+    const isFillBlank =
+      cleanStem.includes('____') || cleanStem.includes('___') || cleanStem.includes('（ ）');
+
+    // Separate multi-line reading/dialogue stems into passage (questionChinese) and question prompt (prompt)
+    const stemLines = cleanStem
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    let displayPrompt = cleanStem;
+    let displayChinese = '';
+
+    if (isListening) {
+      const askLine = stemLines.find((l) => /^问[:：]/i.test(l));
+      const askText = askLine ? askLine.replace(/^问[:：]\s*/i, '').trim() : '';
+      displayPrompt = askText
+        ? `Nghe hội thoại và trả lời: ${askText}`
+        : 'Nghe hội thoại và chọn đáp án đúng:';
+      displayChinese = stemLines.filter((l) => !/^问[:：]/i.test(l)).join('\n');
+    } else if (isFillBlank) {
+      if (stemLines.length >= 2 && !stemLines[stemLines.length - 1].includes('____')) {
+        displayPrompt = stemLines[stemLines.length - 1];
+        displayChinese = stemLines.slice(0, -1).join('\n');
+      } else {
+        displayPrompt = 'Chọn từ thích hợp điền vào chỗ trống:';
+        displayChinese = cleanStem;
+      }
+    } else if (stemLines.length >= 2) {
+      const firstLineIsHeader = /^Đọc\s+/i.test(stemLines[0]);
+      const lastLine = stemLines[stemLines.length - 1];
+      const bodyLines = stemLines.slice(firstLineIsHeader ? 1 : 0, -1);
+      displayPrompt = lastLine;
+      displayChinese = bodyLines.join('\n');
+    } else {
+      displayPrompt = cleanStem;
+      displayChinese = '';
+    }
+
+    // Build pure Chinese audio script for Listening questions (strip Pinyin in parens & speaker labels)
+    let audioTxt = '';
+    if (isListening) {
+      const spokenLines = stemLines
+        .filter((l) => !/^问[:：]/i.test(l))
+        .map((l) =>
+          l
+            .replace(/^(?:男|女|A|B)[:：]\s*/i, '')
+            .replace(/\([^)]*\)/g, '')
+            .trim()
+        )
+        .filter(Boolean);
+      audioTxt = spokenLines.join(' ');
+      if (!audioTxt) {
+        audioTxt = cleanStem.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+      }
+    }
+
+    parsedLocal.push({
+      id: `raw-q-${Date.now()}-${idx + 1}`,
+      type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+      prompt: displayPrompt,
+      questionChinese: displayChinese,
+      audioText: isListening ? audioTxt : undefined,
+      audio_url: isListening
+        ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
+        : undefined,
+      options,
+      correctAnswer,
+      explanation,
+      hskLevel: (targetLevel as HSKLevel) || 1,
+    });
+  });
+
+  return parsedLocal;
+}
+
 export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   isOpen,
   onClose,
@@ -1069,162 +1321,8 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
   };
 
   // Universal instant parser for external AI output (ChatGPT/Claude/Gemini/DeepSeek JSON or numbered text)
-  const parseExternalAiOrRawText = (rawInput: string): QuizQuestion[] => {
-    const trimmed = rawInput.trim();
-    if (!trimmed) return [];
-
-    // 1. Try JSON extraction first (supports raw JSON or ```json ... ``` fenced blocks)
-    try {
-      const jsonFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-      const jsonCandidate = jsonFenceMatch ? jsonFenceMatch[1].trim() : trimmed;
-      if (jsonCandidate.startsWith('[') || jsonCandidate.startsWith('{')) {
-        const parsedJson = JSON.parse(jsonCandidate);
-        const rawArr = Array.isArray(parsedJson)
-          ? parsedJson
-          : Array.isArray(parsedJson.questions)
-          ? parsedJson.questions
-          : Array.isArray(parsedJson.exercises)
-          ? parsedJson.exercises
-          : [];
-        if (rawArr.length > 0) {
-          return rawArr.map((item: Record<string, unknown>, idx: number) => {
-            const rawOpts = Array.isArray(item.options) ? item.options.map((o) => String(o).replace(/^[A-D][.:]\s*/i, '').trim()) : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
-            const qChinese = String(item.questionChinese || item.hanziPrompt || item.stem || item.question || '').trim();
-            const qPrompt = String(item.prompt || item.vietnamesePrompt || item.question || 'Chọn đáp án đúng:').trim();
-            const rawAns = String(item.correctAnswer ?? item.answer ?? 'A').trim();
-            const ansIdx = ['A', 'B', 'C', 'D'].indexOf(rawAns.toUpperCase());
-            const resolvedAnswer =
-              ansIdx >= 0 && rawOpts[ansIdx]
-                ? rawOpts[ansIdx]
-                : rawOpts.find((o) => o === rawAns.replace(/^[A-D][.:]\s*/i, '').trim()) || rawOpts[0];
-            const isListening =
-              item.type === 'listening' ||
-              /男[:：]|女[:：]|问[:：]|\[Nghe\]/i.test(qChinese) ||
-              Boolean(item.audioText);
-            const isFillBlank = item.type === 'fill_blank' || qChinese.includes('____') || qPrompt.includes('____');
-            const audioTxt = String(item.audioText || qChinese || qPrompt).replace(/\([^)]*\)/g, '').trim();
-
-            return {
-              id: `ext-ai-q-${Date.now()}-${idx + 1}`,
-              type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
-              prompt: qPrompt,
-              questionChinese: qChinese || qPrompt,
-              audioText: isListening ? audioTxt : undefined,
-              audio_url: isListening
-                ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
-                : undefined,
-              options: rawOpts.length >= 2 ? rawOpts : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'],
-              correctAnswer: resolvedAnswer,
-              explanation: String(item.explanation || 'Bóc tách từ kết quả AI ngoài.'),
-              hskLevel: (targetLevel as HSKLevel) || 1,
-            };
-          });
-        }
-      }
-    } catch {
-      // Fall through to text regex parser
-    }
-
-    // 2. Standard numbered text parser (supports both inline answers and bottom "ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT" table)
-    const parsedLocal: QuizQuestion[] = [];
-    const footerSplit = trimmed.split(
-      /(?:^|\n)\s*(?:\*\*|#+\s*)?(?:ĐÁP\s*ÁN(?:\s*VÀ\s*GIẢI\s*THÍCH(?:\s*CHI\s*TIẾT)?)?|BẢNG\s*ĐÁP\s*ÁN|ANSWER\s*KEY)\s*[:：]?\s*(?:\*\*)?(?:\n|$)/i
-    );
-    const questionsBody = footerSplit[0] || trimmed;
-    const footerBody = footerSplit.slice(1).join('\n');
-
-    // Parse bottom answer key map: Câu 1: B. Giải thích: ...
-    const footerAnswerMap: Record<number, { ansChar: string; explanation: string }> = {};
-    if (footerBody.trim()) {
-      const footerLines = footerBody.split(/\n+/);
-      footerLines.forEach((line) => {
-        const m = line.match(
-          /(?:Câu|Bài|Question)?\s*(\d+)\s*[:.)]\s*\*?\*?([A-D])\*?\*?(?:[.\s-]*(?:Giải thích\s*[:：.]?\s*)?(.+))?/i
-        );
-        if (m) {
-          const qNum = parseInt(m[1], 10);
-          footerAnswerMap[qNum] = {
-            ansChar: m[2].toUpperCase(),
-            explanation: m[3]?.trim() || '',
-          };
-        }
-      });
-    }
-
-    const questionBlocks = questionsBody
-      .split(/(?:^|\n)\s*(?=(?:\*\*?)?(?:Câu|Bài|Question)\s*\d+\s*[:.)]|\d+\s*[:.)]\s+)/i)
-      .map((b) => b.trim())
-      .filter(Boolean);
-
-    const blocksToProcess = questionBlocks.length > 0 ? questionBlocks : [questionsBody];
-
-    blocksToProcess.forEach((block, idx) => {
-      // Extract options (supports both multiline A. ... B. ... and inline A. ... B. ... C. ... D. ...)
-      const optRegex = /(?:^|\s)[A-D][.:)]\s*([^\n]+?)(?=(?:\s+[A-D][.:)]\s+|\n|$))/g;
-      const extractedOpts: string[] = [];
-      let match: RegExpExecArray | null;
-      while ((match = optRegex.exec(block)) !== null) {
-        const cleaned = match[1].replace(/\*\*$/g, '').trim();
-        if (cleaned && extractedOpts.length < 4) {
-          extractedOpts.push(cleaned);
-        }
-      }
-      if (extractedOpts.length === 0) return;
-
-      const options =
-        extractedOpts.length >= 2
-          ? extractedOpts
-          : ['Phương án A', 'Phương án B', 'Phương án C', 'Phương án D'];
-
-      const qNumMatch = block.match(/^(?:\*\*?)?(?:Câu|Bài|Question)?\s*(\d+)\s*[:.)]/i);
-      const qNum = qNumMatch ? parseInt(qNumMatch[1], 10) : idx + 1;
-      const footerEntry = footerAnswerMap[qNum] || footerAnswerMap[idx + 1];
-
-      const ansMatch = block.match(/(?:Đáp án(?:\s*đúng)?|ĐA|Answer|正确答案)\s*[:：.]?\s*\*?\*?([A-D])/i);
-      const ansChar = ansMatch ? ansMatch[1].toUpperCase() : footerEntry?.ansChar || 'A';
-      const ansIndex = ['A', 'B', 'C', 'D'].indexOf(ansChar);
-      const correctAnswer = options[ansIndex >= 0 && ansIndex < options.length ? ansIndex : 0] || options[0];
-
-      const expMatch = block.match(/(?:Giải thích|Explanation|解析)\s*[:：.]\s*([^\n]+)/i);
-      const explanation = expMatch
-        ? expMatch[1].trim()
-        : footerEntry?.explanation
-        ? footerEntry.explanation
-        : `Đáp án đúng: ${ansChar} (${correctAnswer}).`;
-
-      // Question stem is everything before option A.
-      const stemPart = block.split(/(?:^|\n|\s)A[.:)]\s+/)[0]?.trim() || block.split('\n')[0]?.trim() || '';
-      const cleanStem = stemPart.replace(/^(?:\*\*?)?(?:Câu|Bài|Question)?\s*\d*\s*[:.)]?\s*/i, '').trim();
-      const isListening = /男[:：]|女[:：]|问[:：]|\[Nghe\]|听力/i.test(cleanStem);
-      const isFillBlank = cleanStem.includes('____') || cleanStem.includes('___') || cleanStem.includes('（ ）');
-      const audioTxt = cleanStem
-        .replace(/\[Nghe[^\]]*\]/gi, '')
-        .replace(/\([^)]*\)/g, '')
-        .replace(/\s*\n\s*/g, '')
-        .trim();
-
-      parsedLocal.push({
-        id: `raw-q-${Date.now()}-${idx + 1}`,
-        type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
-        prompt: isListening
-          ? 'Nghe hội thoại và chọn đáp án đúng:'
-          : isFillBlank
-          ? 'Chọn từ thích hợp điền vào chỗ trống:'
-          : cleanStem,
-        questionChinese: cleanStem,
-        audioText: isListening ? audioTxt : undefined,
-        audio_url: isListening
-          ? `/api/tts?text=${encodeURIComponent(audioTxt)}&voice=${encodeURIComponent(selectedVoice)}`
-          : undefined,
-        options,
-        correctAnswer,
-        explanation,
-        hskLevel: (targetLevel as HSKLevel) || 1,
-      });
-    });
-
-    return parsedLocal;
-  };
+  const parseExternalAiOrRawText = (rawInput: string): QuizQuestion[] =>
+    parseExternalAiHomeworkText(rawInput, (targetLevel as HSKLevel) || 1, selectedVoice);
 
   // Generate / Load questions handler
   const handleGenerateQuestions = async () => {
@@ -3099,7 +3197,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
 
                       <div className="text-xs text-[var(--color-text-primary)]">
                         <p className="font-semibold">{q.prompt}</p>
-                        {q.questionChinese && (
+                        {q.questionChinese && q.questionChinese !== q.prompt && (
                           <div className="mt-1 p-2 rounded-lg bg-[var(--color-background)] text-xs font-medium font-chinese whitespace-pre-line text-[var(--color-text-primary)]">
                             {q.questionChinese}
                           </div>

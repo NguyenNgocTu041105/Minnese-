@@ -3882,6 +3882,14 @@ Return ONLY a JSON object matching this schema:
     return res.status(400).json({ error: 'Invalid action parameter' });
   });
 
+  // Eagerly initialize QBank SQLite DB & bootstrap bundled official 92-exam seed on server boot
+  // so both student exam endpoints (/api/exam/*) and Admin QBank endpoints (/api/qbank/*) are ready immediately.
+  try {
+    getDbSync();
+  } catch (dbBootErr: any) {
+    console.warn('[Server Boot] QBank DB eager init warning:', dbBootErr?.message || dbBootErr);
+  }
+
   // Mount HSK 3.0 QBank Admin API Router only if kill-switch is enabled
   if (isQBankAdminEnabled()) {
     warnIfInsecureAdminToken();

@@ -225,7 +225,17 @@ export async function requireAdminAuth(req: Request, res: Response, next: NextFu
     if (fbAuth.authorized) {
       return next();
     }
-    if (!hasExplicitQBankToken) {
+    // Always return the actual Firebase auth error unless an explicit server-matching QBank token was also supplied
+    const serverTokenForFallback = getQBankAdminToken();
+    const explicitXToken = String(req.headers['x-qbank-token'] || req.headers['x-qbank-admin-token'] || '').trim();
+    const hasMatchingExplicitToken = Boolean(
+      hasExplicitQBankToken &&
+        serverTokenForFallback &&
+        explicitXToken &&
+        explicitXToken.length === serverTokenForFallback.length &&
+        crypto.timingSafeEqual(Buffer.from(explicitXToken, 'utf-8'), Buffer.from(serverTokenForFallback, 'utf-8'))
+    );
+    if (!hasMatchingExplicitToken) {
       return res.status(403).json({
         success: false,
         error: fbAuth.reason || 'Từ chối truy cập: Tài khoản Firebase không có quyền Quản trị viên QBank.',
@@ -233,36 +243,53 @@ export async function requireAdminAuth(req: Request, res: Response, next: NextFu
     }
   }
 
-  // 1. Loopback IP check (for static QBANK_ADMIN_TOKEN requests without Firebase Admin auth)
-  const remoteIp = (req.socket?.remoteAddress || req.ip || '').trim();
-  const isLoopbackIp =
-    remoteIp === '127.0.0.1' ||
-    remoteIp === '::1' ||
-    remoteIp === '::ffff:127.0.0.1';
-
-  if (!isLoopbackIp) {
-    return res.status(403).json({
-      success: false,
-      error: 'Access denied: QBank Admin is restricted to local loopback interface.',
-    });
-  }
-
-  // 2. Host check: req.headers.host must match loopback (localhost or 127.0.0.1, with optional port)
+  // Determine whether this request is targeting a trusted cloud deployment host (Render)
   const host = (req.headers.host || '').trim();
-  const isLoopbackHost = /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host);
-  if (!isLoopbackHost) {
-    return res.status(403).json({
-      success: false,
-      error: 'Access denied: Invalid Host header for QBank Admin.',
-    });
+  const renderHostname = (process.env.RENDER_EXTERNAL_HOSTNAME || '').trim().toLowerCase();
+  const isRenderEnv = process.env.RENDER === 'true' || Boolean(renderHostname);
+  const isTrustedRenderHost =
+    isRenderEnv &&
+    Boolean(host) &&
+    ((renderHostname && host.toLowerCase() === renderHostname) || /\.onrender\.com$/i.test(host));
+
+  // 1. Loopback IP check (for static QBANK_ADMIN_TOKEN requests without Firebase Admin auth on local/dev)
+  if (!isTrustedRenderHost) {
+    const remoteIp = (req.socket?.remoteAddress || req.ip || '').trim();
+    const isLoopbackIp =
+      remoteIp === '127.0.0.1' ||
+      remoteIp === '::1' ||
+      remoteIp === '::ffff:127.0.0.1';
+
+    if (!isLoopbackIp) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: QBank Admin is restricted to local loopback interface.',
+      });
+    }
+
+    // 2. Host check: req.headers.host must match loopback (localhost or 127.0.0.1, with optional port)
+    const isLoopbackHost = /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host);
+    if (!isLoopbackHost) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Invalid Host header for QBank Admin.',
+      });
+    }
   }
 
   // 3. Origin check on mutating requests (POST/PUT/DELETE)
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method.toUpperCase())) {
     const origin = req.headers.origin;
     if (origin) {
-      const isLoopbackOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
-      if (!isLoopbackOrigin) {
+      let originOk = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+      if (!originOk && isTrustedRenderHost) {
+        try {
+          originOk = new URL(origin).host.toLowerCase() === host.toLowerCase();
+        } catch {
+          originOk = false;
+        }
+      }
+      if (!originOk) {
         return res.status(403).json({
           success: false,
           error: 'Access denied: Cross-Origin request not allowed for QBank Admin.',

@@ -44,7 +44,8 @@ import {
 } from 'lucide-react';
 import { AIExamStudio } from './Admin/AIExamStudio';
 import { playChineseAudio, playDialogueSequence, stopChineseAudio } from '../utils/chineseAudio';
-import { auth } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, loginWithGoogle } from '../lib/firebase';
 import { HSKIllustrationCanvas, resolveSceneKey } from './HSKIllustrationCanvas';
 import { ExportExamModal, downloadExportFile } from './Admin/ExportExamModal';
 import { GoldenPromptLibraryModal } from './Admin/GoldenPromptLibraryModal';
@@ -494,65 +495,88 @@ export interface ApiResponse<T = any> {
  * checks HTTP status (including 401/403 auth checks), and handles network or server errors.
  * Never allows HTML (<!DOCTYPE) error pages or JSON parse exceptions to crash the UI.
  */
+async function waitForFirebaseUser(): Promise<typeof auth.currentUser> {
+  if (!auth) return null;
+  if (auth.currentUser) return auth.currentUser;
+  if (typeof auth.authStateReady === 'function') {
+    try {
+      await auth.authStateReady();
+    } catch {}
+  }
+  if (auth.currentUser) return auth.currentUser;
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        try { unsub(); } catch {}
+        resolve(auth.currentUser || null);
+      }
+    }, 800);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        try { unsub(); } catch {}
+        resolve(u || null);
+      }
+    });
+  });
+}
+
 async function safeApiCall<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
-  const buildAuthHeaders = async (forceRefreshFirebase = false): Promise<Headers> => {
+  let firebaseTokenError = '';
+  const buildAuthHeaders = async (forceRefreshFirebase = false): Promise<{ headers: Headers; hasFirebaseToken: boolean }> => {
     const rawStoredToken = getQBankToken();
     const headers = new Headers(options?.headers || {});
 
     // Ensure Firebase Auth has finished restoring session on fresh devices before first QBank call
-    if (auth && !auth.currentUser && typeof auth.authStateReady === 'function') {
-      try {
-        await auth.authStateReady();
-      } catch {
-        // Ignore authStateReady errors
-      }
-    }
-
-    // Only send stored manual token if it meets security length (>= 32 chars) or no Firebase user is logged in
-    const hasFirebaseUser = Boolean(auth?.currentUser);
-    const usableManualToken =
-      rawStoredToken && (rawStoredToken.length >= 32 || !hasFirebaseUser) ? rawStoredToken : '';
-
-    if (usableManualToken) {
-      headers.set('Authorization', `Bearer ${usableManualToken}`);
-      headers.set('X-QBank-Admin-Token', usableManualToken);
-      headers.set('X-QBank-Token', usableManualToken);
-    }
+    const currentUser = await waitForFirebaseUser();
+    let hasFirebaseToken = false;
 
     // Automatically attach cryptographically signed Firebase ID Token for authenticated Admins
-    if (auth?.currentUser) {
+    if (currentUser) {
       try {
-        const firebaseIdToken = await auth.currentUser.getIdToken(forceRefreshFirebase);
+        const firebaseIdToken = await currentUser.getIdToken(forceRefreshFirebase);
         if (firebaseIdToken) {
           headers.set('X-Firebase-Id-Token', firebaseIdToken);
-          if (!usableManualToken) {
-            headers.set('Authorization', `Bearer ${firebaseIdToken}`);
-          }
+          headers.set('Authorization', `Bearer ${firebaseIdToken}`);
+          hasFirebaseToken = true;
         }
-      } catch {
-        // Ignore token fetch errors and fall back to manual QBANK_ADMIN_TOKEN if present
+      } catch (tokErr: any) {
+        firebaseTokenError = tokErr?.message || String(tokErr || '');
       }
     }
-    return headers;
+
+    // Only attach manual QBANK_ADMIN_TOKEN if no Firebase ID Token was obtained (prevents stale token conflicts)
+    if (!hasFirebaseToken && rawStoredToken) {
+      headers.set('Authorization', `Bearer ${rawStoredToken}`);
+      headers.set('X-QBank-Admin-Token', rawStoredToken);
+      headers.set('X-QBank-Token', rawStoredToken);
+    }
+
+    return { headers, hasFirebaseToken };
   };
 
   try {
-    let headers = await buildAuthHeaders(false);
+    let { headers, hasFirebaseToken } = await buildAuthHeaders(false);
     let res = await fetch(url, { ...options, headers });
 
     // If a logged-in Firebase Admin gets 401/403 (e.g. stale 1h ID token), silently force-refresh once
     if ((res.status === 401 || res.status === 403) && auth?.currentUser) {
-      headers = await buildAuthHeaders(true);
+      const refreshed = await buildAuthHeaders(true);
+      headers = refreshed.headers;
+      hasFirebaseToken = refreshed.hasFirebaseToken;
       res = await fetch(url, { ...options, headers });
     }
 
-    // If Firebase auth succeeded while a stale short manual token (e.g. "12345678") lingered in storage, clear it
-    if (res.ok && auth?.currentUser) {
+    // If Firebase auth succeeded while any stale manual token lingered in storage, clear it
+    if (res.ok && hasFirebaseToken) {
       const stale = getQBankToken();
-      if (stale && stale.length < 32) {
+      if (stale) {
         setQBankToken('');
       }
     }
@@ -567,6 +591,11 @@ async function safeApiCall<T = any>(
           const errJson = await res.json();
           if (errJson.error) errMsg = errJson.error;
         } catch {}
+      }
+      if (!hasFirebaseToken) {
+        errMsg = firebaseTokenError
+          ? `Không lấy được Firebase ID Token (${firebaseTokenError}). Vui lòng bấm Đăng nhập lại bằng tài khoản Admin.`
+          : 'Trình duyệt này chưa có phiên đăng nhập Firebase Admin đang hoạt động. Bấm nút "Đăng nhập Google (Admin)" bên dưới để tự động mở khóa mà không cần nhập token.';
       }
       return {
         success: false,
@@ -1639,6 +1668,34 @@ export const QBankAdmin: React.FC = () => {
     } catch {}
   }, []);
 
+  const [isGoogleReauthing, setIsGoogleReauthing] = useState(false);
+
+  const handleGoogleAdminUnlock = async () => {
+    setIsGoogleReauthing(true);
+    setTokenModalError(null);
+    try {
+      const profile = await loginWithGoogle();
+      if (profile) {
+        setQBankToken('');
+        setShowTokenModal(false);
+        if (pendingRetryFn) {
+          const fn = pendingRetryFn;
+          setPendingRetryFn(null);
+          await fn();
+        }
+        loadPendingQuestions();
+        loadProgress();
+        loadStats();
+        loadQuestions();
+        loadBackendCustomExamSets();
+      }
+    } catch (err: any) {
+      setTokenModalError(err?.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsGoogleReauthing(false);
+    }
+  };
+
   useEffect(() => {
     loadPendingQuestions();
     loadProgress();
@@ -1651,7 +1708,23 @@ export const QBankAdmin: React.FC = () => {
       loadCoverageDashboard();
       loadBlueprintReport();
     }, 350);
-    return () => clearTimeout(secondaryTimer);
+
+    const unsubAuth = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        setShowTokenModal(false);
+        setTokenModalError(null);
+        loadPendingQuestions();
+        loadProgress();
+        loadStats();
+        loadQuestions();
+        loadBackendCustomExamSets();
+      }
+    });
+
+    return () => {
+      clearTimeout(secondaryTimer);
+      unsubAuth();
+    };
   }, [loadStats, loadQuestions, loadProgress, loadPendingQuestions, loadPoolStats, loadSchedulerStatus, loadCoverageDashboard, loadBlueprintReport, loadBackendCustomExamSets]);
 
   // Total pending count from progress or stats
@@ -9428,6 +9501,21 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
               <p className="text-[11px] italic">
                 Mã token được lưu an toàn trong <code>sessionStorage</code> và sẽ tự động xóa khi đóng tab trình duyệt.
               </p>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={handleGoogleAdminUnlock}
+                disabled={isGoogleReauthing}
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>{isGoogleReauthing ? 'Đang xác thực Google Admin...' : 'Đăng nhập Google (Tự động mở khóa Admin — không cần Token)'}</span>
+              </button>
+              <div className="text-[11px] text-center text-[var(--color-text-secondary)]">
+                — hoặc nhập mã QBANK_ADMIN_TOKEN thủ công nếu dùng nội bộ —
+              </div>
             </div>
 
             <div className="space-y-1.5">

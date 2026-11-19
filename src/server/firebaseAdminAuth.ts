@@ -201,6 +201,8 @@ interface VerifiedJwtPayload {
   uid: string;
   email: string;
   emailVerified: boolean;
+  customRole?: string;
+  customAdmin?: boolean;
 }
 
 async function verifyFirebaseIdTokenWithPublicCerts(
@@ -261,11 +263,15 @@ async function verifyFirebaseIdTokenWithPublicCerts(
 
   const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
   const emailVerified = payload.email_verified !== false;
+  const customRole = typeof payload.role === 'string' ? payload.role.trim().toLowerCase() : undefined;
+  const customAdmin = payload.admin === true;
 
   return {
     uid: payload.sub.trim(),
     email,
     emailVerified,
+    customRole,
+    customAdmin,
   };
 }
 
@@ -305,7 +311,10 @@ async function checkAdminViaFirestoreRest(
 
   // 2. Fetch fresh system_config/admins doc (where Admin Portal stores granted admins)
   try {
-    const adminsRes = await fetch(`${baseUrl}/system_config/admins`, { headers });
+    let adminsRes = await fetch(`${baseUrl}/system_config/admins`, { headers });
+    if (!adminsRes.ok) {
+      adminsRes = await fetch(`${baseUrl}/system_config/admins`, { headers: { Accept: 'application/json' } });
+    }
     if (adminsRes.ok) {
       const docJson = (await adminsRes.json()) as any;
       const list = extractStringArrayFromFirestoreField(docJson?.fields?.admin_emails);
@@ -319,13 +328,16 @@ async function checkAdminViaFirestoreRest(
     console.warn('[Firebase Admin Auth] Firestore REST system_config/admins lookup failed:', err?.message || err);
   }
 
-  // 3. Fallback: check users/{uid}.role === 'admin'
+  // 3. Fallback: check users/{uid}.role === 'admin' or 'teacher'
   try {
-    const userRes = await fetch(`${baseUrl}/users/${encodeURIComponent(uid)}`, { headers });
+    let userRes = await fetch(`${baseUrl}/users/${encodeURIComponent(uid)}`, { headers });
+    if (!userRes.ok) {
+      userRes = await fetch(`${baseUrl}/users/${encodeURIComponent(uid)}`, { headers: { Accept: 'application/json' } });
+    }
     if (userRes.ok) {
       const docJson = (await userRes.json()) as any;
       const role = String(docJson?.fields?.role?.stringValue || '').trim().toLowerCase();
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'teacher') {
         return true;
       }
     }
@@ -355,10 +367,10 @@ async function checkAdminViaAdminSdk(uid: string, email: string, databaseId: str
       }
     }
 
-    // 2. Check users/{uid} -> role === 'admin'
+    // 2. Check users/{uid} -> role === 'admin' or 'teacher'
     const userSnap = await fsDb.collection('users').doc(uid).get();
     const role = userSnap.exists ? String(userSnap.data()?.role || '').trim().toLowerCase() : '';
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'teacher') {
       return true;
     }
   } catch (fsErr: any) {
@@ -404,18 +416,21 @@ export async function verifyFirebaseAdminIdToken(
   try {
     let uid = '';
     let email = '';
-    let emailVerified = true;
+    let customRole = '';
+    let customAdmin = false;
 
     if (useSdk) {
       const decoded = await getAuth().verifyIdToken(idToken, true);
       uid = decoded.uid;
       email = (decoded.email || '').trim().toLowerCase();
-      emailVerified = decoded.email_verified !== false;
+      customRole = typeof (decoded as any).role === 'string' ? String((decoded as any).role).trim().toLowerCase() : '';
+      customAdmin = (decoded as any).admin === true;
     } else {
       const verified = await verifyFirebaseIdTokenWithPublicCerts(idToken, cfg.projectId);
       uid = verified.uid;
       email = verified.email;
-      emailVerified = verified.emailVerified;
+      customRole = verified.customRole || '';
+      customAdmin = Boolean(verified.customAdmin);
     }
 
     if (!email) {
@@ -427,7 +442,11 @@ export async function verifyFirebaseAdminIdToken(
       };
     }
 
-    // Also allow Firebase custom claims role === 'admin' or admin === true if set
+    // 0. Custom claims check
+    if (customAdmin || customRole === 'admin' || customRole === 'teacher') {
+      return { authorized: true, uid, email };
+    }
+
     // 1. Primary owner / static allowlist check
     const allowedEmails = getAllowedAdminEmails();
     if (allowedEmails.has(email)) {

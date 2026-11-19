@@ -1826,7 +1826,12 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
       const playSpokenScriptFallback = async () => {
         if (!textToPlay) return;
-        await playDialogueSequence(textToPlay, { rate, pitch });
+        await playDialogueSequence(textToPlay, {
+          rate,
+          pitch,
+          level: selectedLevel,
+          seed: q.id,
+        });
       };
 
       const playSinglePass = async () => {
@@ -3178,7 +3183,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-100"></span>
                             </span>
                             <span className="font-bold">
-                              🎧 Đang phát bài nghe AI (HSK {selectedLevel} • Giọng chuẩn CLEC Xiaoxiao/Yunxi)...
+                              🎧 Đang phát bài nghe AI (HSK {selectedLevel} • Giọng chuẩn đa nhân vật Nam/Nữ)...
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -4922,11 +4927,15 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                           type="button"
                           data-testid="btn-replay-review-audio"
                           onClick={() => {
-                            if (item.audio_url) {
-                              playAudioUrl(item.audio_url, 0.9);
-                            } else {
-                              const text = item.audio_text || item.stem;
-                              if (text) playChineseAudio(text, 0.9);
+                            const text = item.audio_text || item.stem;
+                            if (item.audio_url && !item.audio_url.startsWith('/api/tts')) {
+                              playAudioUrl(item.audio_url, 0.96);
+                            } else if (text) {
+                              playDialogueSequence(text, {
+                                rate: 0.96,
+                                level: selectedLevel,
+                                seed: item.id,
+                              });
                             }
                           }}
                           className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"

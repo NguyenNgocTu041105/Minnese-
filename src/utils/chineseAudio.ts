@@ -36,6 +36,16 @@ const VOICE_SETTINGS_STORAGE_KEY = 'minnese_chinese_voice_settings_v2';
 
 export const EDGE_TTS_VOICES: VoiceOption[] = [
   {
+    id: 'auto',
+    name: 'Tự Động Đa Giọng AI (Nam/Nữ Chuẩn HSK - Khuyên dùng)',
+    lang: 'zh-CN',
+    gender: 'unknown',
+    accent: 'Standard (Bắc Kinh)',
+    description: '🎭 Tự động phân vai Nam/Nữ đa dạng cho từng câu hỏi và hội thoại chuẩn đề thi HSK',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
     id: 'zh-CN-XiaoxiaoNeural',
     name: 'Hiểu Hiểu (Xiaoxiao) - Nữ Chuẩn Giáo Trình / Cô Giáo',
     lang: 'zh-CN',
@@ -52,6 +62,26 @@ export const EDGE_TTS_VOICES: VoiceOption[] = [
     gender: 'female',
     accent: 'Standard (Bắc Kinh)',
     description: '👩 Giọng Nữ Trẻ Trung • Trong trẻo, tươi vui (AI Tiểu Ngữ, Nữ sinh, Bạn học)',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-liaoning-XiaobeiNeural',
+    name: 'Tiểu Bối (Xiaobei) - Nữ Sinh Động / Đời Thường',
+    lang: 'zh-CN',
+    gender: 'female',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👩 Giọng Nữ Sinh Động • Gần gũi, tự nhiên trong hội thoại đời sống',
+    isNative: true,
+    isAIStudio: true,
+  },
+  {
+    id: 'zh-CN-shaanxi-XiaoniNeural',
+    name: 'Tiểu Ni (Xiaoni) - Nữ Dịu Dàng / Truyền Cảm',
+    lang: 'zh-CN',
+    gender: 'female',
+    accent: 'Standard (Bắc Kinh)',
+    description: '👩 Giọng Nữ Dịu Dàng • Truyền cảm, điềm đạm (Trưởng bối, kể chuyện)',
     isNative: true,
     isAIStudio: true,
   },
@@ -161,15 +191,16 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
 };
 
 /**
- * Natural 1x Native Mandarin Audio Pacing Matrix across HSK 1–6 (no artificial slowdown).
+ * Natural Native Mandarin Audio Pacing Matrix across HSK 1–6
+ * Sent natively to Microsoft Edge Neural SSML (zero pitch distortion).
  */
 export const HSK_LEVEL_AUDIO_PACING: Record<number, { rate: number; pitch: number }> = {
-  1: { rate: 1.00, pitch: 1.00 },
-  2: { rate: 1.00, pitch: 1.00 },
-  3: { rate: 1.00, pitch: 1.00 },
+  1: { rate: 0.94, pitch: 1.00 },
+  2: { rate: 0.96, pitch: 1.00 },
+  3: { rate: 0.98, pitch: 1.00 },
   4: { rate: 1.00, pitch: 1.00 },
   5: { rate: 1.00, pitch: 1.00 },
-  6: { rate: 1.00, pitch: 1.00 },
+  6: { rate: 1.02, pitch: 1.00 },
 };
 
 
@@ -500,7 +531,8 @@ export function parseDialogueTurns(raw: string): DialogueTurn[] | null {
   if (!raw || typeof raw !== 'string') return null;
   const sanitized = sanitizeDialogueScript(raw);
 
-  const regex = /(?:^|\s|\n)(男|女|问|甲|乙|★)\s*[:：]\s*/g;
+  // Match speaker markers at start, after whitespace/newline, OR directly after Chinese punctuation (。！？!?)
+  const regex = /(?:^|[\s\r\n]+|(?<=[。！？!?]))(男|女|问|甲|乙|★|A|B)\s*[:：]\s*/g;
   const matches = [...sanitized.matchAll(regex)];
   if (matches.length === 0) {
     return null;
@@ -535,8 +567,8 @@ export function parseDialogueTurns(raw: string): DialogueTurn[] | null {
 
     if (turnText) {
       let role: DialogueTurn['role'] = 'narrator';
-      if (roleTag === '男' || roleTag === '甲') role = 'male';
-      else if (roleTag === '女' || roleTag === '乙') role = 'female';
+      if (roleTag === '男' || roleTag === '甲' || roleTag === 'A') role = 'male';
+      else if (roleTag === '女' || roleTag === '乙' || roleTag === 'B') role = 'female';
       else if (roleTag === '问') {
         role = 'narrator';
         if (!turnText.startsWith('问')) {
@@ -681,13 +713,25 @@ export function selectContextualSingleVoice(scriptText: string, preferredVoice?:
   return pool[computeDeterministicHash(s) % pool.length];
 }
 
+export interface DialoguePlaybackOptions {
+  rate?: number;
+  pitch?: number;
+  maleVoice?: string;
+  femaleVoice?: string;
+  level?: number;
+  seed?: string;
+  includeQuestion?: boolean;
+}
+
 /**
- * Plays dialogue turns (or a raw dialogue script string) sequentially with context-aware
- * multi-character neural voices, authentic pauses between turns (650ms), and 1200ms before question prompt.
+ * Plays dialogue turns (or a raw dialogue script string) using studio-grade
+ * server-stitched multi-speaker Microsoft Edge Neural TTS (single seamless MP3
+ * with distinct Male/Female neural actors & natural conversational pauses),
+ * with graceful offline fallback to turn-by-turn / browser speech synthesis.
  */
 export async function playDialogueSequence(
   turnsOrScript: DialogueTurn[] | string,
-  settingsOrOptions?: VoiceSettings | { rate?: number; pitch?: number; maleVoice?: string; femaleVoice?: string },
+  settingsOrOptions?: VoiceSettings | DialoguePlaybackOptions,
   overrideRate?: number,
   overridePitch?: number
 ): Promise<void> {
@@ -699,44 +743,86 @@ export async function playDialogueSequence(
   let effectivePitch = overridePitch;
   let preferredMale: string | undefined;
   let preferredFemale: string | undefined;
+  let hskLevel: number | undefined;
+  let seedKey: string | undefined;
+  let includeQuestion = false;
 
   if (settingsOrOptions && typeof settingsOrOptions === 'object') {
     if ('voiceId' in settingsOrOptions) {
       settings = settingsOrOptions as VoiceSettings;
     } else {
-      const opts = settingsOrOptions as { rate?: number; pitch?: number; maleVoice?: string; femaleVoice?: string };
+      const opts = settingsOrOptions as DialoguePlaybackOptions;
       if (effectiveRate === undefined && opts.rate !== undefined) effectiveRate = opts.rate;
       if (effectivePitch === undefined && opts.pitch !== undefined) effectivePitch = opts.pitch;
       preferredMale = opts.maleVoice;
       preferredFemale = opts.femaleVoice;
+      hskLevel = opts.level;
+      seedKey = opts.seed;
+      includeQuestion = Boolean(opts.includeQuestion);
     }
   }
+
+  const finalRate = effectiveRate ?? settings.rate ?? 1.0;
 
   let turns: DialogueTurn[];
   let rawContextText = '';
   if (typeof turnsOrScript === 'string') {
-    rawContextText = turnsOrScript;
+    rawContextText = turnsOrScript.trim();
+    // Primary fast & seamless path: let the pure-Node Edge Neural server synthesize
+    // the full dialogue (distinct Male/Female neural voices + natural pauses) OR
+    // diverse monologue narrator in ONE clean MP3 stream with native SSML rate!
+    if (rawContextText && !preferredMale && !preferredFemale) {
+      try {
+        await playPutonghuaAudioStream(rawContextText, finalRate, 'auto', false, {
+          level: hskLevel,
+          seed: seedKey,
+          includeQuestion,
+          preserveDialogueTags: true,
+        });
+        return;
+      } catch {
+        // Fall through to turn-by-turn / browser fallback if server TTS is unreachable
+      }
+    }
+
     const parsed = parseDialogueTurns(turnsOrScript);
     if (parsed && parsed.length > 0) {
       turns = parsed;
     } else {
       const sanitized = sanitizeQuestionAudioText(turnsOrScript) || sanitizeDialogueScript(turnsOrScript) || turnsOrScript;
-      // Strip any lingering speaker names so single voice doesn't read character names aloud
       const cleanDialogueText = sanitized
         .replace(/(?:^|[\r\n\s]+)(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]\s*/gi, ' ')
         .trim();
       const singleVoice = selectContextualSingleVoice(turnsOrScript);
       try {
-        await playPutonghuaAudioStream(cleanDialogueText || sanitized, effectiveRate ?? settings.rate ?? 1.0, singleVoice, false);
+        await playPutonghuaAudioStream(cleanDialogueText || sanitized, finalRate, singleVoice, false, {
+          level: hskLevel,
+          seed: seedKey,
+        });
         return;
       } catch {
-        await playBrowserUtterance(cleanAudioText(cleanDialogueText || sanitized), settings, effectiveRate, effectivePitch);
+        await playBrowserUtterance(cleanAudioText(cleanDialogueText || sanitized), settings, finalRate, effectivePitch);
         return;
       }
     }
   } else {
     turns = turnsOrScript;
-    rawContextText = turns.map((t) => `${t.role === 'male' ? '男：' : t.role === 'female' ? '女：' : '问：'}${t.text}`).join('\n');
+    rawContextText = turns
+      .map((t) => `${t.role === 'male' ? '男：' : t.role === 'female' ? '女：' : '问：'}${t.text}`)
+      .join('\n');
+    if (rawContextText && !preferredMale && !preferredFemale) {
+      try {
+        await playPutonghuaAudioStream(rawContextText, finalRate, 'auto', false, {
+          level: hskLevel,
+          seed: seedKey,
+          includeQuestion: includeQuestion || turns.some((t) => t.role === 'narrator'),
+          preserveDialogueTags: true,
+        });
+        return;
+      } catch {
+        // Fall through to turn-by-turn / browser fallback
+      }
+    }
   }
 
   const voiceCast = selectContextualVoiceCast(rawContextText, preferredMale, preferredFemale);
@@ -748,7 +834,7 @@ export async function playDialogueSequence(
 
     const turn = turns[i];
     if (i > 0) {
-      const pauseDuration = turn.role === 'narrator' ? 1200 : 650;
+      const pauseDuration = turn.role === 'narrator' ? 750 : 450;
       await sleepWithAbort(pauseDuration, controller.signal);
       if (controller.signal.aborted) break;
     }
@@ -772,10 +858,13 @@ export async function playDialogueSequence(
         : voiceCast.narrator;
 
     try {
-      await playPutonghuaAudioStream(cleanText, effectiveRate ?? settings.rate ?? 1.0, roleVoice, true);
+      await playPutonghuaAudioStream(cleanText, finalRate, roleVoice, true, {
+        level: hskLevel,
+        seed: seedKey,
+      });
     } catch {
       if (!controller.signal.aborted) {
-        await playBrowserUtterance(cleanText, settings, effectiveRate, turnPitch, turn.role, true);
+        await playBrowserUtterance(cleanText, settings, finalRate, turnPitch, turn.role, true);
       }
     }
     if (controller.signal.aborted) break;
@@ -1005,15 +1094,24 @@ function playBrowserUtterance(
  */
 const ttsAudioCache = new Map<string, HTMLAudioElement>();
 
+export interface PutonghuaStreamOptions {
+  level?: number;
+  seed?: string;
+  includeQuestion?: boolean;
+  preserveDialogueTags?: boolean;
+}
+
 /**
  * High-Fidelity National Standard Putonghua Audio Stream (一级甲等普通话)
- * Plays studio-grade, pleasant, crystal-clear Mandarin audio across Grammar, Vocabulary, and Dictionary.
+ * Plays studio-grade, natural, multi-speaker Microsoft Edge Neural Mandarin audio
+ * with native SSML speed control (zero pitch-stretching distortion).
  */
 export async function playPutonghuaAudioStream(
   text: string,
   rate: number = 1.0,
-  voice: string = 'zh-CN-XiaoxiaoNeural',
-  skipGlobalStop: boolean = false
+  voice: string = 'auto',
+  skipGlobalStop: boolean = false,
+  options?: PutonghuaStreamOptions
 ): Promise<void> {
   if (!skipGlobalStop) {
     stopChineseAudio();
@@ -1034,16 +1132,41 @@ export async function playPutonghuaAudioStream(
     }
   }
 
-  const sanitized = sanitizeQuestionAudioText(text) || resolveChineseTtsPayload(text) || text;
-  const trimmed = sanitized
-    .replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ')
-    .replace(/_{2,}/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let trimmed: string;
+  if (options?.preserveDialogueTags) {
+    trimmed = String(text || '')
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ')
+      .replace(/_{2,}/g, '，')
+      .replace(/[ \t]+/g, ' ')
+      .trim();
+  } else {
+    const sanitized = sanitizeQuestionAudioText(text) || resolveChineseTtsPayload(text) || text;
+    trimmed = sanitized
+      .replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ')
+      .replace(/_{2,}/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   if (!trimmed) return;
 
-  const url = `/api/tts?text=${encodeURIComponent(trimmed)}&voice=${encodeURIComponent(voice)}`;
-  const cacheKey = `${voice}:${trimmed}`;
+  const safeRate = Number.isFinite(rate) && rate > 0 ? Math.max(0.6, Math.min(1.5, rate)) : 1.0;
+  // Pass rate natively to Microsoft Edge Neural SSML within 0.72–1.28x (zero client pitch distortion!)
+  const useNativeServerRate = safeRate >= 0.72 && safeRate <= 1.28;
+  const params = new URLSearchParams();
+  params.set('text', trimmed);
+  params.set('voice', voice || 'auto');
+  if (useNativeServerRate && Math.abs(safeRate - 1.0) >= 0.01) {
+    params.set('rate', safeRate.toFixed(2));
+  }
+  if (options?.level) params.set('level', String(options.level));
+  if (options?.seed) params.set('seed', options.seed);
+  if (options?.includeQuestion) params.set('includeQuestion', '1');
+  params.set('v', '3');
+
+  const url = `/api/tts?${params.toString()}`;
+  const cacheKey = url;
 
   return new Promise((resolve, reject) => {
     const cached = ttsAudioCache.get(cacheKey);
@@ -1064,7 +1187,7 @@ export async function playPutonghuaAudioStream(
     }
 
     activeHtmlAudio = audio;
-    audio.playbackRate = rate || 1.0;
+    audio.playbackRate = useNativeServerRate ? 1.0 : safeRate;
 
     let settled = false;
     let startupTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
@@ -1082,7 +1205,7 @@ export async function playPutonghuaAudioStream(
         audio.pause();
       } catch {}
       reject(new Error('TTS timeout'));
-    }, 5000);
+    }, 12000);
 
     const clearStartupTimer = () => {
       if (startupTimer) {

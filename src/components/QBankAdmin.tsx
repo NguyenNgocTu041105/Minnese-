@@ -43,7 +43,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { AIExamStudio } from './Admin/AIExamStudio';
-import { playChineseAudio, playDialogueSequence, stopChineseAudio } from '../utils/chineseAudio';
+import { playChineseAudio, playDialogueSequence, playPutonghuaAudioStream, stopChineseAudio } from '../utils/chineseAudio';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, loginWithGoogle } from '../lib/firebase';
 import { HSKIllustrationCanvas, resolveSceneKey } from './HSKIllustrationCanvas';
@@ -2912,7 +2912,8 @@ export const QBankAdmin: React.FC = () => {
     try {
       stopChineseAudio();
       await playDialogueSequence(text, {
-        rate: 0.9,
+        rate: 0.96,
+        seed: questionId,
       });
       setIsPlayingWebSpeechId(null);
       return;
@@ -2953,10 +2954,14 @@ export const QBankAdmin: React.FC = () => {
       await playIntroChime();
     }
 
-    const sampleText = '你好，这是普通话发音测试。';
+    const sampleText = '你好，这是普通话发音测试。欢迎参加汉语水平考试。';
     try {
       stopChineseAudio();
-      await playChineseAudio(sampleText, 0.9);
+      if (voiceId && voiceId !== 'default' && !voiceId.startsWith('gemini-')) {
+        await playPutonghuaAudioStream(sampleText, 0.96, voiceId);
+      } else {
+        await playChineseAudio(sampleText, 0.96);
+      }
       setIsAuditioningVoiceId(null);
       return;
     } catch {

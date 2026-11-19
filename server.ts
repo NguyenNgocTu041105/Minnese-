@@ -32,6 +32,10 @@ import {
 import { examRouter } from './src/server/examRoutes';
 import { initAutoQuestionScheduler } from './src/server/cron/autoQuestionScheduler';
 import { handleBYOKTest, handleVoiceChatCall } from './src/server/voiceChatHandler';
+import {
+  ALLOWED_EDGE_VOICE_IDS,
+  synthesizeEdgeNeuralTts,
+} from './src/server/services/edgeTtsNode';
 
 export {
   isQBankAdminEnabled,
@@ -2182,8 +2186,13 @@ QUY TẮC BẮT BUỘC:
     }
   });
 
-    // High-Fidelity Standard Putonghua Audio Streaming Endpoint with Microsoft Edge Neural Voices
-  const putonghuaTtsCache = new Map<string, Buffer>();
+    // High-Fidelity Standard Putonghua Audio Streaming Endpoint with Microsoft Edge Neural Voices (Pure Node.js)
+  interface CachedTtsEntry {
+    buffer: Buffer;
+    voices: string[];
+    turns: number;
+  }
+  const putonghuaTtsCache = new Map<string, CachedTtsEntry>();
   const MAX_PUTONGHUA_CACHE = 3000;
   const ttsDiskCacheDir = path.join(process.cwd(), 'public', 'audio', 'tts_cache');
   if (!fs.existsSync(ttsDiskCacheDir)) {
@@ -2191,23 +2200,23 @@ QUY TẮC BẮT BUỘC:
   }
 
   // Concurrency & Deduplication Safeguards to guarantee minimal CPU & RAM consumption
-  const activeTtsJobs = new Map<string, Promise<Buffer>>();
-  let activePythonTtsWorkers = 0;
-  const MAX_CONCURRENT_TTS_WORKERS = 4;
+  const activeTtsJobs = new Map<string, Promise<CachedTtsEntry>>();
+  let activeTtsWorkers = 0;
+  const MAX_CONCURRENT_TTS_WORKERS = 8;
   const ttsQueue: Array<() => void> = [];
 
   function acquireTtsWorker(): Promise<() => void> {
     return new Promise((resolve) => {
       const proceed = () => {
-        activePythonTtsWorkers++;
+        activeTtsWorkers++;
         resolve(() => {
-          activePythonTtsWorkers--;
+          activeTtsWorkers--;
           const next = ttsQueue.shift();
           if (next) next();
         });
       };
 
-      if (activePythonTtsWorkers < MAX_CONCURRENT_TTS_WORKERS) {
+      if (activeTtsWorkers < MAX_CONCURRENT_TTS_WORKERS) {
         proceed();
       } else {
         ttsQueue.push(proceed);
@@ -2215,16 +2224,7 @@ QUY TẮC BẮT BUỘC:
     });
   }
 
-  const ALLOWED_EDGE_VOICES = new Set([
-    'zh-CN-XiaoxiaoNeural',
-    'zh-CN-XiaoyiNeural',
-    'zh-CN-YunxiNeural',
-    'zh-CN-YunjianNeural',
-    'zh-CN-YunyangNeural',
-    'zh-CN-YunxiaNeural',
-    'zh-CN-liaoning-XiaobeiNeural',
-    'zh-CN-shaanxi-XiaoniNeural',
-  ]);
+  const ALLOWED_EDGE_VOICES = ALLOWED_EDGE_VOICE_IDS;
 
   app.get('/api/tts/voices', (_req: Request, res: Response) => {
     res.json([
@@ -2294,115 +2294,146 @@ QUY TẮC BẮT BUỘC:
       return res.status(400).json({ error: 'Text query parameter is required' });
     }
 
-    const requestedVoice = typeof req.query.voice === 'string' && req.query.voice.trim() ? req.query.voice.trim() : '';
-    let voice = 'zh-CN-XiaoxiaoNeural';
-    if (requestedVoice === 'auto') {
+    const requestedVoice = typeof req.query.voice === 'string' && req.query.voice.trim() ? req.query.voice.trim() : 'auto';
+    let voice = 'auto';
+    if (requestedVoice === 'auto' || requestedVoice === 'default') {
       voice = 'auto';
     } else if (ALLOWED_EDGE_VOICES.has(requestedVoice)) {
       voice = requestedVoice;
     } else if (requestedVoice.includes('Xiaoyi') || requestedVoice === 'edge-xiaoyi') {
       voice = 'zh-CN-XiaoyiNeural';
+    } else if (requestedVoice.includes('Xiaobei')) {
+      voice = 'zh-CN-liaoning-XiaobeiNeural';
+    } else if (requestedVoice.includes('Xiaoni')) {
+      voice = 'zh-CN-shaanxi-XiaoniNeural';
     } else if (requestedVoice.includes('Yunxi') || requestedVoice === 'edge-yunxi') {
       voice = 'zh-CN-YunxiNeural';
     } else if (requestedVoice.includes('Yunjian') || requestedVoice === 'edge-yunjian') {
       voice = 'zh-CN-YunjianNeural';
+    } else if (requestedVoice.includes('Yunyang')) {
+      voice = 'zh-CN-YunyangNeural';
+    } else if (requestedVoice.includes('Yunxia')) {
+      voice = 'zh-CN-YunxiaNeural';
+    } else if (requestedVoice.includes('Xiaoxiao')) {
+      voice = 'zh-CN-XiaoxiaoNeural';
     }
 
-    // Sanitize parenthetical Pinyin annotations and Vietnamese headers if Chinese text is present
-    let cleanedText = rawText.slice(0, 1500);
-    if (/[\u4e00-\u9fff]/.test(cleanedText)) {
-      cleanedText = cleanedText
-        .replace(/^(?:Câu|Bài|Question|Part|Phần)\s*\d+\s*[:：.\-)\]]\s*/i, '')
-        .replace(/^(?:Đọc|Nghe)\s+(?:đoạn\s+)?(?:hội\s+thoại|câu|đoạn\s+văn)(?:\s+sau)?(?:\s+và\s+trả\s+lời(?:\s+câu\s+hỏi)?)?\s*[:：]?\s*/i, '')
-        .replace(/(?:^|[\r\n\s]+)(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|Gợi\s*ý|Chú\s*thích)\s*[:：][^\r\n]*/gi, ' ')
-        .replace(/(?:^|[\r\n\s]+)(?:人物|参与人物|对话人物|角色|背景|场景)\s*[:：][^\r\n]*/g, ' ')
-        .replace(/^(?:问|Question|Hỏi)\s*[:：]\s*/gi, '')
-        .replace(/([\r\n]+)\s*(?:Question|Hỏi)\s*[:：]\s*/gi, '$1')
-        .replace(/\([^()\u4e00-\u9fff]*\)/g, ' ')
-        .replace(/（[^（）\u4e00-\u9fff]*）/g, ' ')
-        .replace(/_{2,}/g, '，')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-    }
-    const textToSynth = (cleanedText || rawText).slice(0, 1000);
-    const isMultiDialogue =
-      voice === 'auto' ||
-      /(?:^|[\r\n\s])(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]/.test(
-        textToSynth
-      );
+    const rawRate = typeof req.query.rate === 'string' ? req.query.rate.trim() : '';
+    const parsedLevel = typeof req.query.level === 'string' ? parseInt(req.query.level, 10) : NaN;
+    const hskLevel = Number.isFinite(parsedLevel) && parsedLevel >= 1 && parsedLevel <= 6 ? parsedLevel : undefined;
+    const seed = typeof req.query.seed === 'string' ? req.query.seed.trim().slice(0, 80) : '';
+    const includeQuestion = req.query.includeQuestion === '1' || req.query.includeQuestion === 'true';
 
-    // If single voice mode, strip speaker tags so the narrator does not read character names aloud
-    const textForSingleVoice = textToSynth
-      .replace(/(?:^|[\r\n\s]+)(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]\s*/gi, ' ')
-      .trim();
-
-    const hash = crypto.createHash('md5').update(`${voice}:${textToSynth}`).digest('hex');
+    // Preserve line breaks for multi-speaker dialogue parsing while stripping non-spoken metadata
+    const textToSynth = rawText.slice(0, 1500);
+    const hash = crypto
+      .createHash('md5')
+      .update(`v3-edge-node:${voice}:${rawRate}:${hskLevel ?? ''}:${seed}:${includeQuestion ? 'q1' : 'q0'}:${textToSynth}`)
+      .digest('hex');
 
     // 1. Check in-memory LRU cache
     if (putonghuaTtsCache.has(hash)) {
       const cached = putonghuaTtsCache.get(hash)!;
       res.setHeader('Content-Type', 'audio/mpeg');
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-      return res.send(cached);
+      res.setHeader('X-TTS-Provider', 'edge-neural-node-memcache');
+      if (cached.voices.length > 0) res.setHeader('X-TTS-Voices', cached.voices.join(','));
+      res.setHeader('X-TTS-Turns', String(cached.turns));
+      return res.send(cached.buffer);
     }
 
-    // 2. Check persistent disk cache
-    const diskPath = path.join(ttsDiskCacheDir, `${hash}.mp3`);
+    // 2. Check persistent disk cache (v3-edge-node files only)
+    const diskPath = path.join(ttsDiskCacheDir, `v3_${hash}.mp3`);
     if (fs.existsSync(diskPath)) {
       try {
         const diskBuffer = fs.readFileSync(diskPath);
-        if (putonghuaTtsCache.size < MAX_PUTONGHUA_CACHE) {
-          putonghuaTtsCache.set(hash, diskBuffer);
+        if (diskBuffer.length >= 256) {
+          const entry: CachedTtsEntry = { buffer: diskBuffer, voices: [], turns: 1 };
+          if (putonghuaTtsCache.size < MAX_PUTONGHUA_CACHE) {
+            putonghuaTtsCache.set(hash, entry);
+          }
+          res.setHeader('Content-Type', 'audio/mpeg');
+          res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+          res.setHeader('X-TTS-Provider', 'edge-neural-node-diskcache');
+          return res.send(diskBuffer);
         }
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-        return res.send(diskBuffer);
       } catch {}
     }
 
-    // 3. Deduplicate in-flight requests (if 5 requests ask for the same word simultaneously, run Python only once)
+    // 3. Deduplicate in-flight synthesis requests using pure Node.js Microsoft Edge Neural TTS
     let synthPromise = activeTtsJobs.get(hash);
     if (!synthPromise) {
       synthPromise = (async () => {
         const releaseWorker = await acquireTtsWorker();
         try {
-          const pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim() || process.env.PYTHON_PATH?.trim() || 'python';
-          const synthScript = path.join(process.cwd(), 'scripts', 'edge_tts_synth.py');
-          const multiTtsScript = path.join(process.cwd(), 'tts_service.py');
+          // Primary: Pure Node.js Microsoft Edge Neural TTS (zero Python dependency — works on Windows, Linux & Render!)
+          try {
+            const result = await synthesizeEdgeNeuralTts(textToSynth, {
+              voice,
+              rate: rawRate || undefined,
+              seed: seed || undefined,
+              level: hskLevel,
+              includeQuestion,
+            });
 
-          await new Promise<void>((resolve, reject) => {
-            const args = isMultiDialogue
-              ? [multiTtsScript, '--text', textToSynth, '--output', diskPath, '--voice', voice, '--no-chime']
-              : [synthScript, textForSingleVoice || textToSynth, diskPath, voice === 'auto' ? 'zh-CN-XiaoxiaoNeural' : voice, '+0%'];
-            execFile(
-              pythonExec,
-              args,
-              {
-                cwd: process.cwd(),
-                timeout: isMultiDialogue ? 25000 : 15000,
-                env: {
-                  ...process.env,
-                  PYTHONIOENCODING: 'utf-8',
-                  PYTHONUTF8: '1',
-                },
-              },
-              (err) => {
-                if (err) reject(err);
-                else resolve();
-              }
-            );
-          });
+            try {
+              fs.writeFileSync(diskPath, result.buffer);
+            } catch {}
 
-          if (fs.existsSync(diskPath)) {
-            const buffer = fs.readFileSync(diskPath);
+            const entry: CachedTtsEntry = {
+              buffer: result.buffer,
+              voices: result.voicesUsed,
+              turns: result.turnCount,
+            };
             if (putonghuaTtsCache.size >= MAX_PUTONGHUA_CACHE) {
               const firstKey = putonghuaTtsCache.keys().next().value;
               if (firstKey) putonghuaTtsCache.delete(firstKey);
             }
-            putonghuaTtsCache.set(hash, buffer);
-            return buffer;
+            putonghuaTtsCache.set(hash, entry);
+            return entry;
+          } catch (nodeEdgeErr: any) {
+            console.warn('[TTS Node EdgeNeural warning]', nodeEdgeErr?.message || nodeEdgeErr);
           }
-          throw new Error('Synth output file not created');
+
+          // Secondary fallback: local Python tts_service.py (if available in local dev)
+          const pythonExec = process.env.QBANK_PYTHON_EXECUTABLE?.trim() || process.env.PYTHON_PATH?.trim() || 'python';
+          const multiTtsScript = path.join(process.cwd(), 'tts_service.py');
+          if (fs.existsSync(multiTtsScript)) {
+            await new Promise<void>((resolve, reject) => {
+              execFile(
+                pythonExec,
+                [multiTtsScript, '--text', textToSynth, '--output', diskPath, '--voice', voice, '--no-chime'],
+                {
+                  cwd: process.cwd(),
+                  timeout: 20000,
+                  env: {
+                    ...process.env,
+                    PYTHONIOENCODING: 'utf-8',
+                    PYTHONUTF8: '1',
+                  },
+                },
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+
+            if (fs.existsSync(diskPath)) {
+              const buffer = fs.readFileSync(diskPath);
+              if (buffer.length >= 256) {
+                const entry: CachedTtsEntry = { buffer, voices: [voice], turns: 1 };
+                if (putonghuaTtsCache.size >= MAX_PUTONGHUA_CACHE) {
+                  const firstKey = putonghuaTtsCache.keys().next().value;
+                  if (firstKey) putonghuaTtsCache.delete(firstKey);
+                }
+                putonghuaTtsCache.set(hash, entry);
+                return entry;
+              }
+            }
+          }
+
+          throw new Error('Edge Neural TTS synthesis failed');
         } finally {
           releaseWorker();
           activeTtsJobs.delete(hash);
@@ -2413,39 +2444,45 @@ QUY TẮC BẮT BUỘC:
     }
 
     try {
-      const buffer = await synthPromise;
+      const entry = await synthPromise;
       res.setHeader('Content-Type', 'audio/mpeg');
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-      return res.send(buffer);
+      res.setHeader('X-TTS-Provider', 'edge-neural-node');
+      if (entry.voices.length > 0) res.setHeader('X-TTS-Voices', entry.voices.join(','));
+      res.setHeader('X-TTS-Turns', String(entry.turns));
+      return res.send(entry.buffer);
     } catch (synthErr) {
       activeTtsJobs.delete(hash);
     }
 
-    // 4. Fallback to Google Translate TTS
-        try {
-          const googleTtsUrl =
-            'https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=' +
-            encodeURIComponent(textToSynth.slice(0, 200));
-          const audioRes = await fetch(googleTtsUrl, {
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-              Referer: 'https://translate.google.com/',
-            },
-          });
+    // 4. Emergency last-resort fallback to Google Translate TTS (NEVER cached!)
+    try {
+      const stripTags = textToSynth
+        .replace(/(?:^|[\r\n\s]+)(?:男|女|甲|乙|问|Question|A|B)\s*[:：]\s*/gi, ' ')
+        .trim();
+      const googleTtsUrl =
+        'https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=' +
+        encodeURIComponent((stripTags || textToSynth).slice(0, 200));
+      const audioRes = await fetch(googleTtsUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          Referer: 'https://translate.google.com/',
+        },
+      });
 
-          if (audioRes.ok) {
-            const buffer = Buffer.from(await audioRes.arrayBuffer());
-            putonghuaTtsCache.set(hash, buffer);
-            res.setHeader('Content-Type', 'audio/mpeg');
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(buffer);
-          }
-        } catch (fbErr) {
-          console.warn('[TTS Fallback Error]', fbErr && fbErr.message);
-        }
+      if (audioRes.ok) {
+        const buffer = Buffer.from(await audioRes.arrayBuffer());
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('X-TTS-Provider', 'google-fallback');
+        return res.send(buffer);
+      }
+    } catch (fbErr: any) {
+      console.warn('[TTS Fallback Error]', fbErr?.message);
+    }
 
-        return res.status(500).json({ error: 'TTS synthesis temporarily unavailable' });
+    return res.status(500).json({ error: 'TTS synthesis temporarily unavailable' });
   });
 
   // In-memory server-side cache & rate-limit cooldown for Gemini TTS

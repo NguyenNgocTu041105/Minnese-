@@ -9,6 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
+import { auth } from '../../lib/firebase';
 
 export interface ExportFilePayload {
   format: 'xlsx' | 'docx' | 'json';
@@ -37,25 +38,53 @@ export async function downloadExportFile(
   fallbackFileName: string,
   onTokenExpired?: () => void
 ): Promise<void> {
-  const token =
-    typeof window !== 'undefined'
-      ? sessionStorage.getItem('qbank_admin_token') || localStorage.getItem('qbank_admin_token')
-      : null;
+  const buildHeaders = async (forceRefreshFirebase = false): Promise<Record<string, string>> => {
+    const token =
+      typeof window !== 'undefined'
+        ? sessionStorage.getItem('qbank_admin_token') || localStorage.getItem('qbank_admin_token')
+        : null;
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['X-QBank-Admin-Token'] = token;
+      headers['X-Admin-Token'] = token;
+    }
+
+    if (auth && !auth.currentUser && typeof auth.authStateReady === 'function') {
+      try {
+        await auth.authStateReady();
+      } catch {}
+    }
+    if (auth?.currentUser) {
+      try {
+        const fbToken = await auth.currentUser.getIdToken(forceRefreshFirebase);
+        if (fbToken) {
+          headers['X-Firebase-Id-Token'] = fbToken;
+          if (!token) {
+            headers['Authorization'] = `Bearer ${fbToken}`;
+          }
+        }
+      } catch {}
+    }
+    return headers;
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-    headers['X-QBank-Admin-Token'] = token;
-    headers['X-Admin-Token'] = token;
-  }
 
-  const res = await fetch(exportUrl, {
+  let res = await fetch(exportUrl, {
     method: 'POST',
-    headers,
+    headers: await buildHeaders(false),
     body: JSON.stringify(payload),
   });
+
+  if ((res.status === 401 || res.status === 403) && auth?.currentUser) {
+    res = await fetch(exportUrl, {
+      method: 'POST',
+      headers: await buildHeaders(true),
+      body: JSON.stringify(payload),
+    });
+  }
 
   if (res.status === 401 || res.status === 403) {
     if (onTokenExpired) onTokenExpired();

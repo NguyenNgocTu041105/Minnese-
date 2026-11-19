@@ -1,0 +1,11 @@
+{
+  "cacheKey": "694810b0bf744926",
+  "rawPrompt": "student reading an open book quietly at library desk",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of student reading an open book quietly at library desk, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "student reading open",
+  "theme": "reading",
+  "tier": "tier2_cloudflare",
+  "byteSize": 521918,
+  "createdAt": "2026-11-18T13:59:28.770Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

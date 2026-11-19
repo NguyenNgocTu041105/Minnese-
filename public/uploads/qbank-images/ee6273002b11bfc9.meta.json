@@ -1,0 +1,11 @@
+{
+  "cacheKey": "ee6273002b11bfc9",
+  "rawPrompt": "yellow city taxi car driving on street",
+  "imagePromptEn": "A clean, clear educational illustration of yellow city taxi car driving on street, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "yellow city taxi",
+  "theme": "taxi",
+  "tier": "tier2_cloudflare",
+  "byteSize": 302901,
+  "createdAt": "2026-11-18T13:07:55.620Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

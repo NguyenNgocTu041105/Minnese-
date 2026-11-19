@@ -536,17 +536,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             ✨ Mới nhất
                           </span>
                         )}
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-                          {assign.content_type === 'quiz'
-                            ? 'Trắc nghiệm & Đề thi'
-                            : assign.content_type === 'deck'
-                            ? 'Bộ thẻ Flashcards'
-                            : assign.content_type === 'reading'
-                            ? 'Luyện Đọc hiểu'
-                            : assign.content_type === 'speaking'
-                            ? 'Luyện Nói & Phát âm'
-                            : 'Luyện Viết chữ Hán'}
-                        </span>
+                        {(() => {
+                          const isListeningAssign =
+                            assign.content_type === 'listening' ||
+                            (assign.questions && assign.questions.length > 0 && assign.questions.every((q: any) => q.type === 'listening')) ||
+                            /luyện nghe|nghe hiểu|nghe hội thoại/i.test(assign.title || '') ||
+                            /luyện nghe|nghe hiểu|nghe hội thoại/i.test(assign.description || '');
+
+                          return (
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border ${
+                              isListeningAssign
+                                ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30'
+                                : 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary)]/20'
+                            }`}>
+                              {isListeningAssign
+                                ? 'Luyện Nghe phản xạ'
+                                : assign.content_type === 'quiz'
+                                ? 'Trắc nghiệm & Đề thi'
+                                : assign.content_type === 'deck'
+                                ? 'Bộ thẻ Flashcards'
+                                : assign.content_type === 'reading'
+                                ? 'Luyện Đọc hiểu'
+                                : assign.content_type === 'speaking'
+                                ? 'Luyện Nói & Phát âm'
+                                : 'Luyện Viết chữ Hán'}
+                            </span>
+                          );
+                        })()}
                         {assign.exam_code && (
                           <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
                             Mã: {assign.exam_code}

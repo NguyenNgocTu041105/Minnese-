@@ -200,12 +200,17 @@ export function getMaskedStem(
     };
   }
 
-  // Pattern 3: Question stem contains speaker labels (男：/ 女：/ 甲：/ 乙：/ A: / B:)
+  // Pattern 3: Question stem contains speaker labels (男：/ 女：/ 甲：/ 乙：/ A: / B:) or raw spoken script
   const hasDialogue =
     /(?:^|\s|\n)(男|女|甲|乙)\s*[:：]/.test(rawStem) ||
     (/(?:^|\s|\n)A\s*[:：]/.test(rawStem) && /(?:^|\s|\n)B\s*[:：]/.test(rawStem));
+  const isInstructionStem = /^(?:听录音|听问句|听对话|听短文|Nghe|Hãy nghe)/i.test(rawStem);
 
-  if (hasDialogue || (q.audio_text && rawStem === q.audio_text.trim())) {
+  if (
+    hasDialogue ||
+    (q.audio_text && rawStem === q.audio_text.trim()) ||
+    (!isInstructionStem && (q.part_type?.startsWith('listen_picture_match') || q.part_type?.startsWith('listen_question_answer')))
+  ) {
     return {
       promptText: '🎧 Nghe đoạn hội thoại qua âm thanh để chọn đáp án đúng.',
       pinyinText: '',
@@ -239,6 +244,7 @@ export interface WrongAnswerItem {
   explanation_vi: string;
   audio_text?: string;
   audio_url?: string;
+  image_url?: string;
   illustration?: string;
   timestamp: number;
   mastered: boolean;
@@ -260,6 +266,7 @@ export interface LogWrongAnswerInput {
   explanation_vi: string;
   audio_text?: string;
   audio_url?: string;
+  image_url?: string;
   illustration?: string;
 }
 
@@ -343,6 +350,7 @@ export interface ExamScoreResult {
     part_type: string;
     audio_text?: string;
     audio_url?: string;
+    image_url?: string;
     illustration?: string;
   }>;
 }
@@ -1678,6 +1686,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
               correctAnswer: data.correctAnswer,
               explanation_vi: data.explanation_vi,
               audio_text: q.audio_text,
+              audio_url: (q as any).audio_url,
+              image_url: (q as any).image_url,
               illustration: q.illustration,
             });
           } else {
@@ -1730,6 +1740,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
           correctAnswer: q.answer_index,
           explanation_vi: q.explanation_vi,
           audio_text: q.audio_text,
+          audio_url: (q as any).audio_url,
+          image_url: (q as any).image_url,
           illustration: q.illustration,
         });
       } else {
@@ -1768,8 +1780,21 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   // =========================================================================
   // CLEC Audio Simulation Engine
   // =========================================================================
+  const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (replayTimerRef.current) {
+      clearTimeout(replayTimerRef.current);
+      replayTimerRef.current = null;
+    }
+  }, [currentIndex, currentView]);
+
   const handlePlayAudio = useCallback(
     async (q: HSKExamQuestion) => {
+      if (replayTimerRef.current) {
+        clearTimeout(replayTimerRef.current);
+        replayTimerRef.current = null;
+      }
       if (isPlayingAudio) {
         stopChineseAudio();
         setIsPlayingAudio(false);
@@ -1777,9 +1802,10 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
       }
 
       const rawTextToPlay = q.audio_text || q.stem || '';
+      const splitBefore = rawTextToPlay.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim();
       const textToPlay =
-        q.skill === 'listening'
-          ? (rawTextToPlay.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim() || rawTextToPlay)
+        isListeningQuestion(q)
+          ? (splitBefore || rawTextToPlay.replace(/^(?:问|Question|Hỏi|★)\s*[:：]?\s*/i, '').trim())
           : rawTextToPlay;
       if (!textToPlay && !q.audio_url) return;
 
@@ -1792,7 +1818,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
       setIsPlayingAudio(true);
 
-      const defaultPacing = HSK_LEVEL_AUDIO_PACING[selectedLevel] || { rate: 0.86, pitch: 1.0 };
+      const defaultPacing = HSK_LEVEL_AUDIO_PACING[selectedLevel] || { rate: 1.0, pitch: 1.0 };
       const rate = currentView === 'practice'
         ? audioSpeed
         : defaultPacing.rate;
@@ -1819,7 +1845,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
         // In Exam mode for HSK 1-3: automatic 2nd playback after 2.5s pause if 1st play
         if (currentView === 'exam' && selectedLevel <= 3 && newCount === 1) {
-          setTimeout(async () => {
+          replayTimerRef.current = setTimeout(async () => {
+            replayTimerRef.current = null;
             try {
               await playSinglePass();
               setAudioPlayCounts((prev) => ({ ...prev, [q.id]: 2 }));
@@ -1894,6 +1921,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
             correctAnswer: w.correctAnswer,
             explanation_vi: w.explanation_vi,
             audio_text: w.audio_text,
+            audio_url: w.audio_url,
+            image_url: (w as any).image_url,
             illustration: w.illustration,
           });
         });
@@ -3078,7 +3107,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                           type="button"
                           data-testid="btn-play-listening-audio"
                           onClick={() => handlePlayAudio(currentQuestion)}
-                          disabled={!canPlayAudio || isPlayingAudio}
+                          disabled={!canPlayAudio && !isPlayingAudio}
                           className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all ${
                             !canPlayAudio
                               ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
@@ -3166,26 +3195,36 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
 
 
-              {/* Authentic Vector Illustration (Stimulus only; omitted if picture matching to avoid spoiling options) */}
+              {/* Authentic Vector / Waterfall Illustration (Stimulus only; guarded to visual/optional-visual part types and omitted if picture matching to avoid spoiling options) */}
               {Boolean(
-                currentQuestion.illustration &&
+                (currentQuestion.illustration || (currentQuestion as any).image_url) &&
                 !currentQuestion.part_type.includes('picture_match') &&
-                (!currentQuestion.options_images || currentQuestion.options_images.length === 0)
+                (!currentQuestion.options_images || currentQuestion.options_images.length === 0) &&
+                (
+                  currentQuestion.part_type === 'listen_true_false_2opt' ||
+                  currentQuestion.part_type === 'read_true_false_2opt' ||
+                  currentQuestion.part_type === 'listen_short_dialogue_4opt' ||
+                  currentQuestion.part_type === 'listen_short_dialogue_3opt' ||
+                  currentQuestion.part_type === 'read_sentence_picture_match_4opt' ||
+                  currentQuestion.part_type === 'read_word_picture_match_4opt' ||
+                  currentQuestion.part_type.startsWith('write_picture_')
+                )
               ) && (
-                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm bg-[var(--color-surface)]">
+                <div className="my-2 w-56 sm:w-64 mx-auto rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm bg-[var(--color-surface)]">
                   <HSKIllustrationCanvas
                     scene={currentQuestion.illustration}
-                    aspectRatio="4/3"
-                    heightClass="h-48 sm:h-64"
+                    imageUrl={(currentQuestion as any).image_url}
+                    aspectRatio="square"
                     badgeLabel="Hình minh họa câu hỏi"
-                    caption={currentQuestion.illustration}
+                    hideLabels={true}
+                    examMode={isExamMode}
                     showZoomButton={true}
                     onZoom={() =>
                       setLightboxImage({
                         isOpen: true,
-                        title: currentQuestion.illustration || 'Hình minh họa câu hỏi',
-                        scene: currentQuestion.illustration,
-                        caption: currentQuestion.stem,
+                        title: 'Hình minh họa câu hỏi',
+                        scene: (currentQuestion as any).image_url || currentQuestion.illustration,
+                        caption: isExamMode ? undefined : currentQuestion.stem,
                       })
                     }
                   />
@@ -3884,14 +3923,16 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   return {
                     letter: l,
                     scene: imgDesc,
-                    title: `${l}. ${optText}`,
-                    caption: imgDesc,
+                    title: isExamMode ? `Phương án ${l}` : `${l}. ${optText}`,
+                    caption: isExamMode ? undefined : imgDesc,
                   };
                 });
 
                 const colsClass =
                   currentQuestion.options_images!.length <= 3
                     ? 'grid-cols-1 sm:grid-cols-3'
+                    : currentQuestion.options_images!.length === 4
+                    ? 'grid-cols-2 sm:grid-cols-4'
                     : 'grid-cols-2 sm:grid-cols-3';
 
                 return (
@@ -3944,9 +3985,9 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                                 setLightboxImage({
                                   isOpen: true,
                                   scene: imageDesc,
-                                  title: `${letter}. ${optText}`,
+                                  title: isExamMode ? `Phương án ${letter}` : `${letter}. ${optText}`,
                                   subtitle: `Phương án ${letter}`,
-                                  caption: imageDesc,
+                                  caption: isExamMode ? undefined : imageDesc,
                                   gallery: galleryItems,
                                   galleryIndex: optIdx,
                                 });
@@ -3958,19 +3999,21 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                             </button>
                           </div>
 
-                          {/* Authentic Vector Illustration Option Card */}
+                          {/* Authentic Vector Illustration Option Card (1:1 Square) */}
                           <div className="rounded-xl overflow-hidden border border-slate-200/60 dark:border-slate-800/60">
                             <HSKIllustrationCanvas
                               scene={imageDesc}
-                              aspectRatio="4/3"
-                              heightClass="h-28 sm:h-32"
+                              imageUrl={imageDesc}
+                              aspectRatio="square"
                               isOptionCard={true}
+                              hideLabels={true}
+                              examMode={isExamMode}
                               showZoomButton={false}
                             />
                           </div>
 
                           {/* Text Label & Pinyin */}
-                          {!isExamMode && (
+                          {!isExamMode && optText && !/^[A-F]$/i.test(optText.trim()) && (
                             <div className="space-y-0.5 text-center">
                               {isQuestionPinyinAllowed && (
                                 <div className="font-mono text-[11px] text-teal-600 dark:text-teal-400">
@@ -4603,22 +4646,22 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
                   {/* Stem Illustration if any */}
                   {Boolean(
-                    item.illustration &&
+                    (item.illustration || item.image_url) &&
                     (!item.options_images || item.options_images.length === 0)
                   ) && (
-                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 max-w-sm">
+                    <div className="my-2 mx-auto rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 w-48 sm:w-56">
                       <HSKIllustrationCanvas
                         scene={item.illustration}
-                        aspectRatio="4/3"
-                        heightClass="h-32 sm:h-36"
+                        imageUrl={item.image_url}
+                        aspectRatio="square"
                         badgeLabel="Hình minh họa"
-                        caption={item.illustration}
+                        hideLabels={true}
                         showZoomButton={true}
                         onZoom={() =>
                           setLightboxImage({
                             isOpen: true,
-                            title: item.illustration || 'Hình minh họa',
-                            scene: item.illustration,
+                            title: 'Hình minh họa',
+                            scene: item.image_url || item.illustration,
                             caption: item.stem,
                           })
                         }
@@ -4628,7 +4671,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
                   {/* Options */}
                   {item.options_images && item.options_images.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div className={`w-full grid gap-3.5 text-xs ${item.options_images.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
                       {(item.options || []).map((opt, optIdx) => {
                         const optLetter = String.fromCharCode(65 + optIdx);
                         const isCorrectOpt = optIdx === item.correctAnswer;
@@ -4667,13 +4710,16 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                             <div className="rounded-lg overflow-hidden border border-slate-200/60 dark:border-slate-800/60">
                               <HSKIllustrationCanvas
                                 scene={imgDesc}
-                                aspectRatio="4/3"
-                                heightClass="h-20 sm:h-24"
+                                imageUrl={imgDesc}
+                                aspectRatio="square"
                                 isOptionCard={true}
+                                hideLabels={true}
                                 showZoomButton={false}
                               />
                             </div>
-                            <span className="text-center font-medium line-clamp-1">{opt}</span>
+                            {opt && !/^[A-F]$/i.test(opt.trim()) && (
+                              <span className="text-center font-medium line-clamp-1">{opt}</span>
+                            )}
                           </div>
                         );
                       })}
@@ -5092,22 +5138,22 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
                   {/* Stem Illustration if any */}
                   {Boolean(
-                    item.illustration &&
+                    (item.illustration || item.image_url) &&
                     (!item.options_images || item.options_images.length === 0)
                   ) && (
-                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 max-w-sm">
+                    <div className="my-2 mx-auto rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 w-48 sm:w-56">
                       <HSKIllustrationCanvas
                         scene={item.illustration}
-                        aspectRatio="4/3"
-                        heightClass="h-32 sm:h-36"
+                        imageUrl={item.image_url}
+                        aspectRatio="square"
                         badgeLabel="Hình minh họa"
-                        caption={item.illustration}
+                        hideLabels={true}
                         showZoomButton={true}
                         onZoom={() =>
                           setLightboxImage({
                             isOpen: true,
-                            title: item.illustration || 'Hình minh họa',
-                            scene: item.illustration,
+                            title: 'Hình minh họa',
+                            scene: item.image_url || item.illustration,
                             caption: item.stem,
                           })
                         }
@@ -5117,7 +5163,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
                   {/* Options */}
                   {item.options_images && item.options_images.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div className={`w-full grid gap-3.5 text-xs ${item.options_images.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
                       {(item.options || []).map((opt, optIdx) => {
                         const optLetter = String.fromCharCode(65 + optIdx);
                         const isCorrectOpt = optIdx === item.correctAnswer;
@@ -5156,13 +5202,16 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                             <div className="rounded-lg overflow-hidden border border-slate-200/60 dark:border-slate-800/60">
                               <HSKIllustrationCanvas
                                 scene={imgDesc}
-                                aspectRatio="4/3"
-                                heightClass="h-20 sm:h-24"
+                                imageUrl={imgDesc}
+                                aspectRatio="square"
                                 isOptionCard={true}
+                                hideLabels={true}
                                 showZoomButton={false}
                               />
                             </div>
-                            <span className="text-center font-medium line-clamp-1">{opt}</span>
+                            {opt && !/^[A-F]$/i.test(opt.trim()) && (
+                              <span className="text-center font-medium line-clamp-1">{opt}</span>
+                            )}
                           </div>
                         );
                       })}

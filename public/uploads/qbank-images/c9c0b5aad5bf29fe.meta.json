@@ -1,0 +1,11 @@
+{
+  "cacheKey": "c9c0b5aad5bf29fe",
+  "rawPrompt": "runner jogging on sunny park trail",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of runner jogging on sunny park trail, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "runner jogging park",
+  "theme": "sunny",
+  "tier": "tier2_cloudflare",
+  "byteSize": 651520,
+  "createdAt": "2026-11-18T15:27:05.649Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

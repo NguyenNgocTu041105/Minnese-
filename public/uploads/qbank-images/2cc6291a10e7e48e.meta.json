@@ -1,0 +1,11 @@
+{
+  "cacheKey": "2cc6291a10e7e48e",
+  "rawPrompt": "taxi",
+  "imagePromptEn": "A clean, clear educational illustration of taxi, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "taxi",
+  "theme": "taxi",
+  "tier": "tier2_cloudflare",
+  "byteSize": 439641,
+  "createdAt": "2026-11-18T12:19:14.189Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

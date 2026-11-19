@@ -1,0 +1,11 @@
+{
+  "cacheKey": "7b99a9f9d013519c",
+  "rawPrompt": "reading",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of reading, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "reading",
+  "theme": "reading",
+  "tier": "tier2_cloudflare",
+  "byteSize": 482805,
+  "createdAt": "2026-11-18T14:00:34.741Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

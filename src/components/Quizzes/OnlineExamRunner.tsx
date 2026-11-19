@@ -90,7 +90,7 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
   } | null>(null);
 
   const questions = useMemo(
-    () => (exam.questions || []).map((q) => normalizeListeningMcqOptions(verifyAndFixQuizQuestionPinyin(q))),
+    () => (exam.questions || []).map((q) => normalizeListeningMcqOptions(verifyAndFixQuizQuestionPinyin(q as any) as any) as QuizQuestion),
     [exam.questions]
   );
   const currentQuestion = questions[currentIndex];
@@ -414,7 +414,11 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                     return (
                       <div
                         className={`grid gap-3 pt-2 ${
-                          resolvedOptionImages.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'
+                          resolvedOptionImages.length <= 3
+                            ? 'grid-cols-1 sm:grid-cols-3'
+                            : resolvedOptionImages.length === 4
+                            ? 'grid-cols-2 sm:grid-cols-4'
+                            : 'grid-cols-2 sm:grid-cols-3'
                         }`}
                       >
                         {resolvedOptionImages.map((scene: string, oIdx: number) => {
@@ -451,9 +455,16 @@ export const OnlineExamRunner: React.FC<OnlineExamRunnerProps> = ({
                                 )}
                               </div>
                               <div className="w-full rounded-xl overflow-hidden bg-white/5 border border-[var(--color-border)]/40 p-1">
-                                <HSKIllustrationCanvas scene={scene} aspectRatio="4/3" heightClass="h-28 sm:h-32" isOptionCard />
+                                <HSKIllustrationCanvas
+                                  scene={scene}
+                                  imageUrl={scene}
+                                  aspectRatio="square"
+                                  isOptionCard
+                                  hideLabels={true}
+                                  examMode={!isSubmitted}
+                                />
                               </div>
-                              {currentQuestion.options?.[oIdx] && (
+                              {isSubmitted && currentQuestion.options?.[oIdx] && (
                                 <span className="text-xs sm:text-sm font-chinese font-semibold text-[var(--color-text-primary)]">
                                   {currentQuestion.options[oIdx]}
                                 </span>

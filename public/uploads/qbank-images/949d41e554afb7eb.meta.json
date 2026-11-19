@@ -1,0 +1,11 @@
+{
+  "cacheKey": "949d41e554afb7eb",
+  "rawPrompt": "ceramic cup of warm green tea",
+  "imagePromptEn": "A clean, clear educational illustration of ceramic cup of warm green tea, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "ceramic cup warm",
+  "theme": "tea",
+  "tier": "tier2_cloudflare",
+  "byteSize": 125970,
+  "createdAt": "2026-11-18T13:08:22.351Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

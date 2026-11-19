@@ -53,6 +53,10 @@ import {
   buildExternalAiPrompt,
   EXTERNAL_MODEL_LABELS,
   EXTERNAL_PROMPT_FORMAT_LABELS,
+  getDynamicFormatDisplay,
+  getFormatsForLevelAndSkill,
+  getQuestionCountOptionsForLevel,
+  getRecommendedQuestionCount,
   type ExternalAiModelTarget,
   type ExternalPromptFormatType,
 } from '../utils/externalAiPromptBuilder';
@@ -77,6 +81,8 @@ export interface PendingQuestionItem {
   skill: string;
   part_type: string;
   illustration_theme?: string | null;
+  image_url?: string | null;
+  audio_text?: string | null;
   options_images?: string[];
   topic?: string | null;
   difficulty_tier?: string | null;
@@ -383,6 +389,7 @@ export function parseListeningParts(
 }
 
 export interface QbQuestionItem {
+  id?: string;
   question_id: string;
   level: number;
   skill: string;
@@ -390,6 +397,9 @@ export interface QbQuestionItem {
   stem: string;
   passage?: string | null;
   audio_url?: string | null;
+  audio_text?: string | null;
+  image_url?: string | null;
+  illustration_theme?: string | null;
   options_images?: string[];
   options: string[];
   answer_index: number;
@@ -488,22 +498,37 @@ async function safeApiCall<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
-  try {
-    const token = getQBankToken();
+  const buildAuthHeaders = async (forceRefreshFirebase = false): Promise<Headers> => {
+    const rawStoredToken = getQBankToken();
     const headers = new Headers(options?.headers || {});
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-      headers.set('X-QBank-Admin-Token', token);
-      headers.set('X-QBank-Token', token);
+
+    // Ensure Firebase Auth has finished restoring session on fresh devices before first QBank call
+    if (auth && !auth.currentUser && typeof auth.authStateReady === 'function') {
+      try {
+        await auth.authStateReady();
+      } catch {
+        // Ignore authStateReady errors
+      }
+    }
+
+    // Only send stored manual token if it meets security length (>= 32 chars) or no Firebase user is logged in
+    const hasFirebaseUser = Boolean(auth?.currentUser);
+    const usableManualToken =
+      rawStoredToken && (rawStoredToken.length >= 32 || !hasFirebaseUser) ? rawStoredToken : '';
+
+    if (usableManualToken) {
+      headers.set('Authorization', `Bearer ${usableManualToken}`);
+      headers.set('X-QBank-Admin-Token', usableManualToken);
+      headers.set('X-QBank-Token', usableManualToken);
     }
 
     // Automatically attach cryptographically signed Firebase ID Token for authenticated Admins
     if (auth?.currentUser) {
       try {
-        const firebaseIdToken = await auth.currentUser.getIdToken();
+        const firebaseIdToken = await auth.currentUser.getIdToken(forceRefreshFirebase);
         if (firebaseIdToken) {
           headers.set('X-Firebase-Id-Token', firebaseIdToken);
-          if (!token) {
+          if (!usableManualToken) {
             headers.set('Authorization', `Bearer ${firebaseIdToken}`);
           }
         }
@@ -511,8 +536,27 @@ async function safeApiCall<T = any>(
         // Ignore token fetch errors and fall back to manual QBANK_ADMIN_TOKEN if present
       }
     }
+    return headers;
+  };
 
-    const res = await fetch(url, { ...options, headers });
+  try {
+    let headers = await buildAuthHeaders(false);
+    let res = await fetch(url, { ...options, headers });
+
+    // If a logged-in Firebase Admin gets 401/403 (e.g. stale 1h ID token), silently force-refresh once
+    if ((res.status === 401 || res.status === 403) && auth?.currentUser) {
+      headers = await buildAuthHeaders(true);
+      res = await fetch(url, { ...options, headers });
+    }
+
+    // If Firebase auth succeeded while a stale short manual token (e.g. "12345678") lingered in storage, clear it
+    if (res.ok && auth?.currentUser) {
+      const stale = getQBankToken();
+      if (stale && stale.length < 32) {
+        setQBankToken('');
+      }
+    }
+
     const contentType = res.headers.get('content-type') || '';
 
     // Handle 401/403 auth failures gracefully
@@ -565,14 +609,7 @@ async function safeApiCall<T = any>(
  */
 export function detectCharNoise(q: QbQuestionItem): { hasNoise: boolean; reasons: string[] } {
   const reasons: string[] = [];
-
-  if (q.critical_flags?.has_char_noise) {
-    if (q.critical_flags.char_noise_reasons && q.critical_flags.char_noise_reasons.length > 0) {
-      reasons.push(...q.critical_flags.char_noise_reasons);
-    } else {
-      reasons.push('Phát hiện cờ ký tự nhiễu');
-    }
-  }
+  const isPinyinTask = q.part_type === 'write_tianzige_from_pinyin' || /pinyin/i.test(q.part_type || '');
 
   if (q.qa?.notes) {
     for (const note of q.qa.notes) {
@@ -587,23 +624,49 @@ export function detectCharNoise(q: QbQuestionItem): { hasNoise: boolean; reasons
   const latinOrVietnamese = /[a-zA-ZàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/;
   const parenNoise = /[()（）]/;
 
-  if (latinOrVietnamese.test(q.stem || '')) {
+  const cleanStem = String(q.stem || '')
+    .replace(/（\s*）|\(\s*\)/g, '')
+    .replace(/(?:^|[\r\n\s])[A-Ba-b]\s*[:：]/g, ' ');
+  const stemForCheck = isPinyinTask ? cleanStem.replace(/\([^)]*\)|（[^）]*）/g, '') : cleanStem;
+
+  if (!isPinyinTask && latinOrVietnamese.test(stemForCheck)) {
     reasons.push('Câu dẫn chứa chữ Latin hoặc tiếng Việt có dấu');
   }
-  if (parenNoise.test(q.stem || '')) {
+  if (!isPinyinTask && parenNoise.test(stemForCheck)) {
     reasons.push('Câu dẫn chứa chú thích trong dấu ngoặc');
   }
 
   if (q.options && Array.isArray(q.options)) {
     q.options.forEach((opt, idx) => {
-      const label = ['A', 'B', 'C', 'D'][idx] || String(idx + 1);
-      if (latinOrVietnamese.test(opt || '')) {
+      const label = ['A', 'B', 'C', 'D', 'E', 'F'][idx] || String(idx + 1);
+      const rawOpt = String(opt || '').trim();
+      // Single-letter picture-match labels ("A", "B", "C", "D") and ordering chains ("A-B-C") are valid HSK formats, not noise
+      if (/^[A-Fa-f]$/.test(rawOpt) || /^[A-Fa-f](?:[\s\-–—>→,]+[A-Fa-f])+$/i.test(rawOpt)) {
+        return;
+      }
+      const cleanOpt = rawOpt.replace(/^[A-Fa-f][.、:\s]+/, '').trim();
+      if (latinOrVietnamese.test(cleanOpt)) {
         reasons.push(`Phương án ${label} chứa chữ Latin hoặc tiếng Việt`);
       }
-      if (parenNoise.test(opt || '')) {
+      if (parenNoise.test(cleanOpt)) {
         reasons.push(`Phương án ${label} chứa chú thích trong dấu ngoặc`);
       }
     });
+  }
+
+  if (reasons.length === 0 && q.critical_flags?.has_char_noise) {
+    // Only surface backend critical_flags if options aren't valid single-letter picture/ordering labels
+    const allValidLabels =
+      Array.isArray(q.options) &&
+      q.options.length > 0 &&
+      q.options.every((o) => /^[A-Fa-f]$/.test(String(o || '').trim()) || /^[A-Fa-f](?:[\s\-–—>→,]+[A-Fa-f])+$/i.test(String(o || '').trim()));
+    if (!allValidLabels && !isPinyinTask) {
+      if (q.critical_flags.char_noise_reasons && q.critical_flags.char_noise_reasons.length > 0) {
+        reasons.push(...q.critical_flags.char_noise_reasons);
+      } else {
+        reasons.push('Phát hiện cờ ký tự nhiễu');
+      }
+    }
   }
 
   return {
@@ -654,8 +717,8 @@ export const QBankAdmin: React.FC = () => {
   // Universal Question Import state
   const [importInputText, setImportInputText] = useState('');
   const [importLevel, setImportLevel] = useState<number>(1);
-  const [importSkill, setImportSkill] = useState<'listening' | 'reading' | 'writing'>('reading');
-  const [importPartType, setImportPartType] = useState<string>('read_fill_blank_4opt');
+  const [importSkill, setImportSkill] = useState<'auto' | 'listening' | 'reading' | 'writing'>('auto');
+  const [importPartType, setImportPartType] = useState<string>('auto');
   const [importTopic, setImportTopic] = useState<string>('');
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [importResult, setImportResult] = useState<any | null>(null);
@@ -709,8 +772,9 @@ export const QBankAdmin: React.FC = () => {
 
   // Milestone M4: 1-Click External AI Prompt Builder state
   const [promptTargetModel, setPromptTargetModel] = useState<ExternalAiModelTarget>('deepseek');
-  const [promptFormatType, setPromptFormatType] = useState<ExternalPromptFormatType>('multi_part_20q');
-  const [promptQuestionCount, setPromptQuestionCount] = useState<number>(20);
+  const [promptSkillFilter, setPromptSkillFilter] = useState<'all' | 'listening' | 'reading' | 'writing'>('all');
+  const [promptFormatType, setPromptFormatType] = useState<ExternalPromptFormatType>('full_cbt_mock_exam');
+  const [promptQuestionCount, setPromptQuestionCount] = useState<number>(40);
   const [promptIncludePinyin, setPromptIncludePinyin] = useState<boolean>(true);
 
   const generatedExternalPrompt = useMemo(
@@ -896,9 +960,10 @@ export const QBankAdmin: React.FC = () => {
   const [tokenModalError, setTokenModalError] = useState<string | null>(null);
   const [pendingRetryFn, setPendingRetryFn] = useState<(() => Promise<void> | void) | null>(null);
 
-  const promptTokenModal = useCallback((retryFn?: () => Promise<void> | void) => {
-    setTokenInput(getQBankToken());
-    setTokenModalError('Yêu cầu nhập QBANK_ADMIN_TOKEN để thực hiện thao tác.');
+  const promptTokenModal = useCallback((retryFn?: () => Promise<void> | void, errorMsg?: string) => {
+    const stored = getQBankToken();
+    setTokenInput(stored && stored.length >= 32 ? stored : '');
+    setTokenModalError(errorMsg || 'Yêu cầu nhập QBANK_ADMIN_TOKEN để thực hiện thao tác.');
     if (retryFn) {
       setPendingRetryFn(() => retryFn);
     }
@@ -1103,7 +1168,7 @@ export const QBankAdmin: React.FC = () => {
     setStatsError(null);
     const res = await safeApiCall<StatsData>('/api/qbank/stats');
     if (res.statusCode === 401 || res.statusCode === 403) {
-      promptTokenModal(loadStats);
+      promptTokenModal(loadStats, res.error);
     }
     if (res.success && res.data) {
       setStats(res.data);
@@ -1137,7 +1202,7 @@ export const QBankAdmin: React.FC = () => {
     );
 
     if (res.statusCode === 401 || res.statusCode === 403) {
-      promptTokenModal(loadQuestions);
+      promptTokenModal(loadQuestions, res.error);
     }
 
     if (res.success && res.data) {
@@ -1235,8 +1300,8 @@ export const QBankAdmin: React.FC = () => {
 
     if (res.statusCode === 401 || res.statusCode === 403) {
       if (!isBackground) {
-        setPendingError('Yêu cầu QBANK_ADMIN_TOKEN.');
-        promptTokenModal(() => loadPendingQuestions(overrideFilters));
+        setPendingError(res.error || 'Yêu cầu QBANK_ADMIN_TOKEN.');
+        promptTokenModal(() => loadPendingQuestions(overrideFilters), res.error);
         setPendingLoading(false);
       }
       setIsBackgroundPolling(false);
@@ -1559,11 +1624,27 @@ export const QBankAdmin: React.FC = () => {
   }, [schedulerStatus?.enabled, schedulerStatus?.isRunning, schedulerStatus?.generatedToday, schedulerStatus?.lastBatchId, schedulerStatus?.preferredProvider, schedulerStatus?.lastError, schedulerStatus?.nextRunTime, loadPendingQuestions, loadProgress, loadPoolStats, loadCoverageDashboard]);
 
   // Initial fetch: prioritize primary pending/progress data first, defer secondary analytics by 350ms
+  const loadBackendCustomExamSets = useCallback(async () => {
+    try {
+      const res = await safeApiCall<{ success: boolean; exam_sets?: CustomExamSet[] }>('/api/qbank/custom-exams');
+      if (res.success && Array.isArray(res.data?.exam_sets)) {
+        const localSets = loadCustomExamSets();
+        const mergedMap = new Map<string, CustomExamSet>();
+        for (const s of res.data.exam_sets) mergedMap.set(s.id, s);
+        for (const s of localSets) {
+          if (!mergedMap.has(s.id)) mergedMap.set(s.id, s);
+        }
+        setCustomExamSets(Array.from(mergedMap.values()));
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     loadPendingQuestions();
     loadProgress();
     loadStats();
     loadSchedulerStatus();
+    loadBackendCustomExamSets();
     const secondaryTimer = setTimeout(() => {
       loadQuestions();
       loadPoolStats();
@@ -1571,7 +1652,7 @@ export const QBankAdmin: React.FC = () => {
       loadBlueprintReport();
     }, 350);
     return () => clearTimeout(secondaryTimer);
-  }, [loadStats, loadQuestions, loadProgress, loadPendingQuestions, loadPoolStats, loadSchedulerStatus, loadCoverageDashboard, loadBlueprintReport]);
+  }, [loadStats, loadQuestions, loadProgress, loadPendingQuestions, loadPoolStats, loadSchedulerStatus, loadCoverageDashboard, loadBlueprintReport, loadBackendCustomExamSets]);
 
   // Total pending count from progress or stats
   const totalPendingCount = useMemo(() => {
@@ -2126,6 +2207,21 @@ export const QBankAdmin: React.FC = () => {
     });
   };
 
+  const persistExamSetBothSides = async (examSet: CustomExamSet) => {
+    const updatedLocal = saveCustomExamSetToStorage(examSet);
+    setCustomExamSets(updatedLocal);
+    try {
+      const apiRes = await safeApiCall<{ success: boolean; exam_sets?: CustomExamSet[] }>('/api/qbank/custom-exams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(examSet),
+      });
+      if (apiRes.success && Array.isArray(apiRes.data?.exam_sets)) {
+        setCustomExamSets(apiRes.data.exam_sets);
+      }
+    } catch {}
+  };
+
   /**
    * Handle Universal Question Import & 6 Quality Gates Evaluation
    */
@@ -2144,6 +2240,7 @@ export const QBankAdmin: React.FC = () => {
       default_skill: importSkill,
       default_part_type: importPartType,
       default_topic: importTopic.trim() || null,
+      auto_approve: true,
     };
 
     const res = await safeApiCall<any>('/api/qbank/import', {
@@ -2160,11 +2257,29 @@ export const QBankAdmin: React.FC = () => {
 
     if (res.success && res.data) {
       setImportResult(res.data);
-      if (res.data.accepted_count > 0) {
-        setActionSuccessMsg(`Đã nhập thành công ${res.data.accepted_count} câu hỏi đạt chuẩn 6 Cổng vào hàng chờ duyệt!`);
+      if (Array.isArray(res.data.results) && res.data.results.length > 0) {
+        const rawQuestions = res.data.results.map((r: any) => r.question);
+        const examSet = createCustomExamSet({
+          title:
+            customExamTitleInput.trim() ||
+            (importTopic.trim()
+              ? `Đề HSK ${importLevel} - ${importTopic.trim()} (${rawQuestions.length} câu)`
+              : `Đề HSK ${importLevel} - Nhập đa nguồn (${rawQuestions.length} câu)`),
+          level: importLevel,
+          sourceLabel: 'Nhập đề đa nguồn AI',
+          rawQuestions,
+        });
+        await persistExamSetBothSides(examSet);
+      }
+      if (res.data.accepted_count > 0 || (Array.isArray(res.data.results) && res.data.results.length > 0)) {
+        setActionSuccessMsg(
+          `Đã lưu trọn bộ đề (${res.data.total_parsed} câu) vào "Kho Đề Của Tôi" và nạp thẳng ${res.data.accepted_count} câu vào Kho câu hỏi chính!`
+        );
         setTimeout(() => setActionSuccessMsg(null), 5000);
         loadProgress();
         loadPendingQuestions();
+        loadQuestions();
+        loadPoolStats();
         loadStats();
 
         // Milestone M3: If skill is listening and listeningScript was provided, auto-trigger TTS for inserted question
@@ -2768,10 +2883,7 @@ export const QBankAdmin: React.FC = () => {
     const sampleText = '你好，这是普通话发音测试。';
     try {
       stopChineseAudio();
-      await playChineseAudio(sampleText, {
-        rate: 0.9,
-        voice: voiceId || 'zh-CN-XiaoxiaoNeural',
-      });
+      await playChineseAudio(sampleText, 0.9);
       setIsAuditioningVoiceId(null);
       return;
     } catch {
@@ -4871,9 +4983,19 @@ export const QBankAdmin: React.FC = () => {
                                 data-testid="input-edit-theme"
                                 value={editPendingTheme}
                                 onChange={(e) => setEditPendingTheme(e.target.value)}
-                                placeholder="Ví dụ: taxi, apple, hospital, train, school..."
+                                placeholder="Ví dụ: taxi, apple, hospital, train, school hoặc URL hình..."
                                 className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-primary)]"
                               />
+                              {editPendingTheme.trim().length > 0 && (
+                                <div className="mt-2 w-36" data-testid="inline-edit-theme-preview">
+                                  <HSKIllustrationCanvas
+                                    scene={editPendingTheme.trim()}
+                                    imageUrl={editPendingTheme.trim()}
+                                    aspectRatio="square"
+                                    hideLabels={true}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -5202,6 +5324,18 @@ export const QBankAdmin: React.FC = () => {
                             );
                           })()}
 
+                          {/* Stem Illustration (when q.illustration_theme or q.image_url is present and question is not an options-image match) */}
+                          {Boolean(q.illustration_theme || q.image_url || ((q.part_type === 'listen_true_false_2opt' || q.part_type === 'read_true_false_2opt') && resolveSceneKey(q.stem || ''))) && !Boolean(Array.isArray(q.options_images) && q.options_images.length > 0) && (
+                            <div className="my-3 w-52 sm:w-60 mx-auto" data-testid={`card-stem-illustration-${q.id}`}>
+                              <HSKIllustrationCanvas
+                                scene={q.illustration_theme || resolveSceneKey(q.stem || '') || undefined}
+                                imageUrl={q.image_url || undefined}
+                                aspectRatio="square"
+                                hideLabels={true}
+                              />
+                            </div>
+                          )}
+
                           {/* Image Options Grid (看图选择 - options_images present or picture_match task) */}
                           {(() => {
                             const isPic = Boolean(
@@ -5218,7 +5352,7 @@ export const QBankAdmin: React.FC = () => {
                               return (
                                 <div
                                   data-testid="card-option-images"
-                                  className={`grid gap-2.5 pt-1 ${optImages.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}
+                                  className={`w-full grid gap-4 pt-1 ${optImages.length <= 3 ? 'grid-cols-3' : optImages.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}
                                 >
                                   {optImages.map((scene, imageIdx) => {
                                     const isCorrect = q.answer_idx === imageIdx;
@@ -5228,7 +5362,7 @@ export const QBankAdmin: React.FC = () => {
                                     return (
                                       <div
                                         key={`${scene}-${imageIdx}`}
-                                        className={`space-y-1.5 rounded-2xl border p-2.5 transition-all silk-card-interactive ${
+                                        className={`space-y-2 rounded-2xl border p-2.5 transition-all silk-card-interactive ${
                                           isCorrect
                                             ? 'border-2 border-emerald-500 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100 shadow-xs'
                                             : 'border border-[var(--color-border)] bg-[var(--color-background)]'
@@ -5251,8 +5385,14 @@ export const QBankAdmin: React.FC = () => {
                                             </span>
                                           )}
                                         </div>
-                                        <HSKIllustrationCanvas scene={scene} aspectRatio="4/3" heightClass="h-24 sm:h-28" isOptionCard />
-                                        {optText && (
+                                        <HSKIllustrationCanvas
+                                          scene={scene}
+                                          imageUrl={scene}
+                                          aspectRatio="square"
+                                          isOptionCard
+                                          hideLabels={true}
+                                        />
+                                        {optText && !/^[A-F]$/i.test(optText.trim()) && (
                                           <div className="text-center font-chinese text-xs sm:text-sm font-medium text-[var(--color-text-primary)] pt-0.5">
                                             {optText}
                                           </div>
@@ -6227,71 +6367,75 @@ export const QBankAdmin: React.FC = () => {
                 </button>
               </div>
 
-              {/* Import Configuration Controls (shared across modes) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]">
-                {/* Level selector */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Cấp độ mặc định:</label>
-                  <select
-                    data-testid="select-import-level"
-                    value={importLevel}
-                    onChange={(e) => setImportLevel(Number(e.target.value) || 1)}
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
-                  >
-                    <option value={1}>HSK 1</option>
-                    <option value={2}>HSK 2</option>
-                    <option value={3}>HSK 3</option>
-                    <option value={4}>HSK 4</option>
-                    <option value={5}>HSK 5</option>
-                    <option value={6}>HSK 6</option>
-                  </select>
-                </div>
+              {/* Import Configuration Controls (only shown for file / text / ocr modes; unified inside prompt mode) */}
+              {importMode !== 'prompt' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]">
+                  {/* Level selector */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Cấp độ mặc định:</label>
+                    <select
+                      data-testid="select-import-level"
+                      value={importLevel}
+                      onChange={(e) => setImportLevel(Number(e.target.value) || 1)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                    >
+                      <option value={1}>HSK 1</option>
+                      <option value={2}>HSK 2</option>
+                      <option value={3}>HSK 3</option>
+                      <option value={4}>HSK 4</option>
+                      <option value={5}>HSK 5</option>
+                      <option value={6}>HSK 6</option>
+                    </select>
+                  </div>
 
-                {/* Skill selector */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Kỹ năng mặc định:</label>
-                  <select
-                    data-testid="select-import-skill"
-                    value={importSkill}
-                    onChange={(e) => setImportSkill(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
-                  >
-                    <option value="reading">Đọc hiểu (Reading)</option>
-                    <option value="listening">Nghe hiểu (Listening)</option>
-                    <option value="writing">Viết (Writing)</option>
-                  </select>
-                </div>
+                  {/* Skill selector */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Kỹ năng mặc định:</label>
+                    <select
+                      data-testid="select-import-skill"
+                      value={importSkill}
+                      onChange={(e) => setImportSkill(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                    >
+                      <option value="auto">🔥 Tự động nhận diện (Đề tổng hợp Nghe + Đọc + Viết)</option>
+                      <option value="listening">🎧 Nghe hiểu (Listening)</option>
+                      <option value="reading">📖 Đọc hiểu (Reading)</option>
+                      <option value="writing">✍️ Viết (Writing)</option>
+                    </select>
+                  </div>
 
-                {/* Part Type selector */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Dạng bài mặc định:</label>
-                  <select
-                    data-testid="select-import-part-type"
-                    value={importPartType}
-                    onChange={(e) => setImportPartType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
-                  >
-                    {ALL_PART_TYPES.filter((pt) => importLevel >= pt.minLevel && importLevel <= pt.maxLevel).map((pt) => (
-                      <option key={pt.value} value={pt.value}>
-                        {pt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Part Type selector */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Dạng bài mặc định:</label>
+                    <select
+                      data-testid="select-import-part-type"
+                      value={importPartType}
+                      onChange={(e) => setImportPartType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                    >
+                      <option value="auto">🔄 Tự động nhận diện từng phần / từng câu (Auto-Detect)</option>
+                      {ALL_PART_TYPES.filter((pt) => importLevel >= pt.minLevel && importLevel <= pt.maxLevel).map((pt) => (
+                        <option key={pt.value} value={pt.value}>
+                          {pt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Topic selector */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Chủ đề (Tùy chọn):</label>
-                  <input
-                    type="text"
-                    data-testid="input-import-topic"
-                    placeholder="VD: du_lich, truong_hoc..."
-                    value={importTopic}
-                    onChange={(e) => setImportTopic(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
-                  />
+                  {/* Topic selector */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Chủ đề (Tùy chọn):</label>
+                    <input
+                      type="text"
+                      data-testid="input-import-topic"
+                      placeholder="VD: du_lich, truong_hoc..."
+                      value={importTopic}
+                      onChange={(e) => setImportTopic(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* MODE 1: FILE DROP ZONE */}
               {importMode === 'file' && (
@@ -6554,19 +6698,113 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                        ⚡ Trình Tạo Prompt AI Đa Mô Hình 1-Click (Gemini, DeepSeek, Claude, Grok, ChatGPT)
+                        ⚡ Trình Tạo Prompt AI Đa Mô Hình 1-Click (Gemini, DeepSeek, ChatGPT, GLM, Claude, Grok)
                       </h3>
                       <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                        Chọn mô hình AI, định dạng đề thi (Đề 20 câu 4 phần, Bẫy Nghe hiểu IELTS, Điền từ A–E, Đọc hiểu hoặc JSON) và bấm Sao chép 1-Click để nhờ AI ngoài sinh đề miễn phí 100% đúng chuẩn từ vựng HSK {importLevel}.
+                        Chọn cấp độ, kỹ năng và định dạng đề thi bên dưới, sau đó bấm <strong>Sao chép Prompt 1-Click</strong> để nhờ AI ngoài sinh đề chuẩn từ vựng HSK {importLevel}.
                       </p>
                     </div>
                   </div>
 
-                  {/* Prompt Generator Controls */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Model Target Selector */}
+                  {/* Unified 2x3 Control Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {/* 1. HSK Level Selector */}
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Mô hình AI đích:</label>
+                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">1. Cấp độ HSK:</label>
+                      <select
+                        data-testid="select-import-level"
+                        value={importLevel}
+                        onChange={(e) => {
+                          const nextLvl = Number(e.target.value) || 1;
+                          setImportLevel(nextLvl);
+                          setPromptIncludePinyin(nextLvl <= 3);
+                          const effectiveSkill = nextLvl === 1 && promptSkillFilter === 'writing' ? 'all' : promptSkillFilter;
+                          if (effectiveSkill !== promptSkillFilter) {
+                            setPromptSkillFilter(effectiveSkill);
+                            setImportSkill('auto');
+                          }
+                          const validFormats = getFormatsForLevelAndSkill(nextLvl, effectiveSkill);
+                          const targetFmt =
+                            validFormats.length > 0 && !validFormats.includes(promptFormatType)
+                              ? validFormats[0]
+                              : promptFormatType;
+                          if (targetFmt !== promptFormatType) {
+                            setPromptFormatType(targetFmt);
+                          }
+                          setPromptQuestionCount(getRecommendedQuestionCount(nextLvl, targetFmt, effectiveSkill));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      >
+                        <option value={1}>HSK 1 (500 từ)</option>
+                        <option value={2}>HSK 2 (1.272 từ)</option>
+                        <option value={3}>HSK 3 (2.245 từ)</option>
+                        <option value={4}>HSK 4 (3.245 từ)</option>
+                        <option value={5}>HSK 5 (4.316 từ)</option>
+                        <option value={6}>HSK 6 (5.456 từ)</option>
+                      </select>
+                    </div>
+
+                    {/* 2. Skill Filter Selector */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">2. Kỹ năng cần tạo:</label>
+                      <select
+                        data-testid="select-import-skill"
+                        value={promptSkillFilter}
+                        onChange={(e) => {
+                          const nextSkill = e.target.value as 'all' | 'listening' | 'reading' | 'writing';
+                          setPromptSkillFilter(nextSkill);
+                          setImportSkill(nextSkill === 'all' ? 'auto' : nextSkill);
+                          setImportPartType('auto');
+                          const matchingFormats = getFormatsForLevelAndSkill(importLevel, nextSkill);
+                          const targetFmt =
+                            matchingFormats.length > 0 && !matchingFormats.includes(promptFormatType)
+                              ? matchingFormats[0]
+                              : promptFormatType;
+                          if (targetFmt !== promptFormatType) {
+                            setPromptFormatType(targetFmt);
+                          }
+                          setPromptQuestionCount(getRecommendedQuestionCount(importLevel, targetFmt, nextSkill));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      >
+                        <option value="all">🔥 Tất cả / Đề tổng hợp</option>
+                        <option value="listening">🎧 Nghe hiểu (Listening)</option>
+                        <option value="reading">📖 Đọc hiểu (Reading)</option>
+                        {importLevel >= 2 && <option value="writing">✍️ Viết (Writing)</option>}
+                      </select>
+                    </div>
+
+                    {/* 3. Exam Format Type Selector (filtered by Skill & HSK Level) */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                        3. Định dạng cấu trúc đề (chuẩn HSK {importLevel}):
+                      </label>
+                      <select
+                        data-testid="select-prompt-format"
+                        value={promptFormatType}
+                        onChange={(e) => {
+                          const nextFmt = e.target.value as ExternalPromptFormatType;
+                          setPromptFormatType(nextFmt);
+                          const grp = EXTERNAL_PROMPT_FORMAT_LABELS[nextFmt]?.skillGroup;
+                          if (grp) {
+                            setImportSkill(grp === 'all' ? 'auto' : grp);
+                            setImportPartType('auto');
+                          }
+                          setPromptQuestionCount(getRecommendedQuestionCount(importLevel, nextFmt, promptSkillFilter));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      >
+                        {getFormatsForLevelAndSkill(importLevel, promptSkillFilter).map((fKey) => (
+                          <option key={fKey} value={fKey}>
+                            {getDynamicFormatDisplay(fKey, importLevel).title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 4. Model Target Selector */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">4. Mô hình AI đích:</label>
                       <select
                         data-testid="select-prompt-model"
                         value={promptTargetModel}
@@ -6581,52 +6819,48 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                       </select>
                     </div>
 
-                    {/* Exam Format Type Selector */}
+                    {/* 5. Question Count (dynamically filtered by HSK Level) */}
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Định dạng cấu trúc đề:</label>
-                      <select
-                        data-testid="select-prompt-format"
-                        value={promptFormatType}
-                        onChange={(e) => setPromptFormatType(e.target.value as ExternalPromptFormatType)}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
-                      >
-                        {(Object.keys(EXTERNAL_PROMPT_FORMAT_LABELS) as ExternalPromptFormatType[]).map((fKey) => (
-                          <option key={fKey} value={fKey}>
-                            {EXTERNAL_PROMPT_FORMAT_LABELS[fKey].title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Question Count */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Số lượng câu hỏi:</label>
+                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                        5. Số lượng câu hỏi (theo HSK {importLevel}):
+                      </label>
                       <select
                         data-testid="select-prompt-count"
                         value={promptQuestionCount}
                         onChange={(e) => setPromptQuestionCount(Number(e.target.value) || 20)}
                         className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                       >
-                        <option value={5}>5 câu</option>
-                        <option value={10}>10 câu</option>
-                        <option value={15}>15 câu</option>
-                        <option value={20}>20 câu (Chuẩn đề 4 phần)</option>
-                        <option value={30}>30 câu</option>
+                        {getQuestionCountOptionsForLevel(importLevel).map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
-                    {/* Pinyin Checkbox */}
-                    <div className="space-y-1 flex flex-col justify-end">
-                      <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold cursor-pointer">
-                        <input
-                          type="checkbox"
-                          data-testid="checkbox-prompt-pinyin"
-                          checked={promptIncludePinyin}
-                          onChange={(e) => setPromptIncludePinyin(e.target.checked)}
-                          className="rounded border-gray-300 text-[var(--color-primary)]"
-                        />
-                        <span>Kèm Pinyin trong ngoặc</span>
-                      </label>
+                    {/* 6. Topic & Pinyin Toggle */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">6. Chủ đề (Tùy chọn):</label>
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            data-testid="checkbox-prompt-pinyin"
+                            checked={promptIncludePinyin}
+                            onChange={(e) => setPromptIncludePinyin(e.target.checked)}
+                            className="rounded border-gray-300 text-[var(--color-primary)]"
+                          />
+                          <span>Kèm Pinyin</span>
+                        </label>
+                      </div>
+                      <input
+                        type="text"
+                        data-testid="input-import-topic"
+                        placeholder="VD: du lịch, mua sắm, công việc..."
+                        value={importTopic}
+                        onChange={(e) => setImportTopic(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
+                      />
                     </div>
                   </div>
 
@@ -6634,10 +6868,10 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                   <div className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <span className="font-bold text-[var(--color-primary)]">
-                        {EXTERNAL_PROMPT_FORMAT_LABELS[promptFormatType].badge}:
+                        {getDynamicFormatDisplay(promptFormatType, importLevel).badge}:
                       </span>{' '}
                       <span className="text-[var(--color-text-secondary)]">
-                        {EXTERNAL_PROMPT_FORMAT_LABELS[promptFormatType].subtitle}
+                        {getDynamicFormatDisplay(promptFormatType, importLevel).subtitle}
                       </span>
                     </div>
                     <button
@@ -6893,7 +7127,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         <button
                           type="button"
                           data-testid="btn-save-custom-exam-set"
-                          onClick={() => {
+                          onClick={async () => {
                             const rawQuestions = importResult.results.map((r: any) => r.question);
                             const examSet = createCustomExamSet({
                               title:
@@ -6903,8 +7137,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                               sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn AI',
                               rawQuestions,
                             });
-                            const updated = saveCustomExamSetToStorage(examSet);
-                            setCustomExamSets(updated);
+                            await persistExamSetBothSides(examSet);
                             setCustomExamTitleInput('');
                             setActionSuccessMsg(`Đã lưu "${examSet.title}" vào Kho Đề Của Tôi!`);
                             setTimeout(() => setActionSuccessMsg(null), 4000);
@@ -6917,6 +7150,34 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                       </div>
                     )}
                   </div>
+
+                  {importResult.rejected_count > 0 && Array.isArray(importResult.results) && (() => {
+                    const dupCount = importResult.results.filter((r: any) => !r.inserted && r.gates?.gate5_uniqueness?.passed === false).length;
+                    const schemaOrOtherCount = importResult.rejected_count - dupCount;
+                    return (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+                        <div className="space-y-0.5">
+                          <div className="font-bold">Lý do từ chối nạp vào Hàng chờ duyệt:</div>
+                          <div>
+                            {dupCount > 0 && (
+                              <span>
+                                <strong>{dupCount} câu bị Gate 5 (Chống trùng lặp) chặn</strong> vì câu hỏi giống đã có sẵn trong Hàng chờ duyệt / Kho câu hỏi (từ lần nhập trước hoặc đợt sinh nền).{' '}
+                              </span>
+                            )}
+                            {schemaOrOtherCount > 0 && (
+                              <span>
+                                <strong>{schemaOrOtherCount} câu không đạt chuẩn cấu trúc/lời giải</strong> (xem chi tiết từng thẻ bên dưới).{' '}
+                              </span>
+                            )}
+                            <span>
+                              Nếu bạn chỉ muốn tạo đề luyện tập/thi thử nhanh từ đúng <strong>{importResult.results.length} câu vừa dán</strong>, bấm ngay nút <strong>🖥️ Thi thử ngay trên máy</strong> hoặc <strong>💾 Lưu vào Kho Đề Của Tôi</strong> ở góc phải!
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {showExtractedRawText && importResult.raw_text_preview && (
                     <div
@@ -7003,6 +7264,47 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                           <p className="text-xs text-[var(--color-text-secondary)] italic mt-0.5">
                             {q.pinyin}
                           </p>
+                        )}
+
+                        {/* Stem Illustration in Import Modal */}
+                        {(q.illustration_theme || q.image_url) && (
+                          <div className="my-2 w-48 sm:w-56 mx-auto" data-testid={`modal-preview-illustration-${idx}`}>
+                            <HSKIllustrationCanvas
+                              scene={q.illustration_theme}
+                              imageUrl={q.image_url}
+                              aspectRatio="square"
+                              hideLabels={true}
+                            />
+                          </div>
+                        )}
+
+                        {/* Option Images Grid in Import Modal */}
+                        {Array.isArray(q.options_images) && q.options_images.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-2.5 max-w-2xl" data-testid={`modal-preview-option-images-${idx}`}>
+                            {q.options_images.map((optImg: string, optImgIdx: number) => {
+                              const label = String.fromCharCode(65 + optImgIdx);
+                              const isCorrect = q.answer_idx === optImgIdx;
+                              return (
+                                <div
+                                  key={optImgIdx}
+                                  className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 ${
+                                    isCorrect
+                                      ? 'border-emerald-500 bg-emerald-500/10'
+                                      : 'border-[var(--color-border)] bg-[var(--color-surface)]'
+                                  }`}
+                                >
+                                  <HSKIllustrationCanvas
+                                    scene={optImg}
+                                    imageUrl={optImg}
+                                    aspectRatio="square"
+                                    badgeLabel={`Phương án ${label}`}
+                                    isOptionCard
+                                    hideLabels={true}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
 
                         {/* Options */}
@@ -7101,6 +7403,22 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                             >
                               Gate 6: Đơn nhất {gates.gate6_blind_solve?.passed ? '✓' : '✕'}
                             </span>
+
+                            {/* Visible failure reason breakdown for rejected questions */}
+                            {!isAccepted && (() => {
+                              const failNotes: string[] = [];
+                              if (gates.gate1_schema?.passed === false) failNotes.push(`Gate 1: ${gates.gate1_schema.details}`);
+                              if (gates.gate2_rationales_coherence?.passed === false) failNotes.push(`Gate 2: ${gates.gate2_rationales_coherence.details}`);
+                              if (gates.gate5_uniqueness?.passed === false) failNotes.push(`Gate 5 (Trùng lặp): ${gates.gate5_uniqueness.details}`);
+                              if (failNotes.length === 0) {
+                                failNotes.push('Câu hỏi đã tồn tại trùng content_hash trong cơ sở dữ liệu.');
+                              }
+                              return (
+                                <div className="w-full mt-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-[11px] font-medium">
+                                  <strong>Lý do không nạp hàng chờ:</strong> {failNotes.join(' • ')}
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -7186,9 +7504,18 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         <button
                           type="button"
                           data-testid={`btn-delete-custom-exam-${examSet.id}`}
-                          onClick={() => {
+                          onClick={async () => {
                             const updated = deleteCustomExamSetFromStorage(examSet.id);
                             setCustomExamSets(updated);
+                            try {
+                              const apiRes = await safeApiCall<{ success: boolean; exam_sets?: CustomExamSet[] }>(
+                                `/api/qbank/custom-exams/${encodeURIComponent(examSet.id)}`,
+                                { method: 'DELETE' }
+                              );
+                              if (apiRes.success && Array.isArray(apiRes.data?.exam_sets)) {
+                                setCustomExamSets(apiRes.data.exam_sets);
+                              }
+                            } catch {}
                           }}
                           className="p-1.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-rose-500 hover:bg-rose-500/10 cursor-pointer"
                           title="Xóa bộ đề này"
@@ -7631,6 +7958,18 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         );
                       })()}
 
+                      {/* Stem Illustration (when q.illustration_theme or q.image_url is present and question is not an options-image match) */}
+                      {Boolean(q.illustration_theme || q.image_url || ((q.part_type === 'listen_true_false_2opt' || q.part_type === 'read_true_false_2opt') && resolveSceneKey(q.stem || ''))) && !Boolean(Array.isArray(q.options_images) && q.options_images.length > 0) && (
+                        <div className="my-3 w-52 sm:w-60 mx-auto" data-testid={`card-stem-illustration-${q.question_id}`}>
+                          <HSKIllustrationCanvas
+                            scene={q.illustration_theme || resolveSceneKey(q.stem || '') || undefined}
+                            imageUrl={q.image_url || undefined}
+                            aspectRatio="square"
+                            hideLabels={true}
+                          />
+                        </div>
+                      )}
+
                       {/* Image Options Grid (看图选择 - options_images present or picture_match task) */}
                       {(() => {
                         const isPic = Boolean(
@@ -7647,7 +7986,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                           return (
                             <div
                               data-testid={`card-qb-option-images-${q.question_id}`}
-                              className={`grid gap-2.5 pt-1 ${optImages.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}
+                              className={`w-full grid gap-4 pt-1 ${optImages.length <= 3 ? 'grid-cols-3' : optImages.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}
                             >
                               {optImages.map((scene, imageIdx) => {
                                 const isCorrect = q.answer_index === imageIdx;
@@ -7657,7 +7996,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 return (
                                   <div
                                     key={`${scene}-${imageIdx}`}
-                                    className={`space-y-1.5 rounded-2xl border p-2.5 transition-all silk-card-interactive ${
+                                    className={`space-y-2 rounded-2xl border p-2.5 transition-all silk-card-interactive ${
                                       isCorrect
                                         ? 'bg-emerald-500/10 border-2 border-emerald-500 shadow-xs'
                                         : 'bg-[var(--color-background)] border border-[var(--color-border)]'
@@ -7680,8 +8019,14 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                         </span>
                                       )}
                                     </div>
-                                    <HSKIllustrationCanvas scene={scene} aspectRatio="4/3" heightClass="h-24 sm:h-28" isOptionCard />
-                                    {optText && (
+                                    <HSKIllustrationCanvas
+                                      scene={scene}
+                                      imageUrl={scene}
+                                      aspectRatio="square"
+                                      isOptionCard
+                                      hideLabels={true}
+                                    />
+                                    {optText && !/^[A-F]$/i.test(optText.trim()) && (
                                       <div className="text-center font-chinese text-xs sm:text-sm font-medium text-[var(--color-text-primary)] pt-0.5">
                                         {optText}
                                       </div>

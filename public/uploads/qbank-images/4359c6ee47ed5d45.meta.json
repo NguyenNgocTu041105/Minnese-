@@ -1,0 +1,11 @@
+{
+  "cacheKey": "4359c6ee47ed5d45",
+  "rawPrompt": "glass of fresh clear drinking water on wooden table",
+  "imagePromptEn": "A clean, clear educational illustration of glass of fresh clear drinking water on wooden table, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "glass clear drinking",
+  "theme": "water",
+  "tier": "tier2_cloudflare",
+  "byteSize": 343605,
+  "createdAt": "2026-11-18T13:07:42.539Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

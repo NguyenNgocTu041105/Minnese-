@@ -1,0 +1,11 @@
+{
+  "cacheKey": "ed9f96b1f3f8996e",
+  "rawPrompt": "high speed train at station",
+  "imagePromptEn": "A clean, clear educational illustration of high speed train at station, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "high speed train",
+  "theme": "train",
+  "tier": "tier2_cloudflare",
+  "byteSize": 142287,
+  "createdAt": "2026-11-18T12:40:08.004Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

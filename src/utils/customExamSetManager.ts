@@ -49,8 +49,15 @@ export function convertImportedToCbtQuestion(
     String(raw.pinyin || raw.pinyin_stem || inlineStemPinyin || '').trim() ||
     getSentencePinyin(stem);
 
+  const isWritingTask =
+    raw.skill === 'writing' ||
+    raw.section === 'writing' ||
+    Boolean(raw.part_type && String(raw.part_type).startsWith('write_'));
+
   const rawOptions: string[] = Array.isArray(raw.options)
     ? raw.options.map((o: any) => String(o ?? '').trim())
+    : isWritingTask
+    ? []
     : ['✓ 对 (Đúng)', '✗ 错 (Sai)'];
 
   const options: string[] = [];
@@ -89,10 +96,14 @@ export function convertImportedToCbtQuestion(
   const hasDialogueMarkers = /(?:^|\s|\n)(男|女|A|B)\s*[:：]/.test(stem);
   const rawSkill = String(raw.skill || raw.section || '').toLowerCase();
   const section: 'listening' | 'reading' | 'writing' =
-    rawSkill === 'listening' || raw.part_type?.startsWith('listen_') || hasDialogueMarkers
+    rawSkill === 'listening' || raw.part_type?.startsWith('listen_')
       ? 'listening'
       : rawSkill === 'writing' || raw.part_type?.startsWith('write_')
       ? 'writing'
+      : rawSkill === 'reading' || raw.part_type?.startsWith('read_')
+      ? 'reading'
+      : hasDialogueMarkers
+      ? 'listening'
       : 'reading';
 
   let partType = String(raw.part_type || '').trim();
@@ -102,7 +113,7 @@ export function convertImportedToCbtQuestion(
     } else if (options.length === 5) {
       partType = stem.includes('____') ? 'read_word_bank_5opt' : 'read_sentence_match_5opt';
     } else {
-      partType = section === 'listening' ? 'listen_dialogue_4opt' : 'read_fill_blank_4opt';
+      partType = section === 'listening' ? 'listen_dialogue_qa_4opt' : 'read_fill_blank_4opt';
     }
   }
 
@@ -127,8 +138,11 @@ export function convertImportedToCbtQuestion(
     answer_index: Math.max(0, Math.min(options.length - 1, answerIndex)),
     explanation_vi:
       String(raw.explanation_vi || raw.answer_rationale_vi || '').trim() ||
-      `Đáp án đúng là ${options[answerIndex] || options[0]}.`,
+      (options.length > 0 ? `Đáp án đúng là ${options[answerIndex] || options[0]}.` : ''),
     audio_text: audioText,
+    audio_url: raw.audio_url || undefined,
+    image_url: raw.image_url || raw.illustration_resolved_url || undefined,
+    passage: raw.passage || undefined,
     illustration: raw.illustration || raw.illustration_theme || undefined,
     options_images: Array.isArray(raw.options_images) ? raw.options_images : undefined,
   };

@@ -159,7 +159,7 @@ export interface AssignmentDoc {
   target_type: 'class' | 'level' | 'all';
   target_class_id?: string;
   hsk_level: number;
-  content_type: 'quiz' | 'deck' | 'reading' | 'writing' | 'speaking';
+  content_type: 'quiz' | 'deck' | 'reading' | 'writing' | 'speaking' | 'listening';
   content_ref_id: string;
   content_title?: string;
   exam_code?: string;

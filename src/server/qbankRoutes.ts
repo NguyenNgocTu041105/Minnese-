@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { execFile, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
 import crypto from 'crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { GoogleGenAI } from '@google/genai';
@@ -14,7 +15,9 @@ import {
   getComparableStem,
   evaluateCandidateSixGates,
   isVisualQuestionType,
+  allowsOptionalStemVisual,
 } from './llm/questionValidator.js';
+import { batchResolveQuestionImages, resolveImageWaterfall } from './services/imageWaterfall.js';
 import { parseUniversalQuestions } from './llm/universalQuestionParser.js';
 import { CandidateQuestion } from './llm/types.js';
 import {
@@ -170,7 +173,67 @@ export function setQBankAdminTokenForTesting(t: string | null): void {
  *    - Performs constant-time timing-safe comparison (crypto.timingSafeEqual)
  */
 export async function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
-  // 1. Loopback IP check: req.socket.remoteAddress must be loopback ('127.0.0.1', '::1', '::ffff:127.0.0.1')
+  // 0. Cryptographic Firebase Admin ID Token verification (works from ANY device for Primary Owner & Granted Admins)
+  const rawFirebaseHeader = req.headers['x-firebase-id-token'];
+  const bearerHeader =
+    typeof req.headers.authorization === 'string' &&
+    req.headers.authorization.trim().toLowerCase().startsWith('bearer ')
+      ? req.headers.authorization.trim().slice(7).trim()
+      : '';
+  const hasExplicitQBankToken = Boolean(
+    (typeof req.headers['x-qbank-token'] === 'string' && req.headers['x-qbank-token'].trim()) ||
+      (typeof req.headers['x-qbank-admin-token'] === 'string' && req.headers['x-qbank-admin-token'].trim())
+  );
+  const candidateFirebaseJwt =
+    typeof rawFirebaseHeader === 'string' && rawFirebaseHeader.trim()
+      ? rawFirebaseHeader.trim()
+      : !hasExplicitQBankToken && bearerHeader.split('.').length === 3
+        ? bearerHeader
+        : '';
+
+  if (candidateFirebaseJwt && isFirebaseAdminConfigured()) {
+    // CSRF protection for mutating requests from remote/LAN devices: Origin (when present) must match Host/Forwarded-Host or loopback
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method.toUpperCase())) {
+      const origin = req.headers.origin;
+      if (origin) {
+        let originAllowed = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+        if (!originAllowed) {
+          try {
+            const originHost = new URL(origin).host.toLowerCase();
+            const reqHost = String(req.headers.host || '').trim().toLowerCase();
+            const forwardedHost = String(req.headers['x-forwarded-host'] || '')
+              .split(',')[0]
+              .trim()
+              .toLowerCase();
+            if ((reqHost && originHost === reqHost) || (forwardedHost && originHost === forwardedHost)) {
+              originAllowed = true;
+            }
+          } catch {
+            originAllowed = false;
+          }
+        }
+        if (!originAllowed) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied: Cross-Origin request not allowed for QBank Admin.',
+          });
+        }
+      }
+    }
+
+    const fbAuth = await verifyFirebaseAdminIdToken(candidateFirebaseJwt);
+    if (fbAuth.authorized) {
+      return next();
+    }
+    if (!hasExplicitQBankToken) {
+      return res.status(403).json({
+        success: false,
+        error: fbAuth.reason || 'Từ chối truy cập: Tài khoản Firebase không có quyền Quản trị viên QBank.',
+      });
+    }
+  }
+
+  // 1. Loopback IP check (for static QBANK_ADMIN_TOKEN requests without Firebase Admin auth)
   const remoteIp = (req.socket?.remoteAddress || req.ip || '').trim();
   const isLoopbackIp =
     remoteIp === '127.0.0.1' ||
@@ -205,37 +268,6 @@ export async function requireAdminAuth(req: Request, res: Response, next: NextFu
           error: 'Access denied: Cross-Origin request not allowed for QBank Admin.',
         });
       }
-    }
-  }
-
-  // 4a. Cryptographic Firebase Admin ID Token verification (for authenticated Firebase Admins)
-  const rawFirebaseHeader = req.headers['x-firebase-id-token'];
-  const bearerHeader =
-    typeof req.headers.authorization === 'string' &&
-    req.headers.authorization.trim().toLowerCase().startsWith('bearer ')
-      ? req.headers.authorization.trim().slice(7).trim()
-      : '';
-  const hasExplicitQBankToken = Boolean(
-    (typeof req.headers['x-qbank-token'] === 'string' && req.headers['x-qbank-token'].trim()) ||
-      (typeof req.headers['x-qbank-admin-token'] === 'string' && req.headers['x-qbank-admin-token'].trim())
-  );
-  const candidateFirebaseJwt =
-    typeof rawFirebaseHeader === 'string' && rawFirebaseHeader.trim()
-      ? rawFirebaseHeader.trim()
-      : !hasExplicitQBankToken && bearerHeader.split('.').length === 3
-        ? bearerHeader
-        : '';
-
-  if (candidateFirebaseJwt && isFirebaseAdminConfigured()) {
-    const fbAuth = await verifyFirebaseAdminIdToken(candidateFirebaseJwt);
-    if (fbAuth.authorized) {
-      return next();
-    }
-    if (!hasExplicitQBankToken) {
-      return res.status(403).json({
-        success: false,
-        error: fbAuth.reason || 'Từ chối truy cập: Tài khoản Firebase không có quyền Quản trị viên QBank.',
-      });
     }
   }
 
@@ -532,6 +564,18 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_qb_questions_hash ON qb_questions(content_hash);
     CREATE INDEX IF NOT EXISTS idx_qb_questions_status ON qb_questions(status, level);
+
+    CREATE TABLE IF NOT EXISTS custom_exam_sets (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      level INTEGER NOT NULL DEFAULT 1,
+      source TEXT,
+      source_label TEXT,
+      time_limit_minutes INTEGER NOT NULL DEFAULT 40,
+      question_count INTEGER NOT NULL DEFAULT 0,
+      questions_json TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
@@ -568,6 +612,18 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
     if (!pendCols.includes('audio_url')) {
       targetDb.exec('ALTER TABLE pending_questions ADD COLUMN audio_url TEXT;');
     }
+    if (!pendCols.includes('image_url')) {
+      targetDb.exec('ALTER TABLE pending_questions ADD COLUMN image_url TEXT;');
+    }
+    if (!pendCols.includes('audio_text')) {
+      targetDb.exec('ALTER TABLE pending_questions ADD COLUMN audio_text TEXT;');
+    }
+    if (!pendCols.includes('transcript')) {
+      targetDb.exec('ALTER TABLE pending_questions ADD COLUMN transcript TEXT;');
+    }
+    if (!pendCols.includes('passage')) {
+      targetDb.exec('ALTER TABLE pending_questions ADD COLUMN passage TEXT;');
+    }
     targetDb.exec('CREATE INDEX IF NOT EXISTS idx_pending_topic ON pending_questions(topic);');
     targetDb.exec('CREATE INDEX IF NOT EXISTS idx_pending_batch_id ON pending_questions(batch_id);');
   } catch {}
@@ -584,6 +640,18 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
     if (!qCols.includes('audio_url')) {
       targetDb.exec('ALTER TABLE questions ADD COLUMN audio_url TEXT;');
     }
+    if (!qCols.includes('image_url')) {
+      targetDb.exec('ALTER TABLE questions ADD COLUMN image_url TEXT;');
+    }
+    if (!qCols.includes('audio_text')) {
+      targetDb.exec('ALTER TABLE questions ADD COLUMN audio_text TEXT;');
+    }
+    if (!qCols.includes('transcript')) {
+      targetDb.exec('ALTER TABLE questions ADD COLUMN transcript TEXT;');
+    }
+    if (!qCols.includes('passage')) {
+      targetDb.exec('ALTER TABLE questions ADD COLUMN passage TEXT;');
+    }
   } catch {}
 
   try {
@@ -593,6 +661,18 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
     }
     if (!qbCols.includes('audio_url')) {
       targetDb.exec('ALTER TABLE qb_questions ADD COLUMN audio_url TEXT;');
+    }
+    if (!qbCols.includes('image_url')) {
+      targetDb.exec('ALTER TABLE qb_questions ADD COLUMN image_url TEXT;');
+    }
+    if (!qbCols.includes('illustration_theme')) {
+      targetDb.exec('ALTER TABLE qb_questions ADD COLUMN illustration_theme TEXT;');
+    }
+    if (!qbCols.includes('audio_text')) {
+      targetDb.exec('ALTER TABLE qb_questions ADD COLUMN audio_text TEXT;');
+    }
+    if (!qbCols.includes('transcript')) {
+      targetDb.exec('ALTER TABLE qb_questions ADD COLUMN transcript TEXT;');
     }
   } catch {}
 
@@ -642,6 +722,135 @@ export function setDbSync(db: DatabaseSync | null): void {
   dbSyncInstance = db;
 }
 
+let officialSeedBootstrapped = false;
+
+/**
+ * Automatically bootstraps the pre-validated official HSK 3.0 exam sets and approved question pool
+ * from `data/qbank/seed_official_exams.json.gz` on fresh/cloud deployments (e.g. Render) when
+ * SQLite does not yet contain all bundled exam sets. Uses INSERT OR IGNORE so local edits are preserved.
+ */
+export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
+  if (officialSeedBootstrapped || process.env.VITEST) return;
+  officialSeedBootstrapped = true;
+
+  try {
+    const seedPath = path.resolve(process.cwd(), 'data/qbank/seed_official_exams.json.gz');
+    if (!fs.existsSync(seedPath)) return;
+
+    const existingSetCount = Number(
+      (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets').get() as any)?.c || 0
+    );
+    const existingApprovedCount = Number(
+      (db.prepare("SELECT COUNT(*) as c FROM questions WHERE status = 'approved'").get() as any)?.c || 0
+    );
+    // Fast skip when local DB already holds the full bundled bank
+    if (existingSetCount >= 92 && existingApprovedCount >= 6400) return;
+
+    const raw = zlib.gunzipSync(fs.readFileSync(seedPath)).toString('utf-8');
+    const parsed = JSON.parse(raw) as { sets?: any[]; qs?: any[] };
+    const sets = Array.isArray(parsed.sets) ? parsed.sets : [];
+    const qs = Array.isArray(parsed.qs) ? parsed.qs : [];
+    if (sets.length === 0 && qs.length === 0) return;
+
+    const insertSet = db.prepare(`
+      INSERT OR IGNORE INTO custom_exam_sets (
+        id, title, level, source, source_label, time_limit_minutes, question_count, questions_json, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertApproved = db.prepare(`
+      INSERT OR IGNORE INTO questions (
+        id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type,
+        illustration_theme, image_url, options_images, topic, status, provider_used, content_hash,
+        near_duplicate_signature, tested_vocab, passage, audio_url, audio_text, is_active, batch_id,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, '[]', ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+    `);
+    const insertQb = db.prepare(`
+      INSERT OR IGNORE INTO qb_questions (
+        question_id, level, skill, part_type, stem, passage, audio_url, audio_text,
+        image_url, illustration_theme, options, answer_index, explanation_vi, pinyin_stem,
+        topic, status, provenance, qa, content_hash, vocab_tags, options_images
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, '[]', ?)
+    `);
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const s of sets) {
+        insertSet.run(
+          s.id,
+          s.title,
+          s.level,
+          s.source || 'official_seed',
+          s.source_label || '',
+          s.time_limit_minutes || 60,
+          s.question_count || 0,
+          s.questions_json || '[]',
+          s.created_at || new Date().toISOString()
+        );
+      }
+      for (const q of qs) {
+        const cHash =
+          q.content_hash ||
+          crypto.createHash('sha256').update(`${q.stem}|${q.options}|${q.answer_idx}|${q.id}`).digest('hex');
+        insertApproved.run(
+          q.id,
+          q.stem,
+          q.options,
+          q.answer_idx ?? 0,
+          q.pinyin || '',
+          q.explanation_vi || '',
+          q.level,
+          q.skill,
+          q.part_type,
+          q.illustration_theme || null,
+          q.image_url || null,
+          q.options_images || '[]',
+          q.topic || '',
+          q.provider_used || 'official-seed',
+          cHash,
+          q.near_duplicate_signature || cHash.slice(0, 32),
+          q.passage || null,
+          q.audio_url || null,
+          q.audio_text || null,
+          q.batch_id || 'official_seed'
+        );
+        insertQb.run(
+          q.id,
+          q.level,
+          q.skill,
+          q.part_type,
+          q.stem,
+          q.passage || null,
+          q.audio_url || null,
+          q.audio_text || null,
+          q.image_url || null,
+          q.illustration_theme || null,
+          q.options,
+          q.answer_idx ?? 0,
+          q.explanation_vi || '',
+          q.pinyin || '',
+          q.topic || '',
+          JSON.stringify({ origin: 'official_seed', batch_id: q.batch_id || 'official_seed' }),
+          JSON.stringify({ structure_ok: true, level_ok: true, out_of_level_words: [], notes: ['Official Seed'] }),
+          cHash,
+          q.options_images || '[]'
+        );
+      }
+      db.exec('COMMIT');
+    } catch (txErr) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {}
+      throw txErr;
+    }
+
+    reEvaluateApprovedQuestions(db);
+    console.log(`[QBank Seed] Bootstrapped ${sets.length} official exam sets and ${qs.length} approved questions.`);
+  } catch (err: any) {
+    console.warn('[QBank Seed] Non-fatal seed bootstrap warning:', err?.message || err);
+  }
+}
+
 export function getDbSync(): DatabaseSync {
   if (!dbSyncInstance) {
     const dbPath = getQBankDbPath();
@@ -661,6 +870,7 @@ export function getDbSync(): DatabaseSync {
     }
     dbSyncInstance = instance;
     ensurePendingSchema(instance);
+    bootstrapOfficialExamsSeedIfNeeded(instance);
   }
   return dbSyncInstance;
 }
@@ -697,7 +907,8 @@ export function buildAutoListeningAudioUrl(q: {
   if (!rawSource) return null;
 
   // Exclude question prompt (问： / Question: / ★) so only the spoken dialogue/monologue is voiced
-  const beforeQuestion = rawSource.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim() || rawSource;
+  const splitBeforeQuestion = rawSource.split(/(?:[\r\n\s]+|^)(?:问|Question|★)\s*[:：]?/i)[0]?.trim();
+  const beforeQuestion = splitBeforeQuestion || rawSource.replace(/^(?:问|Question|Hỏi|★)\s*[:：]?\s*/i, '').trim();
 
   // Strip Vietnamese headers and parenthetical Pinyin if Chinese characters are present
   let cleanScript = beforeQuestion
@@ -715,6 +926,51 @@ export function buildAutoListeningAudioUrl(q: {
 
   if (cleanScript.length < 2) return null;
   return `/api/tts?text=${encodeURIComponent(cleanScript)}&voice=auto`;
+}
+
+/**
+ * Sanitizes non-visual questions (stripping leaked illustration_theme / options_images)
+ * and resolves 5-Tier Image Waterfall URLs for visual questions.
+ */
+async function sanitizeAndResolveCandidateImages(
+  questions: any[],
+  defaultPartType = 'read_fill_blank_4opt',
+  forceNetworkInTest = false
+): Promise<any[]> {
+  if (!Array.isArray(questions) || questions.length === 0) return questions;
+
+  for (const q of questions) {
+    const pt = String(q.part_type || defaultPartType || '').trim();
+    const isVisual = isVisualQuestionType(pt);
+    const isOptionalVisual = allowsOptionalStemVisual(pt);
+    if (!isVisual && !isOptionalVisual) {
+      q.illustration_theme = null;
+      q.image_url = null;
+      q.options_images = [];
+    }
+  }
+
+  const isUnitTest = Boolean(process.env.VITEST) && !forceNetworkInTest;
+  const resolved = await batchResolveQuestionImages(questions as any[], {
+    skipTiers: isUnitTest ? ['tier2_cloudflare', 'tier3_stock', 'tier4_pollinations'] : [],
+  });
+
+  for (let i = 0; i < questions.length; i++) {
+    const r = resolved[i] as any;
+    if (!r) continue;
+    const pt = String(questions[i].part_type || defaultPartType || '').trim();
+    if (!isVisualQuestionType(pt) && !allowsOptionalStemVisual(pt)) {
+      questions[i].illustration_theme = null;
+      questions[i].image_url = null;
+      questions[i].options_images = [];
+    } else {
+      if (r.image_url) questions[i].image_url = r.image_url;
+      if (r.illustration_theme !== undefined) questions[i].illustration_theme = r.illustration_theme;
+      if (Array.isArray(r.options_images)) questions[i].options_images = r.options_images;
+    }
+  }
+
+  return questions;
 }
 
 /**
@@ -753,10 +1009,22 @@ function formatQuestionRow(row: any) {
   const flags: string[] = [];
   const charNoiseReasons: string[] = [];
 
-  const textToCheck = `${row.stem || ''} ${options.join(' ')}`;
-  const hasLatin = /[a-zA-Z]/.test(textToCheck);
-  const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/.test(textToCheck);
-  const hasParen = /[()（）]/.test(textToCheck);
+  const isPinyinTask = row.part_type === 'write_tianzige_from_pinyin' || /pinyin/i.test(row.part_type || '');
+  const sanitizedStem = String(row.stem || '')
+    .replace(/（\s*）|\(\s*\)/g, '')
+    .replace(/(?:^|[\r\n\s])[A-Ba-b]\s*[:：]/g, ' ');
+  const sanitizedOptions = options
+    .map((o) => String(o || '').trim())
+    .filter((o) => !/^[A-Fa-f]$/.test(o) && !/^[A-Fa-f](?:[\s\-–—>→,]+[A-Fa-f])+$/i.test(o))
+    .map((o) => o.replace(/^[A-Fa-f][.、:\s]+/, ''));
+
+  let textToCheck = `${sanitizedStem} ${sanitizedOptions.join(' ')}`;
+  if (isPinyinTask) {
+    textToCheck = textToCheck.replace(/\([^)]*\)|（[^）]*）/g, '');
+  }
+  const hasLatin = !isPinyinTask && /[a-zA-Z]/.test(textToCheck);
+  const hasVietnamese = /[đĐơưƠƯạảãặẳẵậẩẫẹẻẽịỉĩọỏõụủũỵỷỹẠẢÃẶẲẴẬẨẪẸẺẼỊỈĨỌỎÕỤỦŨỴỶỸ]/.test(textToCheck);
+  const hasParen = !isPinyinTask && /[()（）]/.test(textToCheck);
 
   if (hasLatin || hasVietnamese || hasParen) {
     flags.push('char_noise (Ký tự nhiễu: Latin, tiếng Việt, hoặc ngoặc đơn trong stem/options)');
@@ -793,8 +1061,11 @@ function formatQuestionRow(row: any) {
     skill: row.skill,
     part_type: row.part_type,
     stem: row.stem,
-    passage: row.passage,
+    passage: row.passage || null,
+    audio_text: row.audio_text || row.transcript || null,
     audio_url: row.audio_url || buildAutoListeningAudioUrl(row),
+    image_url: row.image_url || row.media_url || null,
+    illustration_theme: row.illustration_theme || row.illustration || null,
     options,
     options_images: Array.isArray(row.options_images)
       ? row.options_images
@@ -1290,10 +1561,15 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
         if (!q.illustration_theme || typeof q.illustration_theme !== 'string' || !isValidIllustrationTheme(q.illustration_theme)) {
           q.illustration_theme = imageOptionPartTypes.has(effectivePartType) ? null : 'reading';
         }
-      } else {
+      } else if (allowsOptionalStemVisual(effectivePartType)) {
         if (q.illustration_theme && !isValidIllustrationTheme(q.illustration_theme)) {
           q.illustration_theme = null;
         }
+        q.options_images = [];
+      } else {
+        q.illustration_theme = null;
+        (q as any).image_url = null;
+        q.options_images = [];
       }
 
       const valResult = validateCandidate(q, existingStems, {
@@ -1338,6 +1614,10 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
     }
     const rejectedReasons = summarizeCandidateIssues(validationFailures.flatMap((failure) => failure.issues));
 
+    if (validCandidates.length > 0) {
+      await sanitizeAndResolveCandidateImages(validCandidates as any[], partType, Boolean(req.body?.resolve_images));
+    }
+
     let countSaved = 0;
     if (!dryRun) {
       db.exec('BEGIN IMMEDIATE;');
@@ -1345,8 +1625,8 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
         if (validCandidates.length > 0) {
           const insertStmt = db.prepare(`
             INSERT INTO pending_questions (
-              id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, audio_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+              id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, image_url, options_images, topic, status, provider_used, content_hash, audio_url, audio_text, passage
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
             ON CONFLICT(content_hash) DO NOTHING
           `);
 
@@ -1368,11 +1648,14 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
               q.skill,
               q.part_type,
               q.illustration_theme || null,
+              (q as any).image_url || null,
               JSON.stringify(q.options_images || []),
               q.topic || topic || null,
               waterfallResult.providerUsed,
               contentHash,
-              autoAudioUrl
+              autoAudioUrl,
+              (q as any).audio_text || (q as any).transcript || null,
+              q.passage || null
             );
 
             if ((info as any)?.changes > 0) {
@@ -1532,6 +1815,197 @@ qbankRouter.post('/generate', async (req: Request, res: Response) => {
 });
 
 // =========================================================================
+// Helper: Direct Approval into Kho Câu Hỏi Chính & Persistent "Kho Đề Của Tôi"
+// =========================================================================
+function saveDirectApprovedImportQuestion(
+  db: DatabaseSync,
+  params: {
+    id: string;
+    batchId: string;
+    stem: string;
+    optionsJson: string;
+    answerIdx: number;
+    pinyin: string | null;
+    explanationVi: string;
+    level: number;
+    skill: string;
+    partType: string;
+    illustrationTheme: string | null;
+    imageUrl: string | null;
+    optionsImagesJson: string;
+    topic: string | null;
+    providerUsed: string;
+    contentHash: string;
+    nearDupSig: string;
+    audioUrl: string | null;
+    audioText: string | null;
+    passage: string | null;
+  }
+): void {
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO questions (
+        id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type,
+        illustration_theme, image_url, options_images, topic, status, provider_used, content_hash,
+        near_duplicate_signature, tested_vocab, passage, audio_url, audio_text, is_active, batch_id,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, '[]', ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+    `).run(
+      params.id,
+      params.stem,
+      params.optionsJson,
+      params.answerIdx,
+      params.pinyin,
+      params.explanationVi,
+      params.level,
+      params.skill,
+      params.partType,
+      params.illustrationTheme,
+      params.imageUrl,
+      params.optionsImagesJson,
+      params.topic,
+      params.providerUsed,
+      params.contentHash,
+      params.nearDupSig,
+      params.passage,
+      params.audioUrl,
+      params.audioText,
+      params.batchId
+    );
+  } catch {}
+
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO qb_questions (
+        question_id, level, skill, part_type, stem, passage, audio_url, audio_text,
+        image_url, illustration_theme, options, answer_index, explanation_vi, pinyin_stem,
+        topic, status, provenance, qa, content_hash, vocab_tags, options_images
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, '[]', ?)
+    `).run(
+      params.id,
+      params.level,
+      params.skill,
+      params.partType,
+      params.stem,
+      params.passage,
+      params.audioUrl,
+      params.audioText,
+      params.imageUrl,
+      params.illustrationTheme,
+      params.optionsJson,
+      params.answerIdx,
+      params.explanationVi,
+      params.pinyin,
+      params.topic,
+      JSON.stringify({ origin: 'controlled_import', batch_id: params.batchId, created_at: new Date().toISOString() }),
+      JSON.stringify({ structure_ok: true, level_ok: true, out_of_level_words: [], notes: ['Approved via controlled multi-source import'] }),
+      params.contentHash,
+      params.optionsImagesJson
+    );
+  } catch {}
+
+  try {
+    syncApprovedQuestionToPool(db, params.id);
+  } catch {}
+}
+
+export function listCustomExamSetRecords(db: DatabaseSync): any[] {
+  try {
+    ensurePendingSchema(db);
+    const rows = db.prepare('SELECT * FROM custom_exam_sets ORDER BY created_at DESC, rowid DESC').all() as any[];
+    return rows.map((r) => {
+      let questions: any[] = [];
+      try {
+        questions = JSON.parse(r.questions_json || '[]');
+      } catch {}
+      return {
+        id: r.id,
+        title: r.title,
+        level: Number(r.level) || 1,
+        source: r.source || 'Nhập đề đa nguồn',
+        sourceLabel: r.source_label || r.source || 'Nhập đề đa nguồn',
+        timeLimitMinutes: Number(r.time_limit_minutes) || 40,
+        questionCount: Number(r.question_count) || questions.length,
+        createdAt: r.created_at || new Date().toISOString(),
+        questions,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomExamSetRecord(db: DatabaseSync, examSet: any): any {
+  ensurePendingSchema(db);
+  const id = String(examSet.id || `custom_exam_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`);
+  const level = Math.min(6, Math.max(1, Number(examSet.level) || 1));
+  const questions = Array.isArray(examSet.questions) ? examSet.questions : [];
+  const defaultTime = level === 1 ? 40 : level === 2 ? 60 : level === 3 ? 83 : level === 4 ? 85 : level === 5 ? 110 : 125;
+  const timeLimitMinutes = Number(examSet.timeLimitMinutes) > 0 ? Number(examSet.timeLimitMinutes) : defaultTime;
+  const title = String(examSet.title || `Đề HSK ${level} (${questions.length} câu)`).trim();
+  const sourceLabel = String(examSet.sourceLabel || examSet.source || 'Nhập đề đa nguồn').trim();
+  const createdAt = examSet.createdAt || new Date().toISOString();
+
+  db.prepare(`
+    INSERT OR REPLACE INTO custom_exam_sets (
+      id, title, level, source, source_label, time_limit_minutes, question_count, questions_json, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    title,
+    level,
+    sourceLabel,
+    sourceLabel,
+    timeLimitMinutes,
+    questions.length,
+    JSON.stringify(questions),
+    createdAt
+  );
+
+  return {
+    id,
+    title,
+    level,
+    source: sourceLabel,
+    sourceLabel,
+    timeLimitMinutes,
+    questionCount: questions.length,
+    createdAt,
+    questions,
+  };
+}
+
+qbankRouter.get('/custom-exams', (_req: Request, res: Response) => {
+  try {
+    const db = getDbSync();
+    return res.json({ success: true, exam_sets: listCustomExamSetRecords(db) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: sanitizeError(err.message) });
+  }
+});
+
+qbankRouter.post('/custom-exams', (req: Request, res: Response) => {
+  try {
+    const db = getDbSync();
+    const saved = saveCustomExamSetRecord(db, req.body || {});
+    return res.json({ success: true, exam_set: saved, exam_sets: listCustomExamSetRecords(db) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: sanitizeError(err.message) });
+  }
+});
+
+qbankRouter.delete('/custom-exams/:id', (req: Request, res: Response) => {
+  try {
+    const db = getDbSync();
+    ensurePendingSchema(db);
+    db.prepare('DELETE FROM custom_exam_sets WHERE id = ?').run(req.params.id);
+    return res.json({ success: true, exam_sets: listCustomExamSetRecords(db) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: sanitizeError(err.message) });
+  }
+});
+
+// =========================================================================
 // 3b. POST /api/qbank/import: Universal Multi-Source Question Import & 6-Gate Validation
 // =========================================================================
 qbankRouter.post('/import', async (req: Request, res: Response) => {
@@ -1557,8 +2031,10 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
     }
 
     const defaultLevel = Number(req.body?.default_level || req.body?.level) || 1;
-    const defaultSkill = String(req.body?.default_skill || req.body?.skill || 'reading');
-    const defaultPartType = String(req.body?.default_part_type || req.body?.part_type || 'read_fill_blank_4opt');
+    const rawSkill = String(req.body?.default_skill || req.body?.skill || 'reading');
+    const defaultSkill = rawSkill === 'auto' || rawSkill === 'all' ? 'reading' : rawSkill;
+    const rawPartType = String(req.body?.default_part_type || req.body?.part_type || 'read_fill_blank_4opt');
+    const defaultPartType = rawPartType === 'auto' ? 'read_fill_blank_4opt' : rawPartType;
     const defaultTopic = req.body?.default_topic ? String(req.body.default_topic).trim() : null;
 
     const parsedQuestions = parseUniversalQuestions(rawInput, {
@@ -1582,6 +2058,7 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
 
     const db = getDbSync();
     ensurePendingSchema(db);
+    await sanitizeAndResolveCandidateImages(parsedQuestions as any[], defaultPartType, Boolean(req.body?.resolve_images));
     const existingStems = extractExistingStemsFromDb(db);
     const batchId = `import_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
     const pendCols = (db.prepare('PRAGMA table_info(pending_questions)').all() as any[]).map((c) => c.name);
@@ -1596,11 +2073,11 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
     try {
       const insertSql = `
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, image_url, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url, audio_text, passage
           ${hasDiffCol ? ', difficulty_tier' : ''}
           ${hasSourceCol ? ', source' : ''}
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?
           ${hasDiffCol ? ', ?' : ''}
           ${hasSourceCol ? ', ?' : ''}
         )
@@ -1609,6 +2086,7 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
       const insertStmt = db.prepare(insertSql);
 
       const useLenientImport = req.body?.strict_gates !== true;
+      const autoApprove = req.body?.auto_approve === true;
 
       for (const q of parsedQuestions) {
         const sixGate = evaluateCandidateSixGates(q, existingStems, {
@@ -1627,11 +2105,14 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
             skill: effectiveSkill,
             part_type: effectivePartType,
           });
+          const optionsJson = JSON.stringify(q.options);
+          const optionsImagesJson = JSON.stringify(q.options_images || []);
+          const audioText = (q as any).audio_text || (q as any).transcript || null;
           const insertParams: any[] = [
             qId,
             batchId,
             q.stem,
-            JSON.stringify(q.options),
+            optionsJson,
             q.answer_idx,
             q.pinyin || null,
             q.explanation_vi,
@@ -1639,12 +2120,15 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
             effectiveSkill,
             effectivePartType,
             q.illustration_theme || null,
-            JSON.stringify(q.options_images || []),
+            (q as any).image_url || null,
+            optionsImagesJson,
             q.topic || defaultTopic,
             'imported',
             contentHash,
             nearDupSig,
             autoAudioUrl,
+            audioText,
+            q.passage || null,
           ];
           if (hasDiffCol) {
             insertParams.push(q.difficulty_tier || null);
@@ -1658,8 +2142,40 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
             inserted = true;
             acceptedCount++;
             existingStems.push(getComparableStem(q.stem, q.options, q.answer_idx));
+            if (autoApprove) {
+              try {
+                db.prepare("UPDATE pending_questions SET status = 'approved' WHERE id = ?").run(qId);
+              } catch {}
+              saveDirectApprovedImportQuestion(db, {
+                id: qId,
+                batchId,
+                stem: q.stem,
+                optionsJson,
+                answerIdx: q.answer_idx,
+                pinyin: q.pinyin || null,
+                explanationVi: q.explanation_vi,
+                level: q.level || defaultLevel,
+                skill: effectiveSkill,
+                partType: effectivePartType,
+                illustrationTheme: q.illustration_theme || null,
+                imageUrl: (q as any).image_url || null,
+                optionsImagesJson,
+                topic: q.topic || defaultTopic,
+                providerUsed: 'imported',
+                contentHash,
+                nearDupSig,
+                audioUrl: autoAudioUrl,
+                audioText,
+                passage: q.passage || null,
+              });
+            }
           } else {
             rejectedCount++;
+            sixGate.gate5_uniqueness = {
+              passed: false,
+              details: 'Câu hỏi trùng lặp chính xác (content_hash) đã tồn tại trong Hàng chờ duyệt hoặc Kho câu hỏi.',
+            };
+            sixGate.allPassed = false;
           }
         } else {
           rejectedCount++;
@@ -1742,8 +2258,10 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
     }
 
     const defaultLevel = Number(req.body?.default_level || req.body?.level) || 1;
-    const defaultSkill = String(req.body?.default_skill || req.body?.skill || 'reading');
-    const defaultPartType = String(req.body?.default_part_type || req.body?.part_type || 'read_fill_blank_4opt');
+    const rawSkill = String(req.body?.default_skill || req.body?.skill || 'reading');
+    const defaultSkill = rawSkill === 'auto' || rawSkill === 'all' ? 'reading' : rawSkill;
+    const rawPartType = String(req.body?.default_part_type || req.body?.part_type || 'read_fill_blank_4opt');
+    const defaultPartType = rawPartType === 'auto' ? 'read_fill_blank_4opt' : rawPartType;
     const defaultTopic = req.body?.default_topic ? String(req.body.default_topic).trim() : null;
     const autoPersist = req.body?.auto_persist !== false;
 
@@ -1783,6 +2301,7 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
 
     const db = getDbSync();
     ensurePendingSchema(db);
+    await sanitizeAndResolveCandidateImages(parsedQuestions as any[], defaultPartType, Boolean(req.body?.resolve_images));
     const existingStems = extractExistingStemsFromDb(db);
     const batchId = `upload_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
     const pendCols = (db.prepare('PRAGMA table_info(pending_questions)').all() as any[]).map((c) => c.name);
@@ -1797,11 +2316,11 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
     try {
       const insertSql = `
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, image_url, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url, audio_text, passage
           ${hasDiffCol ? ', difficulty_tier' : ''}
           ${hasSourceCol ? ', source' : ''}
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?
           ${hasDiffCol ? ', ?' : ''}
           ${hasSourceCol ? ', ?' : ''}
         )
@@ -1841,12 +2360,15 @@ qbankRouter.post('/upload-file', async (req: Request, res: Response) => {
               effectiveSkill,
               effectivePartType,
               q.illustration_theme || null,
+              (q as any).image_url || null,
               JSON.stringify(q.options_images || []),
               q.topic || defaultTopic,
               'uploaded_file',
               contentHash,
               nearDupSig,
               autoAudioUrl,
+              (q as any).audio_text || (q as any).transcript || null,
+              q.passage || null,
             ];
             if (hasDiffCol) {
               insertParams.push(q.difficulty_tier || null);
@@ -2106,6 +2628,7 @@ CHÚ Ý:
 
     const db = getDbSync();
     ensurePendingSchema(db);
+    await sanitizeAndResolveCandidateImages(parsedQuestions as any[], defaultPartType, Boolean(req.body?.resolve_images));
     const existingStems = extractExistingStemsFromDb(db);
     const batchId = `ocr_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
     const pendCols = (db.prepare('PRAGMA table_info(pending_questions)').all() as any[]).map((c) => c.name);
@@ -2121,11 +2644,11 @@ CHÚ Ý:
     try {
       const insertSql = `
         INSERT INTO pending_questions (
-          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url
+          id, batch_id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, image_url, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, audio_url, audio_text, passage
           ${hasDiffCol ? ', difficulty_tier' : ''}
           ${hasSourceCol ? ', source' : ''}
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?
           ${hasDiffCol ? ', ?' : ''}
           ${hasSourceCol ? ', ?' : ''}
         )
@@ -2163,12 +2686,15 @@ CHÚ Ý:
             effectiveSkill,
             effectivePartType,
             q.illustration_theme || null,
+            (q as any).image_url || null,
             JSON.stringify(q.options_images || []),
             q.topic || defaultTopic,
             providerUsed,
             contentHash,
             nearDupSig,
             autoAudioUrl,
+            (q as any).audio_text || (q as any).transcript || null,
+            q.passage || null,
           ];
           if (hasDiffCol) {
             insertParams.push(q.difficulty_tier || null);
@@ -3244,7 +3770,11 @@ export function formatPendingRow(row: any) {
 
   // 4. Character noise check: Latin letters or Vietnamese accents in Chinese stem/options where unexpected
   // Strip allowed bracketed pinyin (e.g. "(hòu tiān)" or "（yí gòng）") in fill-in-pinyin tasks
-  let textToCheck = `${stem} ${options.join(' ')}`;
+  const cleanOptionsForNoise = options
+    .map((o) => String(o || '').trim())
+    .filter((o) => !/^[A-Fa-f]$/.test(o) && !/^[A-Fa-f](?:[\s\-–—>→,]+[A-Fa-f])+$/i.test(o))
+    .map((o) => o.replace(/^[A-Fa-f][.、:\s]+/, ''));
+  let textToCheck = `${stem.replace(/(?:^|[\r\n\s])[A-Ba-b]\s*[:：]/g, ' ')} ${cleanOptionsForNoise.join(' ')}`;
   textToCheck = textToCheck.replace(/\([^)]*\)/g, '').replace(/（[^）]*）/g, '');
   // Ignore standard ordering labels e.g. "A-B-C-D-E" or "A. B. C."
   textToCheck = textToCheck.replace(/\b[A-Fa-f][\s\-,]+[A-Fa-f]\b/g, '').replace(/^[A-F]\.\s*/gm, '');
@@ -3281,7 +3811,10 @@ export function formatPendingRow(row: any) {
     skill: row.skill || 'reading',
     part_type: row.part_type || 'read_fill_blank_4opt',
     illustration_theme: row.illustration_theme || null,
+    image_url: row.image_url || null,
     options_images: optionsImages,
+    passage: row.passage || null,
+    audio_text: row.audio_text || row.transcript || null,
     topic: row.topic || null,
     status: row.status || 'pending',
     provider_used: row.provider_used || null,
@@ -3422,6 +3955,46 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
     const approvedIds: string[] = [];
     const syncDetails: any[] = [];
 
+    // Pre-resolve missing visual images before entering the synchronous SQLite transaction
+    try {
+      const preSelectStmt = db.prepare('SELECT * FROM pending_questions WHERE id = ?');
+      const preUpdateImgStmt = db.prepare(
+        'UPDATE pending_questions SET illustration_theme = ?, image_url = ?, options_images = ? WHERE id = ?'
+      );
+      for (const id of ids) {
+        const preRow: any = preSelectStmt.get(id);
+        if (!preRow) continue;
+        const pt = String(preRow.part_type || '').trim();
+        if (!isVisualQuestionType(pt) && !allowsOptionalStemVisual(pt)) {
+          if (preRow.illustration_theme || preRow.image_url || (preRow.options_images && preRow.options_images !== '[]')) {
+            preUpdateImgStmt.run(null, null, '[]', id);
+          }
+        } else if (
+          (isVisualQuestionType(pt) || (allowsOptionalStemVisual(pt) && preRow.illustration_theme)) &&
+          (!preRow.image_url || Boolean(req.body?.resolve_images))
+        ) {
+          let parsedOpts: string[] = [];
+          let parsedOptImgs: string[] = [];
+          try { parsedOpts = typeof preRow.options === 'string' ? JSON.parse(preRow.options) : (preRow.options || []); } catch {}
+          try { parsedOptImgs = typeof preRow.options_images === 'string' ? JSON.parse(preRow.options_images) : (preRow.options_images || []); } catch {}
+          const candidateObj: any = {
+            ...preRow,
+            options: parsedOpts,
+            options_images: parsedOptImgs,
+          };
+          await sanitizeAndResolveCandidateImages([candidateObj], pt, Boolean(req.body?.resolve_images));
+          preUpdateImgStmt.run(
+            candidateObj.illustration_theme || null,
+            candidateObj.image_url || null,
+            JSON.stringify(candidateObj.options_images || []),
+            id
+          );
+        }
+      }
+    } catch (preErr) {
+      console.warn('[QBank Approve] Pre-resolve image waterfall warning:', preErr);
+    }
+
     db.exec('BEGIN IMMEDIATE;');
     try {
       const selectStmt = db.prepare('SELECT * FROM pending_questions WHERE id = ?');
@@ -3430,8 +4003,8 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
       );
       const upsertQuestionsStmt = db.prepare(`
         INSERT INTO questions (
-          id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, tested_vocab, passage, audio_url, is_active, batch_id, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
+          id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type, illustration_theme, image_url, options_images, topic, status, provider_used, content_hash, near_duplicate_signature, tested_vocab, passage, audio_url, audio_text, is_active, batch_id, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET
           stem = excluded.stem,
           options = excluded.options,
@@ -3442,6 +4015,7 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           skill = excluded.skill,
           part_type = excluded.part_type,
           illustration_theme = excluded.illustration_theme,
+          image_url = COALESCE(excluded.image_url, questions.image_url),
           options_images = excluded.options_images,
           topic = excluded.topic,
           status = 'approved',
@@ -3451,14 +4025,15 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           tested_vocab = excluded.tested_vocab,
           passage = excluded.passage,
           audio_url = COALESCE(excluded.audio_url, questions.audio_url),
+          audio_text = COALESCE(excluded.audio_text, questions.audio_text),
           is_active = 1,
           batch_id = COALESCE(excluded.batch_id, questions.batch_id),
           updated_at = CURRENT_TIMESTAMP
       `);
       const upsertQbStmt = db.prepare(`
         INSERT INTO qb_questions (
-          question_id, level, skill, part_type, stem, passage, audio_url, options, answer_index, explanation_vi, pinyin_stem, topic, status, provenance, qa, content_hash, vocab_tags, options_images
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?, ?)
+          question_id, level, skill, part_type, stem, passage, audio_url, audio_text, image_url, illustration_theme, options, answer_index, explanation_vi, pinyin_stem, topic, status, provenance, qa, content_hash, vocab_tags, options_images
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?, ?)
         ON CONFLICT(question_id) DO UPDATE SET
           level = excluded.level,
           skill = excluded.skill,
@@ -3466,6 +4041,9 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           stem = excluded.stem,
           passage = excluded.passage,
           audio_url = COALESCE(excluded.audio_url, qb_questions.audio_url),
+          audio_text = COALESCE(excluded.audio_text, qb_questions.audio_text),
+          image_url = COALESCE(excluded.image_url, qb_questions.image_url),
+          illustration_theme = excluded.illustration_theme,
           options = excluded.options,
           answer_index = excluded.answer_index,
           explanation_vi = excluded.explanation_vi,
@@ -3483,6 +4061,9 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
 
         updatePendingStmt.run(id);
 
+        const rowPartType = row.part_type || 'read_fill_blank_4opt';
+        const isVisualRow = isVisualQuestionType(rowPartType) || allowsOptionalStemVisual(rowPartType);
+
         let optionsArr: string[] = [];
         try {
           optionsArr = typeof row.options === 'string' ? JSON.parse(row.options) : (row.options || []);
@@ -3494,8 +4075,12 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
         const rowLevel = Number(row.level) || 1;
         // Always compute hash and near-duplicate signature freshly
         let optionImages: string[] = [];
-        try { optionImages = typeof row.options_images === 'string' ? JSON.parse(row.options_images) : (row.options_images || []); } catch {}
+        if (isVisualRow) {
+          try { optionImages = typeof row.options_images === 'string' ? JSON.parse(row.options_images) : (row.options_images || []); } catch {}
+        }
         const optionsImagesJson = JSON.stringify(Array.isArray(optionImages) ? optionImages : []);
+        const resolvedIllustrationTheme = isVisualRow ? (row.illustration_theme || null) : null;
+        const resolvedImageUrl = isVisualRow ? (row.image_url || null) : null;
         const contentHash = computeContentHash(row.stem, optionsArr, Number(row.answer_idx), optionImages);
         const nearDupSig = computeNearDuplicateSignature(row.stem, optionsArr);
 
@@ -3535,8 +4120,9 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           row.explanation_vi || '',
           rowLevel,
           row.skill || 'reading',
-          row.part_type || 'read_fill_blank_4opt',
-          row.illustration_theme || null,
+          rowPartType,
+          resolvedIllustrationTheme,
+          resolvedImageUrl,
           optionsImagesJson,
           row.topic || null,
           row.provider_used || 'multi-llm',
@@ -3545,6 +4131,7 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           testedVocabJson,
           row.passage || null,
           resolvedAudioUrl || null,
+          row.audio_text || row.transcript || null,
           row.batch_id || null
         );
 
@@ -3567,15 +4154,18 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
           row.id,
           rowLevel,
           row.skill || 'reading',
-          row.part_type || 'read_fill_blank_4opt',
+          rowPartType,
           row.stem,
           row.passage || null,
           resolvedAudioUrl || null,
+          row.audio_text || row.transcript || null,
+          resolvedImageUrl,
+          resolvedIllustrationTheme,
           optionsJson,
           Number(row.answer_idx),
           row.explanation_vi || '',
           row.pinyin || null,
-          row.topic || row.illustration_theme || null,
+          row.topic || resolvedIllustrationTheme || null,
           provenance,
           qa,
           contentHash,
@@ -3610,6 +4200,88 @@ qbankRouter.post('/pending/approve', async (req: Request, res: Response) => {
       approved_count: approvedIds.length,
       approved_ids: approvedIds,
       sync_details: syncDetails,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: sanitizeError(err.message) });
+  }
+});
+
+// =========================================================================
+// 8b. POST /api/qbank/resolve-images: Resolve/backfill 5-Tier Waterfall images
+// =========================================================================
+qbankRouter.post('/resolve-images', async (req: Request, res: Response) => {
+  try {
+    const db = getDbSync();
+    ensurePendingSchema(db);
+    const table = req.body?.table === 'pending_questions' ? 'pending_questions' : 'questions';
+    const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    const forceRegenerate = Boolean(req.body?.force);
+
+    let rows: any[] = [];
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => '?').join(',');
+      rows = db.prepare(`SELECT * FROM ${table} WHERE id IN (${placeholders})`).all(...ids) as any[];
+    } else {
+      rows = db.prepare(`SELECT * FROM ${table} ORDER BY rowid ASC LIMIT 100`).all() as any[];
+    }
+
+    let updatedCount = 0;
+    const updateStmt = db.prepare(
+      `UPDATE ${table} SET illustration_theme = ?, image_url = ?, options_images = ? WHERE id = ?`
+    );
+
+    for (const row of rows) {
+      const pt = String(row.part_type || '').trim();
+      if (!isVisualQuestionType(pt) && !allowsOptionalStemVisual(pt)) {
+        if (row.illustration_theme || row.image_url || (row.options_images && row.options_images !== '[]')) {
+          updateStmt.run(null, null, '[]', row.id);
+          updatedCount++;
+        }
+        continue;
+      }
+      if (!isVisualQuestionType(pt) && !(allowsOptionalStemVisual(pt) && row.illustration_theme)) continue;
+      if (!forceRegenerate && row.image_url && String(row.image_url).startsWith('/uploads/qbank-images/')) {
+        continue;
+      }
+      let parsedOpts: string[] = [];
+      let parsedOptImgs: string[] = [];
+      try { parsedOpts = typeof row.options === 'string' ? JSON.parse(row.options) : (row.options || []); } catch {}
+      try { parsedOptImgs = typeof row.options_images === 'string' ? JSON.parse(row.options_images) : (row.options_images || []); } catch {}
+      const candidateObj: any = {
+        ...row,
+        options: parsedOpts,
+        options_images: parsedOptImgs,
+      };
+      const resolvedList = await batchResolveQuestionImages([candidateObj], {
+        skipTiers: forceRegenerate ? ['tier1_cache'] : [],
+      });
+      const r = resolvedList[0] as any;
+      if (r) {
+        updateStmt.run(
+          r.illustration_theme || row.illustration_theme || null,
+          r.image_url || null,
+          JSON.stringify(r.options_images || []),
+          row.id
+        );
+        if (table === 'questions') {
+          try {
+            db.prepare('UPDATE qb_questions SET image_url = ?, illustration_theme = ?, options_images = ? WHERE question_id = ?').run(
+              r.image_url || null,
+              r.illustration_theme || row.illustration_theme || null,
+              JSON.stringify(r.options_images || []),
+              row.id
+            );
+          } catch {}
+        }
+        updatedCount++;
+      }
+    }
+
+    return res.json({
+      success: true,
+      table,
+      scanned: rows.length,
+      updated_count: updatedCount,
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: sanitizeError(err.message) });

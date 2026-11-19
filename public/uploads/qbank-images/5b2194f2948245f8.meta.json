@@ -1,0 +1,11 @@
+{
+  "cacheKey": "5b2194f2948245f8",
+  "rawPrompt": "passenger airplane in sky",
+  "imagePromptEn": "A clean, clear educational illustration of passenger airplane in sky, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "passenger airplane sky",
+  "theme": "airplane",
+  "tier": "tier2_cloudflare",
+  "byteSize": 226823,
+  "createdAt": "2026-11-18T12:40:04.942Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

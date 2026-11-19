@@ -1,0 +1,11 @@
+{
+  "cacheKey": "5bbf9de7e3e41f9f",
+  "rawPrompt": "sleeping",
+  "imagePromptEn": "A clean, clear educational illustration of sleeping, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "sleeping",
+  "theme": "sleeping",
+  "tier": "tier2_cloudflare",
+  "byteSize": 153897,
+  "createdAt": "2026-11-18T12:19:39.622Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

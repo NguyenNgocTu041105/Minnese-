@@ -1,0 +1,11 @@
+{
+  "cacheKey": "0a5f634cd6d29f7a",
+  "rawPrompt": "writing",
+  "imagePromptEn": "A clean, clear educational illustration of writing, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "writing",
+  "theme": "writing",
+  "tier": "tier2_cloudflare",
+  "byteSize": 162923,
+  "createdAt": "2026-11-18T12:20:01.303Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

@@ -1,0 +1,11 @@
+{
+  "cacheKey": "4b48159247f439cb",
+  "rawPrompt": "passenger airplane flying in blue sky",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of passenger airplane flying in blue sky, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "passenger airplane flying",
+  "theme": "airplane",
+  "tier": "tier2_cloudflare",
+  "byteSize": 330942,
+  "createdAt": "2026-11-18T13:59:34.177Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

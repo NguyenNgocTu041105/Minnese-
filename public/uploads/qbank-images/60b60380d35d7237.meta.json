@@ -1,0 +1,11 @@
+{
+  "cacheKey": "60b60380d35d7237",
+  "rawPrompt": "train",
+  "imagePromptEn": "A clean, clear educational illustration of train, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "train",
+  "theme": "train",
+  "tier": "tier2_cloudflare",
+  "byteSize": 285336,
+  "createdAt": "2026-11-18T12:19:45.340Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

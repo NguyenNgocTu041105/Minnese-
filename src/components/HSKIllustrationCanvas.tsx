@@ -24,36 +24,51 @@ export interface HSKIllustrationProps {
   className?: string;
   /** Option card mode: displays compact layout for option buttons */
   isOptionCard?: boolean;
+  /** Suppresses text labels/captions on fallback & illustration cards to prevent answer leaks */
+  hideLabels?: boolean;
+  /** Exam mode alias that forces hideLabels=true */
+  examMode?: boolean;
 }
 
-export type SceneKey =
-  | 'taxi'
-  | 'apple'
-  | 'reading'
-  | 'rain'
-  | 'writing'
-  | 'airplane'
-  | 'train'
-  | 'banana'
-  | 'watermelon'
-  | 'sleeping'
-  | 'water'
-  | 'sunny'
-  | 'wind'
-  | 'singing'
-  | 'dance'
-  | 'coffee'
-  | 'tea'
-  | 'movie'
-  | 'phone'
-  | 'cat'
-  | 'hospital'
-  | 'rice'
-  | 'bookshelf'
-  | 'running'
-  | 'swimming'
-  | 'soccer'
-  | 'handshake';
+export const VALID_ILLUSTRATION_THEMES = [
+  'taxi',
+  'apple',
+  'reading',
+  'rain',
+  'writing',
+  'airplane',
+  'train',
+  'banana',
+  'watermelon',
+  'sleeping',
+  'water',
+  'sunny',
+  'wind',
+  'singing',
+  'dance',
+  'coffee',
+  'tea',
+  'movie',
+  'phone',
+  'cat',
+  'hospital',
+  'rice',
+  'bookshelf',
+  'running',
+  'swimming',
+  'soccer',
+  'handshake',
+] as const;
+
+export type SceneKey = (typeof VALID_ILLUSTRATION_THEMES)[number];
+
+/**
+ * Checks if a string is one of the 27 valid illustration themes
+ */
+export function isValidIllustrationTheme(theme: string | null | undefined): theme is SceneKey {
+  if (!theme || typeof theme !== 'string') return false;
+  return VALID_ILLUSTRATION_THEMES.includes(theme.trim().toLowerCase() as SceneKey);
+}
 
 /**
  * Normalizes text to extract semantic scene key
@@ -187,11 +202,6 @@ function renderSvgScene(sceneKey: SceneKey) {
               <circle cx="0" cy="0" r="7" fill="#334155" />
             </g>
           </g>
-          {/* Label Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0F172A" opacity="0.7" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">出租车 • Taxi</text>
-          </g>
         </svg>
       );
 
@@ -232,11 +242,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           {/* 3D Specular Highlight */}
           <ellipse cx="155" cy="150" rx="22" ry="38" transform="rotate(-25 155 150)" fill="#FFFFFF" opacity="0.4" />
           <ellipse cx="148" cy="142" rx="8" ry="16" transform="rotate(-25 148 142)" fill="#FFFFFF" opacity="0.7" />
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#991B1B" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">苹果 • Quả táo</text>
-          </g>
         </svg>
       );
 
@@ -284,11 +289,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           <path d="M324 202 C 332 202, 332 218, 324 218" stroke="#E2E8F0" strokeWidth="3" fill="none" />
           <path d="M306 188 Q 312 180 308 172" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" fill="none" />
           <path d="M314 188 Q 320 180 316 172" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" fill="none" />
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#4338CA" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">看书 • Đọc sách</text>
-          </g>
         </svg>
       );
 
@@ -328,11 +328,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <line x1="0" y1="-45" x2="0" y2="45" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
             <path d="M0 45 C 0 55, 12 55, 12 45" stroke="#334155" strokeWidth="4" fill="none" strokeLinecap="round" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0369A1" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">下雨 • Trời mưa</text>
-          </g>
         </svg>
       );
 
@@ -354,8 +349,8 @@ function renderSvgScene(sceneKey: SceneKey) {
             {/* Dashed Crosshairs */}
             <line x1="0" y1="70" x2="140" y2="70" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="4 4" />
             <line x1="70" y1="0" x2="70" y2="140" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="4 4" />
-            {/* Character '好' in Kaiti font */}
-            <text x="70" y="102" fontSize="88" fill="#0F172A" textAnchor="middle" fontFamily="'KaiTi', 'STKaiti', serif" fontWeight="600">好</text>
+            {/* Brush stroke curve in Tianzige */}
+            <path d="M40 75 Q 70 40 100 75 Q 70 105 45 110" stroke="#0F172A" strokeWidth="8" fill="none" strokeLinecap="round" />
           </g>
           {/* Chinese Calligraphy Brush */}
           <g transform="translate(260, 45) rotate(35)">
@@ -365,11 +360,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <rect x="0" y="175" width="10" height="15" fill="#CA8A04" />
             {/* Brush Tip with Inked Point */}
             <path d="M0 190 Q 5 220 5 225 Q 5 220 10 190 Z" fill="#0F172A" />
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#B91C1C" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">写字 • Viết chữ</text>
           </g>
         </svg>
       );
@@ -414,11 +404,6 @@ function renderSvgScene(sceneKey: SceneKey) {
               <circle key={x} cx={x} cy="-4" r="2.5" fill="#1E293B" />
             ))}
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0369A1" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">飞机 • Máy bay</text>
-          </g>
         </svg>
       );
 
@@ -462,11 +447,6 @@ function renderSvgScene(sceneKey: SceneKey) {
               <rect key={x} x={x} y="15" width="26" height="18" rx="4" fill="#0F172A" />
             ))}
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#1E3A8A" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">火车 • Tàu hỏa</text>
-          </g>
         </svg>
       );
 
@@ -504,11 +484,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <circle cx="140" cy="145" r="4" fill="#78350F" />
             <circle cx="160" cy="130" r="4" fill="#78350F" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#A16207" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">香蕉 • Quả chuối</text>
-          </g>
         </svg>
       );
 
@@ -543,11 +518,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             ].map((seed, i) => (
               <path key={i} d={`M${seed.x} ${seed.y} C ${seed.x - 3} ${seed.y + 6}, ${seed.x + 3} ${seed.y + 6}, ${seed.x} ${seed.y} Z`} fill="#0F172A" />
             ))}
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#BE123C" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">西瓜 • Dưa hấu</text>
           </g>
         </svg>
       );
@@ -585,11 +555,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           <text x="135" y="150" fontSize="18" fontWeight="bold" fill="#C4B5FD">Z</text>
           <text x="150" y="135" fontSize="24" fontWeight="bold" fill="#DDD6FE">Z</text>
           <text x="170" y="115" fontSize="30" fontWeight="bold" fill="#EDE9FE">z</text>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#5B21B6" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">睡觉 • Đi ngủ</text>
-          </g>
         </svg>
       );
 
@@ -625,11 +590,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <path d="M10 20 L20 150 C 20 162, 80 162, 80 150 L90 20 Z" fill="none" stroke="#FFFFFF" strokeWidth="4" />
             <ellipse cx="50" cy="20" rx="40" ry="8" fill="#E0F2FE" opacity="0.5" stroke="#FFFFFF" strokeWidth="3" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0284C7" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">喝水 • Uống nước</text>
-          </g>
         </svg>
       );
 
@@ -663,11 +623,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           {/* Flying Bird Silhouettes */}
           <path d="M80 80 Q 90 70 100 80 Q 110 70 120 80" stroke="#0F172A" strokeWidth="2.5" fill="none" strokeLinecap="round" />
           <path d="M290 90 Q 298 82 306 90 Q 314 82 322 90" stroke="#0F172A" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#D97706" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">晴天 • Trời nắng</text>
-          </g>
         </svg>
       );
 
@@ -695,11 +650,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <ellipse cx="120" cy="120" rx="12" ry="6" transform="rotate(-30 120 120)" />
             <ellipse cx="220" cy="180" rx="14" ry="7" transform="rotate(25 220 180)" />
             <ellipse cx="330" cy="100" rx="10" ry="5" transform="rotate(-15 330 100)" />
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0F766E" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">刮风 • Có gió</text>
           </g>
         </svg>
       );
@@ -736,11 +686,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <text x="280" y="100" fontSize="42" fontFamily="serif">♬</text>
             <text x="310" y="145" fontSize="32" fontFamily="serif">♪</text>
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#7C3AED" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">唱歌 • Hát ca</text>
-          </g>
         </svg>
       );
 
@@ -773,11 +718,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             {/* Slender Legs */}
             <line x1="-10" y1="50" x2="-25" y2="85" stroke="#FDE047" strokeWidth="5" strokeLinecap="round" />
             <line x1="10" y1="50" x2="25" y2="85" stroke="#FDE047" strokeWidth="5" strokeLinecap="round" />
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#BE185D" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">跳舞 • Khiêu vũ</text>
           </g>
         </svg>
       );
@@ -819,11 +759,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           {/* Coffee Beans Scattered */}
           <ellipse cx="90" cy="235" rx="8" ry="5" fill="#451A03" transform="rotate(25 90 235)" />
           <ellipse cx="300" cy="240" rx="8" ry="5" fill="#451A03" transform="rotate(-30 300 240)" />
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#78350F" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">咖啡 • Cà phê</text>
-          </g>
         </svg>
       );
 
@@ -865,11 +800,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <rect x="0" y="0" width="28" height="24" rx="4" fill="#A7F3D0" stroke="#059669" strokeWidth="1.5" />
             <ellipse cx="14" cy="3" rx="12" ry="4" fill="#F59E0B" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#065F46" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">茶 • Uống trà</text>
-          </g>
         </svg>
       );
 
@@ -887,9 +817,9 @@ function renderSvgScene(sceneKey: SceneKey) {
           <g transform="translate(70, 70) rotate(-8)">
             {/* Lower Slate Board */}
             <rect x="0" y="35" width="130" height="95" rx="6" fill="#0F172A" stroke="#475569" strokeWidth="3" />
-            <text x="15" y="65" fill="#94A3B8" fontSize="11" fontWeight="bold">SCENE: 1</text>
-            <text x="75" y="65" fill="#94A3B8" fontSize="11" fontWeight="bold">TAKE: 3</text>
-            <text x="25" y="105" fill="#FDE047" fontSize="18" fontWeight="bold" fontFamily="sans-serif">电影院</text>
+            <line x1="15" y1="65" x2="55" y2="65" stroke="#94A3B8" strokeWidth="4" strokeLinecap="round" />
+            <line x1="75" y1="65" x2="115" y2="65" stroke="#94A3B8" strokeWidth="4" strokeLinecap="round" />
+            <line x1="25" y1="100" x2="105" y2="100" stroke="#FDE047" strokeWidth="6" strokeLinecap="round" />
             {/* Clapper Top with Black/White Stripes */}
             <g transform="translate(0, 5)">
               <rect width="130" height="25" rx="4" fill="#000" />
@@ -914,11 +844,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <polygon points="12,20 22,20 18,120 10,120" fill="#FFFFFF" />
             <polygon points="32,20 42,20 38,120 30,120" fill="#FFFFFF" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#BE123C" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">看电影 • Xem phim</text>
-          </g>
         </svg>
       );
 
@@ -942,20 +867,15 @@ function renderSvgScene(sceneKey: SceneKey) {
             <circle cx="65" cy="70" r="28" fill="#BAE6FD" />
             <circle cx="65" cy="65" r="14" fill="#0284C7" />
             <path d="M48 88 C 48 78, 82 78, 82 88 Z" fill="#0284C7" />
-            {/* Caller Name */}
-            <text x="65" y="120" fill="#FFFFFF" fontSize="16" fontWeight="bold" textAnchor="middle">妈妈</text>
-            <text x="65" y="136" fill="#BAE6FD" fontSize="11" textAnchor="middle">Incoming Call...</text>
+            {/* Caller Signal Bars */}
+            <rect x="42" y="112" width="46" height="8" rx="4" fill="#FFFFFF" opacity="0.85" />
+            <rect x="35" y="128" width="60" height="6" rx="3" fill="#BAE6FD" opacity="0.7" />
             {/* Green Accept Button */}
             <circle cx="38" cy="180" r="18" fill="#22C55E" />
             <path d="M30 180 Q 38 172 46 180" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
             {/* Red Decline Button */}
             <circle cx="92" cy="180" r="18" fill="#EF4444" />
             <path d="M84 180 Q 92 188 100 180" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#4338CA" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">打电话 • Gọi điện</text>
           </g>
         </svg>
       );
@@ -1001,11 +921,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           {/* Red Yarn Ball on Left */}
           <circle cx="110" cy="235" r="18" fill="#EF4444" />
           <path d="M110 235 Q 130 240 150 238" stroke="#EF4444" strokeWidth="3" fill="none" />
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#C2410C" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">小猫 • Con mèo</text>
-          </g>
         </svg>
       );
 
@@ -1038,11 +953,6 @@ function renderSvgScene(sceneKey: SceneKey) {
           {/* Entrance Canopy & Automatic Sliding Glass Doors */}
           <rect x="175" y="210" width="50" height="30" fill="#0D9488" rx="2" />
           <rect x="185" y="215" width="30" height="25" fill="#E0F2FE" />
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0F766E" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">医院 • Bệnh viện</text>
-          </g>
         </svg>
       );
 
@@ -1076,11 +986,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             {/* Wooden Chopsticks */}
             <line x1="-85" y1="-25" x2="85" y2="5" stroke="#92400E" strokeWidth="5" strokeLinecap="round" />
             <line x1="-80" y1="-32" x2="80" y2="-2" stroke="#78350F" strokeWidth="5" strokeLinecap="round" />
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#1D4ED8" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">米饭 • Cơm trắng</text>
           </g>
         </svg>
       );
@@ -1118,11 +1023,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <rect x="76" y="0" width="25" height="75" fill="#DC2626" rx="2" />
             <rect x="105" y="5" width="22" height="70" fill="#4338CA" rx="2" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#9A3412" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">很多书 • Giá sách</text>
-          </g>
         </svg>
       );
 
@@ -1156,11 +1056,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <line x1="0" y1="50" x2="-30" y2="65" stroke="#0F172A" strokeWidth="8" strokeLinecap="round" />
             <line x1="-30" y1="65" x2="-55" y2="55" stroke="#0F172A" strokeWidth="8" strokeLinecap="round" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#C2410C" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">跑步 • Chạy bộ</text>
-          </g>
         </svg>
       );
 
@@ -1193,11 +1088,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <path d="M-20 20 Q -10 0 0 20" stroke="#FFFFFF" strokeWidth="3" fill="none" />
             <path d="M10 25 Q 25 5 40 25" stroke="#FFFFFF" strokeWidth="3" fill="none" />
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#0284C7" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">游泳 • Bơi lội</text>
-          </g>
         </svg>
       );
 
@@ -1228,11 +1118,6 @@ function renderSvgScene(sceneKey: SceneKey) {
             <line x1="11" y1="15" x2="35" y2="35" stroke="#0F172A" strokeWidth="3" />
             <line x1="-11" y1="15" x2="-35" y2="35" stroke="#0F172A" strokeWidth="3" />
             <line x1="-17" y1="-5" x2="-44" y2="-15" stroke="#0F172A" strokeWidth="3" />
-          </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#15803D" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">足球 • Đá bóng</text>
           </g>
         </svg>
       );
@@ -1266,11 +1151,6 @@ function renderSvgScene(sceneKey: SceneKey) {
               <rect key={y} x="-18" y={y} width="36" height="7" rx="3" fill="#FB923C" stroke="#EA580C" strokeWidth="1" />
             ))}
           </g>
-          {/* Title Badge */}
-          <g transform="translate(20, 20)">
-            <rect width="130" height="28" rx="8" fill="#1E40AF" opacity="0.85" />
-            <text x="65" y="18" fill="#FFFFFF" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">握手 • Bắt tay</text>
-          </g>
         </svg>
       );
 
@@ -1282,11 +1162,12 @@ function renderSvgScene(sceneKey: SceneKey) {
 /**
  * Fallback Canvas for unlisted scenes or custom emoji
  */
-function renderFallbackScene(label: string) {
+function renderFallbackScene(label: string, hideLabels = false) {
   // Extract emoji if present
   const emojiMatch = label.match(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u);
   const emoji = emojiMatch ? emojiMatch[0] : '🖼️';
   const cleanLabel = label.replace(/[\[\]]/g, '').trim();
+  const shouldShowTextBanner = !hideLabels && Boolean(cleanLabel) && !isValidIllustrationTheme(cleanLabel);
 
   return (
     <svg viewBox="0 0 400 300" className="w-full h-full select-none" xmlns="http://www.w3.org/2000/svg">
@@ -1304,14 +1185,18 @@ function renderFallbackScene(label: string) {
       <line x1="133" y1="0" x2="133" y2="300" stroke="#FFFFFF" strokeWidth="1" opacity="0.15" />
       <line x1="266" y1="0" x2="266" y2="300" stroke="#FFFFFF" strokeWidth="1" opacity="0.15" />
       {/* Floating Center Badge */}
-      <circle cx="200" cy="130" r="55" fill="#FFFFFF" opacity="0.2" />
-      <circle cx="200" cy="130" r="45" fill="#FFFFFF" opacity="0.9" />
-      <text x="200" y="145" fontSize="48" textAnchor="middle">{emoji}</text>
-      {/* Text Label Banner */}
-      <rect x="30" y="220" width="340" height="45" rx="10" fill="#0F172A" opacity="0.6" />
-      <text x="200" y="248" fill="#FFFFFF" fontSize="13" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">
-        {cleanLabel.length > 36 ? cleanLabel.substring(0, 36) + '...' : cleanLabel}
-      </text>
+      <circle cx="200" cy={shouldShowTextBanner ? 130 : 150} r="55" fill="#FFFFFF" opacity="0.2" />
+      <circle cx="200" cy={shouldShowTextBanner ? 130 : 150} r="45" fill="#FFFFFF" opacity="0.9" />
+      <text x="200" y={shouldShowTextBanner ? 145 : 165} fontSize="48" textAnchor="middle">{emoji}</text>
+      {/* Text Label Banner (hidden in exam / hideLabels mode) */}
+      {shouldShowTextBanner && (
+        <>
+          <rect x="30" y="220" width="340" height="45" rx="10" fill="#0F172A" opacity="0.6" />
+          <text x="200" y="248" fill="#FFFFFF" fontSize="13" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">
+            {cleanLabel.length > 36 ? cleanLabel.substring(0, 36) + '...' : cleanLabel}
+          </text>
+        </>
+      )}
     </svg>
   );
 }
@@ -1320,7 +1205,7 @@ export const HSKIllustrationCanvas: React.FC<HSKIllustrationProps> = ({
   scene,
   imageUrl,
   alt = 'Hình minh họa đề thi HSK',
-  aspectRatio = '4/3',
+  aspectRatio = 'square',
   heightClass,
   showZoomButton = true,
   onZoom,
@@ -1328,37 +1213,69 @@ export const HSKIllustrationCanvas: React.FC<HSKIllustrationProps> = ({
   caption,
   className = '',
   isOptionCard = false,
+  hideLabels = false,
+  examMode = false,
 }) => {
   const [imageError, setImageError] = useState(false);
+  const suppressLabels = Boolean(hideLabels || examMode || isOptionCard);
 
-  // Aspect ratio mapping
+  // Aspect ratio mapping — default to 1:1 square so 1024x1024 AI illustrations are never squished or vertically cropped
+  const effectiveRatio = isOptionCard ? 'square' : aspectRatio;
   const ratioClasses = {
     'video': 'aspect-video',
-    '4/3': 'aspect-4/3',
+    '4/3': 'aspect-square',
     'square': 'aspect-square',
-    'banner': 'aspect-21/9',
-  }[aspectRatio];
+    'banner': 'aspect-[21/9]',
+  }[effectiveRatio];
+
+  const isImagePath = (val?: string | null): boolean => {
+    if (!val || typeof val !== 'string') return false;
+    const trimmed = val.trim();
+    if (trimmed.startsWith('/api/builtin-illustration')) return false;
+    return (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('/') ||
+      trimmed.startsWith('./') ||
+      trimmed.startsWith('data:image/') ||
+      /\.(png|jpe?g|webp|svg|gif|avif)(\?.*)?$/i.test(trimmed)
+    );
+  };
+
+  const effectiveImageUrl = isImagePath(imageUrl)
+    ? imageUrl
+    : isImagePath(scene)
+    ? scene
+    : undefined;
 
   const matchedSceneKey = resolveSceneKey(scene || imageUrl);
 
   // Determine whether to render direct real image
-  const isDirectImage = Boolean(
-    imageUrl &&
-    !imageError &&
-    (imageUrl.startsWith('http://') ||
-     imageUrl.startsWith('https://') ||
-     imageUrl.startsWith('/') ||
-     imageUrl.startsWith('data:image/'))
-  );
+  const isDirectImage = Boolean(effectiveImageUrl && !imageError);
+  const showBottomCaption =
+    Boolean(caption) &&
+    !suppressLabels &&
+    !isValidIllustrationTheme(caption) &&
+    caption !== scene;
+
+  // Never let legacy fixed narrow height classes (h-24, h-28, h-32) squish a 1:1 square container
+  const effectiveHeightClass = isOptionCard || effectiveRatio === 'square' ? '' : (heightClass || '');
+  const inlineAspectRatioStyle: React.CSSProperties | undefined =
+    effectiveRatio === 'square'
+      ? { aspectRatio: '1 / 1' }
+      : effectiveRatio === 'video'
+      ? { aspectRatio: '16 / 9' }
+      : undefined;
 
   return (
     <div
-      className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-center items-center group transition-all ${ratioClasses} ${heightClass || ''} ${className}`}
+      style={inlineAspectRatioStyle}
+      className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-center items-center group transition-all ${ratioClasses} ${effectiveHeightClass} ${className}`}
     >
       {/* 1. Real Image Rendering (if URL is valid and not errored) */}
-      {isDirectImage ? (
+      {isDirectImage && effectiveImageUrl ? (
         <img
-          src={imageUrl}
+          src={effectiveImageUrl}
           alt={alt}
           onError={() => setImageError(true)}
           className="w-full h-full object-cover select-none"
@@ -1368,7 +1285,7 @@ export const HSKIllustrationCanvas: React.FC<HSKIllustrationProps> = ({
         renderSvgScene(matchedSceneKey)
       ) : (
         // 3. Fallback Canvas with extracted Emoji
-        renderFallbackScene(scene || 'Hình minh họa')
+        renderFallbackScene(scene || 'Hình minh họa', suppressLabels)
       )}
 
       {/* Top Badge Overlay (if provided) */}
@@ -1395,7 +1312,7 @@ export const HSKIllustrationCanvas: React.FC<HSKIllustrationProps> = ({
       )}
 
       {/* Optional Bottom Caption inside option card or stem */}
-      {caption && !isOptionCard && (
+      {showBottomCaption && (
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 text-center">
           <span className="text-xs text-white font-medium drop-shadow-xs">
             {caption}

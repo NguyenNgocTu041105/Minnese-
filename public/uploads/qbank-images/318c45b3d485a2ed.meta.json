@@ -1,0 +1,11 @@
+{
+  "cacheKey": "318c45b3d485a2ed",
+  "rawPrompt": "cat",
+  "imagePromptEn": "A clean, clear educational illustration of cat, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "cat",
+  "theme": "cat",
+  "tier": "tier2_cloudflare",
+  "byteSize": 178807,
+  "createdAt": "2026-11-18T12:19:55.374Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

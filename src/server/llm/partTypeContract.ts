@@ -52,15 +52,6 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
     requiresCompletedStem: true,
     descriptionVi: 'Câu chứa chỗ trống và ngân hàng 5 từ vựng A–E để chọn từ phù hợp.',
   },
-  read_fill_blank_word_bank_3opt: {
-    partType: 'read_fill_blank_word_bank_3opt',
-    category: 'fill_blank',
-    name: 'Đọc: Điền từ vào chỗ trống từ ngân hàng từ (3 phương án: A–C)',
-    expectedOptions: 3,
-    requiresPlaceholder: true,
-    requiresCompletedStem: true,
-    descriptionVi: 'Câu chứa chỗ trống và ngân hàng 3 từ vựng A–C để chọn từ phù hợp.',
-  },
   read_fill_blank_word_bank_4opt: {
     partType: 'read_fill_blank_word_bank_4opt',
     category: 'fill_blank',
@@ -81,17 +72,6 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
   },
 
   // --- Reading Comprehension Formats ---
-  read_comprehension_short_3opt: {
-    partType: 'read_comprehension_short_3opt',
-    category: 'reading_comprehension',
-    name: 'Đọc hiểu ngắn: Đọc đoạn văn ngắn chọn đáp án (3 phương án)',
-    expectedOptions: 3,
-    requiresPlaceholder: false,
-    prohibitsPlaceholder: true,
-    requiresCompletedStem: false,
-    requiresQuestionMarkStar: true,
-    descriptionVi: 'Gồm đoạn văn/câu khẳng định ngắn (>= 6 chữ Hán) kèm câu hỏi đánh dấu sao (★). 3 phương án là câu trả lời cho câu hỏi. KHÔNG chứa chỗ trống điền từ.',
-  },
   read_comprehension_4opt: {
     partType: 'read_comprehension_4opt',
     category: 'reading_comprehension',
@@ -114,18 +94,30 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
     prohibitsPlaceholder: true,
     requiresCompletedStem: false,
     requiresVisual: true,
-    descriptionVi: 'Câu văn đọc hiểu khớp với một trong 6 hình ảnh SVG trong ngân hàng tranh.',
+    descriptionVi: 'Câu văn đọc hiểu khớp với một trong 6 hình ảnh trong ngân hàng tranh.',
   },
-  listen_picture_match_3opt: {
-    partType: 'listen_picture_match_3opt',
+  read_sentence_picture_match_split: {
+    partType: 'read_sentence_picture_match_split',
     category: 'picture_matching',
-    name: 'Nghe: Nghe câu chọn tranh phù hợp (3 phương án tranh)',
-    expectedOptions: 3,
+    name: 'Đọc: Nối câu với tranh minh họa chia phần (6 phương án tranh)',
+    expectedOptions: 6,
     requiresPlaceholder: false,
+    prohibitsPlaceholder: true,
+    requiresCompletedStem: false,
+    requiresVisual: true,
+    descriptionVi: 'Câu văn đọc hiểu khớp với một trong 6 hình ảnh trong ngân hàng tranh.',
+  },
+  listen_picture_match_4opt: {
+    partType: 'listen_picture_match_4opt',
+    category: 'picture_matching',
+    name: 'Nghe: Nghe câu chọn tranh phù hợp (4 phương án tranh)',
+    expectedOptions: 4,
+    requiresPlaceholder: false,
+    prohibitsPlaceholder: true,
     requiresCompletedStem: false,
     requiresAudioText: true,
     requiresVisual: true,
-    descriptionVi: 'Nghe audio (hoặc transcript) và chọn bức tranh đúng trong 3 tranh.',
+    descriptionVi: 'Nghe audio (hoặc transcript) và chọn bức tranh đúng trong 4 tranh.',
   },
   listen_dialogue_picture_match_6opt: {
     partType: 'listen_dialogue_picture_match_6opt',
@@ -149,15 +141,6 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
     requiresPlaceholder: false,
     requiresCompletedStem: false,
     descriptionVi: 'Câu hỏi hoặc câu ngữ cảnh cần ghép với câu đáp hợp lý từ bảng 2 phương án A–B.',
-  },
-  read_dialogue_matching_3opt: {
-    partType: 'read_dialogue_matching_3opt',
-    category: 'dialogue_matching',
-    name: 'Đọc: Ghép câu hỏi - đáp hội thoại (3 phương án: A–C)',
-    expectedOptions: 3,
-    requiresPlaceholder: false,
-    requiresCompletedStem: false,
-    descriptionVi: 'Câu hỏi hoặc câu ngữ cảnh cần ghép với câu đáp hợp lý từ bảng 3 phương án A–C.',
   },
   read_dialogue_matching_4opt: {
     partType: 'read_dialogue_matching_4opt',
@@ -198,16 +181,16 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
     requiresSpokenTurns: true,
     descriptionVi: 'Nghe đoạn hội thoại có lượt lời (男：... 女：...) và trả lời câu hỏi.',
   },
-  listen_monologue_qa_3opt: {
-    partType: 'listen_monologue_qa_3opt',
+  listen_monologue_qa_4opt: {
+    partType: 'listen_monologue_qa_4opt',
     category: 'listening_monologue',
-    name: 'Nghe: Nghe đoạn độc thoại/thông báo chọn đáp án (3 phương án)',
-    expectedOptions: 3,
+    name: 'Nghe: Nghe đoạn độc thoại/thông báo chọn đáp án (4 phương án)',
+    expectedOptions: 4,
     requiresPlaceholder: false,
     prohibitsPlaceholder: true,
     requiresCompletedStem: false,
     requiresAudioText: true,
-    descriptionVi: 'Đoạn nói đơn thoại kèm câu hỏi nghe hiểu.',
+    descriptionVi: 'Đoạn nói đơn thoại kèm câu hỏi nghe hiểu (4 phương án).',
   },
 
   // --- True / False Practice Formats ---
@@ -333,23 +316,22 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
     name: 'Viết: Ghép bộ thủ thành chữ Hán (6 phương án)',
     expectedOptions: 6,
     requiresPlaceholder: false,
+    prohibitsPlaceholder: true,
     requiresCompletedStem: false,
-    descriptionVi: 'Dạng bài ghép các nét/bộ thủ cho trước thành chữ Hán đúng (6 phương án).',
+    descriptionVi: 'Dạng bài ghép các nét/bộ thủ cho trước thành chữ Hán đúng (6 phương án). Không được chứa chỗ trống điền từ (____).',
   },
-
-  // --- Official Split & 3-opt Blueprint Formats ---
-  listen_dialogue_qa_3opt: {
-    partType: 'listen_dialogue_qa_3opt',
-    category: 'listening_dialogue',
-    name: 'Nghe: Hội thoại hỏi đáp 3 phương án (HSK 2)',
-    expectedOptions: 3,
+  write_sentence_reorder_4opt: {
+    partType: 'write_sentence_reorder_4opt',
+    category: 'generic_mcq',
+    name: 'Viết: Sắp xếp từ thành câu hoàn chỉnh (连词成句 - 4 phương án)',
+    expectedOptions: 4,
     requiresPlaceholder: false,
     prohibitsPlaceholder: true,
     requiresCompletedStem: false,
-    requiresAudioText: true,
-    requiresSpokenTurns: true,
-    descriptionVi: 'Nghe đoạn hội thoại ngắn 2 lượt lời và chọn đáp án trong 3 phương án.',
+    descriptionVi: 'Dạng bài sắp xếp các từ/cụm từ phân cách bởi dấu / thành câu hoàn chỉnh (4 phương án).',
   },
+
+  // --- Official Split Blueprint Formats ---
   listen_dialogue_picture_match_split: {
     partType: 'listen_dialogue_picture_match_split',
     category: 'picture_matching',
@@ -430,17 +412,6 @@ const PART_TYPE_REGISTRY: Record<string, PartTypeContract> = {
     requiresCompletedStem: true,
     descriptionVi: 'Điền từ thích hợp vào chỗ trống từ ngân hàng 6 từ A–F.',
   },
-  read_comprehension_short_and_medium_3opt: {
-    partType: 'read_comprehension_short_and_medium_3opt',
-    category: 'reading_comprehension',
-    name: 'Đọc hiểu ngắn và vừa (3 phương án - HSK 2/3)',
-    expectedOptions: 3,
-    requiresPlaceholder: false,
-    prohibitsPlaceholder: true,
-    requiresCompletedStem: false,
-    requiresQuestionMarkStar: true,
-    descriptionVi: 'Đọc đoạn văn ngắn hoặc vừa kèm câu hỏi ★ (3 phương án).',
-  },
 };
 
 /**
@@ -462,9 +433,16 @@ export function getPartTypeContract(partType?: string): PartTypeContract {
   const isWriting = /^write_/i.test(normalized);
 
   const optionMatch = normalized.match(/_(\d+)opt/i);
-  const expectedOpts = optionMatch ? Number(optionMatch[1]) : (isTrueFalse ? 2 : 4);
+  const parsedOpts = optionMatch ? Number(optionMatch[1]) : null;
+  const isSharedPoolType = /dialogue_matching|word_bank/i.test(normalized);
+  const expectedOpts =
+    parsedOpts !== null && (parsedOpts !== 3 || isSharedPoolType)
+      ? parsedOpts
+      : isTrueFalse
+      ? 2
+      : 4;
 
-  if (isWriting && !normalized.includes('6opt') && !normalized.includes('4opt') && !normalized.includes('3opt')) {
+  if (isWriting && !normalized.includes('6opt') && !normalized.includes('4opt')) {
     return {
       partType: normalized,
       category: 'writing_open_ended',
@@ -478,7 +456,7 @@ export function getPartTypeContract(partType?: string): PartTypeContract {
 
   if (isComprehension) {
     return {
-      partType: normalized || 'read_comprehension_short_3opt',
+      partType: normalized || 'read_comprehension_4opt',
       category: 'reading_comprehension',
       name: `Đọc hiểu (${expectedOpts} phương án)`,
       expectedOptions: expectedOpts,
@@ -510,17 +488,21 @@ export function getPartTypeContract(partType?: string): PartTypeContract {
       expectedOptions: 2,
       requiresPlaceholder: false,
       requiresCompletedStem: false,
+      requiresAudioText: isListening,
       descriptionVi: 'Dạng câu hỏi Đúng/Sai (2 phương án).',
     };
   }
 
   return {
     partType: normalized || 'generic_mcq',
-    category: 'generic_mcq',
+    category: isPicture ? 'picture_matching' : 'generic_mcq',
     name: `Trắc nghiệm (${expectedOpts} phương án)`,
     expectedOptions: expectedOpts,
     requiresPlaceholder: false,
     requiresCompletedStem: false,
+    requiresVisual: isPicture,
+    requiresAudioText: isListening,
+    requiresSpokenTurns: isListening && /dialogue/i.test(normalized),
     descriptionVi: 'Dạng câu hỏi trắc nghiệm thông thường.',
   };
 }
@@ -545,4 +527,42 @@ export function isReadingComprehensionPartType(partType?: string): boolean {
 export function isOpenEndedWritingPartType(partType?: string): boolean {
   const cat = getPartTypeContract(partType).category;
   return cat === 'writing_open_ended' || cat === 'writing_make_sentence';
+}
+
+export const PINYIN_INLINE_CHAR_CLASS =
+  "a-zA-ZāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜĀÁǍÀĒÉĚÈĪÍǏÌŌÓǑÒŪÚǓÙǕǗǙǛ";
+
+/**
+ * Strips parenthesized/bracketed inline Pinyin (including uppercase tone-marked vowels such as Ānnà).
+ */
+export function stripParenthesizedPinyin(text: string): string {
+  if (!text || typeof text !== 'string') return text || '';
+  const parenRe = new RegExp(`[\\(\\uff08][${PINYIN_INLINE_CHAR_CLASS}0-9\\s,.:;\\?!'’\\-_：；、，。？！]+[\\)\\uff09]`, 'g');
+  const bracketRe = new RegExp(`[\\[【][${PINYIN_INLINE_CHAR_CLASS}0-9\\s,.:;\\?!'’\\-_：；、，。？！]+[\\]】]`, 'g');
+  return text.replace(parenRe, '').replace(bracketRe, '').trim();
+}
+
+/**
+ * Substitutes all blank placeholders (____, （ ）, (), 【】, []) with the selected option.
+ * Supports multi-blank correlative conjunctions (e.g. `因为 …… 所以 ……` across 2 blanks).
+ */
+export function substituteBlankPlaceholders(stem: string, optionText: string): string {
+  const source = typeof stem === 'string' ? stem : '';
+  const ans = (typeof optionText === 'string' ? optionText : '').trim();
+  const blankRegex = /\s*(?:_{2,}|（\s*_*\s*）|\(\s*_*\s*\)|【\s*_*\s*】|\[\s*_*\s*\])\s*/g;
+  const matches = source.match(blankRegex);
+  if (!matches || matches.length === 0) return source;
+
+  if (matches.length >= 2 && ans) {
+    const parts = ans
+      .split(/\s*(?:……|\.{3,}|—+|\/)\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length === matches.length) {
+      let idx = 0;
+      return source.replace(blankRegex, () => parts[idx++] ?? ans).trim();
+    }
+  }
+
+  return source.replace(blankRegex, ans).trim();
 }

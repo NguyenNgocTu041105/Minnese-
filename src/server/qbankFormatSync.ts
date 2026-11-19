@@ -121,23 +121,21 @@ export function ensureEligiblePoolSchema(db: DatabaseSync): void {
 /**
  * Helper for pedagogical option-count flexibility between generated questions and blueprint parts.
  * Rules:
- * - 4 options acceptable for 3-option parts (listening QA, picture match, reading comprehension)
+ * - Legacy 3-option parts (*_3opt / requiredOptions === 3) are rejected.
  * - 4 or 5 options acceptable for 6-word-bank parts (read_fill_blank_word_bank_6opt, read_fill_blank_word_bank_split)
- * - 4 options acceptable for 6-option picture match
+ * - 4 or 5 options acceptable for 6-option picture match
  * - 0 options acceptable for open-ended writing tasks
  */
 export function isOptionCountCompatible(bpType: string, requiredOptions: number, actualOptions: number): boolean {
+  if (/_3opt(?:\b|_)/i.test(bpType) || requiredOptions === 3 || actualOptions === 3) {
+    return false;
+  }
   if (requiredOptions === 0) {
     return actualOptions === 0;
   }
-  if (bpType.includes('reorder') || bpType.includes('ordering')) return true;
   if (actualOptions === requiredOptions) return true;
 
-  // Pedagogical equivalence rules:
-  // 1. 4-option questions are valid substitutes for 3-option parts (listening QA, picture match, reading comprehension)
-  if (requiredOptions === 3 && actualOptions === 4) return true;
-
-  // 2. 4 or 5 options acceptable for 6-word-bank or 6-option picture match parts
+  // 4 or 5 options acceptable for 6-word-bank or 6-option picture match parts
   if (requiredOptions === 6 && (actualOptions === 4 || actualOptions === 5)) {
     if (bpType.includes('picture') || bpType.includes('word_bank') || bpType.includes('fill_blank')) {
       return true;
@@ -145,6 +143,21 @@ export function isOptionCountCompatible(bpType: string, requiredOptions: number,
   }
 
   return false;
+}
+
+function isResolvedVisualUrl(val: unknown): boolean {
+  if (typeof val !== 'string') return false;
+  const s = val.trim();
+  return /^(?:\/uploads\/[^\s"'<>]+|https?:\/\/[^\s"'<>]+|data:image\/[a-z0-9+.-]+;base64,[a-z0-9+/=]+)$/i.test(s);
+}
+
+function isValidEnglishVisualPrompt(val: unknown): boolean {
+  if (typeof val !== 'string') return false;
+  const s = val.trim();
+  if (s.length < 6) return false;
+  if (/[\u4e00-\u9fa5]/.test(s)) return false;
+  if (/^invalid[\s_]/i.test(s) || /^(?:none|null|undefined|n\/a)$/i.test(s)) return false;
+  return /^[a-zA-Z0-9][a-zA-Z0-9\s,.'"\-()\/]+$/.test(s) && /\s+/.test(s);
 }
 
 /**
@@ -252,8 +265,7 @@ export function validateFormatCompatibility(q: any, level?: number): FormatCheck
   const isZeroOptionWritingTask =
     rawPartTypeForOpts.startsWith('write_') &&
     !rawPartTypeForOpts.includes('6opt') &&
-    !rawPartTypeForOpts.includes('4opt') &&
-    !rawPartTypeForOpts.includes('3opt');
+    !rawPartTypeForOpts.includes('4opt');
 
   if (isZeroOptionWritingTask && optionsArr.length > 0) {
     practice_format_compatible = false;
@@ -297,118 +309,156 @@ export function validateFormatCompatibility(q: any, level?: number): FormatCheck
   if (blueprint && practice_format_compatible) {
     const rawPartType = (q.part_type || '').toLowerCase().trim();
 
-    // Check if blueprint contains this section
-    const section = blueprint.sections?.[rawSkill];
-    if (section && section.parts) {
-      let foundMatchingType = false;
-      // Find matching part in blueprint
-      for (const [partKey, partDef] of Object.entries<any>(section.parts)) {
-        const bpType = (partDef.type || '').toLowerCase().trim();
+    if (/_3opt(?:\b|_)/i.test(rawPartType)) {
+      ineligible_reasons.push(
+        `Loại bài ${q.part_type} sử dụng định dạng 3 lựa chọn đã lỗi thời; yêu cầu 4 lựa chọn`
+      );
+    } else {
+      // Check if blueprint contains this section
+      const section = blueprint.sections?.[rawSkill];
+      if (section && section.parts) {
+        let foundMatchingType = false;
+        // Find matching part in blueprint
+        for (const [partKey, partDef] of Object.entries<any>(section.parts)) {
+          const bpType = (partDef.type || '').toLowerCase().trim();
 
-        // Match either exact type or verified compatible type
-        const isTypeMatch = bpType === rawPartType || isCompatiblePartType(bpType, rawPartType);
+          // Match either exact type or verified compatible type
+          const isTypeMatch = bpType === rawPartType || isCompatiblePartType(bpType, rawPartType);
 
-        if (isTypeMatch) {
-          foundMatchingType = true;
-          if (!compatible_formats.includes(bpType)) {
-            compatible_formats.push(bpType);
-          }
-          if (rawPartType && !compatible_formats.includes(rawPartType)) {
-            compatible_formats.push(rawPartType);
-          }
-
-          // Check options count constraint if specified in blueprint with pedagogical flexibility
-          const optMatch = /_(\d+)opt$/.exec(bpType);
-          const requiredOptions = partDef.n_options ?? (optMatch ? parseInt(optMatch[1], 10) : 0);
-          // In HSK 1, 2, 3: Word bank parts require at least 5 options; 4-option MCQs (read_fill_blank_4opt) are practice-only
-          const isWordBankWithWrongOptions = targetLevel <= 3 && bpType.includes('word_bank') && (rawPartType.includes('4opt') || optionsArr.length < 5);
-          const isWordBankSplitWithWrongOptions = bpType.includes('split') && optionsArr.length !== requiredOptions && rawPartType.includes('4opt');
-
-          if (!isOptionCountCompatible(bpType, requiredOptions, optionsArr.length) || isWordBankWithWrongOptions || isWordBankSplitWithWrongOptions) {
-            ineligible_reasons.push(
-              isWordBankWithWrongOptions || isWordBankSplitWithWrongOptions
-                ? `Dạng bài ${bpType} yêu cầu chính xác 6 phương án (câu hiện có ${optionsArr.length})`
-                : `Dạng bài ${bpType} yêu cầu chính xác ${requiredOptions} phương án (câu hiện có ${optionsArr.length})`
-            );
-            continue;
-          }
-
-          // Check Audio requirement for listening (exam blueprint accepts audio_text, audio_url, audio_playback, or valid spoken stem)
-          let hasAudioDeficit = false;
-          if (rawSkill === 'listening') {
-            const hasExamAudio = Boolean(q.audio_text || q.audio_url || q.audio_playback || hasValidStem);
-            if (!hasExamAudio) {
-              hasAudioDeficit = true;
-              if (!ineligible_reasons.some((r) => r.includes('audio_text') || r.includes('âm thanh'))) {
-                ineligible_reasons.push('Câu hỏi nghe thiếu tài nguyên văn bản âm thanh (audio_text hoặc audio_url)');
-              }
+          if (isTypeMatch) {
+            foundMatchingType = true;
+            if (!compatible_formats.includes(bpType)) {
+              compatible_formats.push(bpType);
             }
-          }
+            if (rawPartType && !compatible_formats.includes(rawPartType)) {
+              compatible_formats.push(rawPartType);
+            }
 
-          // Check Passage requirement for cloze passages in higher HSK levels
-          if (bpType.includes('cloze_passages') || (targetLevel >= 5 && rawSkill === 'reading' && !bpType.includes('ordering') && !rawPartType.includes('sentence_ordering'))) {
-            const hasPassage = Boolean(
-              (q.passage && q.passage.trim().length >= 20) ||
-              (typeof q.stem === 'string' && q.stem.trim().length >= 25 && (!q.id || (!String(q.id).startsWith('pend_5_') && !String(q.id).startsWith('pend_6_'))))
-            );
-            if (!hasPassage) {
-              ineligible_reasons.push(`Dạng bài ${bpType} yêu cầu bài đọc văn bản (passage)`);
+            // Check options count constraint if specified in blueprint with pedagogical flexibility
+            const optMatch = /_(\d+)opt$/.exec(bpType);
+            const requiredOptions = partDef.n_options ?? (optMatch ? parseInt(optMatch[1], 10) : 0);
+            // In HSK 1, 2, 3: Word bank parts require at least 5 options; 4-option MCQs (read_fill_blank_4opt) are practice-only
+            const isWordBankWithWrongOptions = targetLevel <= 3 && bpType.includes('word_bank') && (rawPartType.includes('4opt') || optionsArr.length < 5);
+            const isWordBankSplitWithWrongOptions = bpType.includes('split') && optionsArr.length !== requiredOptions && rawPartType.includes('4opt');
+
+            if (!isOptionCountCompatible(bpType, requiredOptions, optionsArr.length) || isWordBankWithWrongOptions || isWordBankSplitWithWrongOptions) {
+              ineligible_reasons.push(
+                isWordBankWithWrongOptions || isWordBankSplitWithWrongOptions
+                  ? `Dạng bài ${bpType} yêu cầu chính xác 6 phương án (câu hiện có ${optionsArr.length})`
+                  : `Dạng bài ${bpType} yêu cầu chính xác ${requiredOptions} phương án (câu hiện có ${optionsArr.length})`
+              );
               continue;
             }
-          }
 
-          // Check Visual requirement
-          let hasVisualDeficit = false;
-          if (isVisualQuestionType(rawPartType) || isVisualQuestionType(bpType)) {
-            const theme = q.illustration_theme || q.illustration;
-            let hasImageBank = false;
-            if (Array.isArray(q.options_images) && q.options_images.length > 0) {
-              hasImageBank = true;
-            } else if (typeof q.options_images === 'string') {
-              try {
-                const parsed = JSON.parse(q.options_images);
-                if (Array.isArray(parsed) && parsed.length > 0) hasImageBank = true;
-              } catch {}
-            }
-            const hasTheme = isValidIllustrationTheme(theme) || hasImageBank;
-            if (!hasTheme) {
-              hasVisualDeficit = true;
-              if (!ineligible_reasons.some((r) => r.includes('hình minh họa'))) {
-                ineligible_reasons.push('Dạng bài nhìn tranh thiếu chủ đề hình minh họa SVG hợp lệ');
+            // Check Audio requirement for listening (exam blueprint accepts audio_text, audio_url, audio_playback, or valid spoken stem)
+            let hasAudioDeficit = false;
+            if (rawSkill === 'listening') {
+              const hasExamAudio = Boolean(q.audio_text || q.audio_url || q.audio_playback || hasValidStem);
+              if (!hasExamAudio) {
+                hasAudioDeficit = true;
+                if (!ineligible_reasons.some((r) => r.includes('audio_text') || r.includes('âm thanh'))) {
+                  ineligible_reasons.push('Câu hỏi nghe thiếu tài nguyên văn bản âm thanh (audio_text hoặc audio_url)');
+                }
               }
             }
-          }
 
-          if (hasAudioDeficit || hasVisualDeficit) {
-            continue;
-          }
+            // Check Passage requirement for cloze passages & comprehension articles in higher HSK levels (exclude sentence ordering & faulty-sentence detection)
+            if (
+              bpType.includes('cloze_passages') ||
+              (
+                targetLevel >= 5 &&
+                rawSkill === 'reading' &&
+                !bpType.includes('ordering') &&
+                !rawPartType.includes('sentence_ordering') &&
+                !bpType.includes('faulty') &&
+                !rawPartType.includes('faulty')
+              )
+            ) {
+              const hasPassage = Boolean(
+                (q.passage && q.passage.trim().length >= 20) ||
+                (typeof q.stem === 'string' && q.stem.trim().length >= 25 && (!q.id || (!String(q.id).startsWith('pend_5_') && !String(q.id).startsWith('pend_6_'))))
+              );
+              if (!hasPassage) {
+                ineligible_reasons.push(`Dạng bài ${bpType} yêu cầu bài đọc văn bản (passage)`);
+                continue;
+              }
+            }
 
-          // If all technical conditions pass:
-          exam_format_compatible = true;
-          matched_blueprint_part = partKey;
-          compatible_formats.push(bpType);
-          if (rawPartType && !compatible_formats.includes(rawPartType)) {
-            compatible_formats.push(rawPartType);
+            // Check Visual requirement
+            let hasVisualDeficit = false;
+            if (isVisualQuestionType(rawPartType) || isVisualQuestionType(bpType)) {
+              const theme = q.illustration_theme || q.illustration;
+              let hasImageBank = false;
+              const isValidVisualOptionItem = (u: unknown): boolean =>
+                typeof u === 'string' &&
+                (isValidIllustrationTheme(u) || isResolvedVisualUrl(u) || isValidEnglishVisualPrompt(u));
+              const hasRequiredVisualCount = (arr: unknown[]): boolean =>
+                optionsArr.length === 0 || arr.length >= optionsArr.length;
+              if (
+                Array.isArray(q.options_images) &&
+                q.options_images.length > 0 &&
+                hasRequiredVisualCount(q.options_images) &&
+                q.options_images.every(isValidVisualOptionItem)
+              ) {
+                hasImageBank = true;
+              } else if (typeof q.options_images === 'string') {
+                try {
+                  const parsed = JSON.parse(q.options_images);
+                  if (
+                    Array.isArray(parsed) &&
+                    parsed.length > 0 &&
+                    hasRequiredVisualCount(parsed) &&
+                    parsed.every(isValidVisualOptionItem)
+                  ) {
+                    hasImageBank = true;
+                  }
+                } catch {}
+              }
+              const hasResolvedUrl = isResolvedVisualUrl(q.image_url) || isResolvedVisualUrl(theme);
+              const hasTheme =
+                isValidIllustrationTheme(theme) ||
+                hasResolvedUrl ||
+                isValidEnglishVisualPrompt(theme) ||
+                hasImageBank;
+              if (!hasTheme) {
+                hasVisualDeficit = true;
+                if (!ineligible_reasons.some((r) => r.includes('hình minh họa'))) {
+                  ineligible_reasons.push('Dạng bài nhìn tranh thiếu chủ đề hình minh họa SVG hợp lệ');
+                }
+              }
+            }
+
+            if (hasAudioDeficit || hasVisualDeficit) {
+              continue;
+            }
+
+            // If all technical conditions pass:
+            exam_format_compatible = true;
+            matched_blueprint_part = partKey;
+            compatible_formats.push(bpType);
+            if (rawPartType && !compatible_formats.includes(rawPartType)) {
+              compatible_formats.push(rawPartType);
+            }
+            compatible_formats.push(`hsk${targetLevel}_official_mock:${rawSkill}:${partKey}`);
+            compatible_formats.push(`hsk${targetLevel}_section_${rawSkill}`);
+            break;
           }
-          compatible_formats.push(`hsk${targetLevel}_official_mock:${rawSkill}:${partKey}`);
-          compatible_formats.push(`hsk${targetLevel}_section_${rawSkill}`);
-          break;
         }
-      }
 
-      if (!foundMatchingType) {
-        if (targetLevel === 1 && rawPartType === 'read_fill_blank_4opt') {
-          ineligible_reasons.push(
-            `Loại bài ${q.part_type} không thuộc bất kỳ phần nào trong blueprint HSK 1 (dạng bài đọc điền từ yêu cầu chính xác 6 phương án theo định dạng word bank)`
-          );
-        } else {
-          ineligible_reasons.push(
-            `Loại bài ${q.part_type || 'không xác định'} không thuộc bất kỳ phần nào trong blueprint HSK ${targetLevel}`
-          );
+        if (!foundMatchingType) {
+          if (targetLevel === 1 && rawPartType === 'read_fill_blank_4opt') {
+            ineligible_reasons.push(
+              `Loại bài ${q.part_type} không thuộc bất kỳ phần nào trong blueprint HSK 1 (dạng bài đọc điền từ yêu cầu chính xác 6 phương án theo định dạng word bank)`
+            );
+          } else {
+            ineligible_reasons.push(
+              `Loại bài ${q.part_type || 'không xác định'} không thuộc bất kỳ phần nào trong blueprint HSK ${targetLevel}`
+            );
+          }
         }
+      } else {
+        ineligible_reasons.push(`Blueprint HSK ${targetLevel} không có phần thi kỹ năng '${rawSkill}'`);
       }
-    } else {
-      ineligible_reasons.push(`Blueprint HSK ${targetLevel} không có phần thi kỹ năng '${rawSkill}'`);
     }
   } else if (!blueprint) {
     ineligible_reasons.push(`Chưa có tệp blueprint xác minh cho HSK ${targetLevel}`);

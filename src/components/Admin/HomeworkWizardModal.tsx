@@ -512,7 +512,7 @@ export function synthesizeLessonQuestions(
         }
 
         const dialogueScript = `${speaker1}\n${speaker2}\n${questionPrompt}`;
-        const audioText = `${speaker1}${speaker2}${questionPrompt}`;
+        const audioText = `${speaker1}\n${speaker2}`;
 
         const correct = v2.hanzi;
         const distractors = getHanziDistractors(v2, effectiveVocabPool, 3);
@@ -657,6 +657,7 @@ YÊU CẦU CẤU TRÚC ĐỀ ĐA DẠNG & ĐỊNH DẠNG CHUẨN CANONICAL (Đ�
 Hãy kết hợp đầy đủ các dạng bài tập (bắt buộc có cả câu Nghe hội thoại 男/女/问, câu Điền từ vào chỗ trống ____, và câu Trắc nghiệm/Đọc hiểu) xoay quanh đúng từ vựng & cấu trúc trên:
 - Phần 1 — Câu Nghe hội thoại (Hệ thống sẽ tự động phân vai giọng đọc Bắc Kinh Neural TTS theo từng nhân vật và ngữ cảnh bài học; BẮT BUỘC đủ 4 phương án A, B, C, D, tuyệt đối không chỉ có 3 đáp án):
   + Đa dạng hóa nhân vật và bối cảnh giao tiếp sát với Bài ${opts.lessonNumber} (ví dụ: thầy/cô giáo 王老师/李老师 với học sinh 学生/同学, trợ lý AI小语 với người học, bố mẹ 爸爸/妈妈 với con cái, bạn bè 大卫/玛丽/小明/小红, hoặc nhân vật 男/女).
+  + TUYỆT ĐỐI KHÔNG thêm các dòng chú thích bối cảnh/nhân vật như "Nhân vật tham gia:", "Tuyến nhân vật:", "Bối cảnh:", "Tình huống:", "人物：", "角色：" trước câu thoại. Mỗi câu hỏi chỉ viết trực tiếp lời thoại bắt đầu bằng 男： và 女： để hệ thống phát âm chuẩn xác hội thoại.
   Câu [STT]:
   男：[Lời thoại nhân vật 1 (có thể ghi 男： hoặc tên nhân vật phù hợp ngữ cảnh như 王老师：, 学生：, 爸爸：, 大卫：) bằng chữ Hán dùng từ vựng/cấu trúc bài học]
   女：[Lời thoại nhân vật 2 (có thể ghi 女： hoặc tên nhân vật đối đáp như 学生：, AI小语：, 妈妈：, 玛丽：) bằng chữ Hán dùng từ vựng/cấu trúc bài học]
@@ -777,7 +778,7 @@ export function parseExternalAiHomeworkText(
 
           return verifyAndFixQuizQuestionPinyin({
             id: `ext-ai-q-${Date.now()}-${idx + 1}`,
-            type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+            type: (isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning') as QuizQuestion['type'],
             prompt: qPrompt,
             questionChinese: qChinese !== qPrompt ? qChinese : '',
             audioText: isListening ? audioTxt : undefined,
@@ -917,7 +918,10 @@ export function parseExternalAiHomeworkText(
       displayPrompt = askText
         ? `Nghe hội thoại và trả lời: ${askText}`
         : 'Nghe hội thoại và chọn đáp án đúng:';
-      displayChinese = stemLines.filter((l) => !/^问[:：]/i.test(l)).join('\n');
+      const isMetaLine = (l: string) =>
+        /^(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|Gợi\s*ý|Chú\s*thích)\s*[:：]/i.test(l.trim()) ||
+        /^(?:人物|参与人物|对话人物|角色|背景|场景)\s*[:：]/.test(l.trim());
+      displayChinese = stemLines.filter((l) => !/^问[:：]/i.test(l) && !isMetaLine(l)).join('\n');
     } else if (isFillBlank) {
       if (stemLines.length >= 2 && !stemLines[stemLines.length - 1].includes('____')) {
         displayPrompt = stemLines[stemLines.length - 1];
@@ -941,13 +945,13 @@ export function parseExternalAiHomeworkText(
     const sanitizedChineseAudio = sanitizeQuestionAudioText(displayChinese || cleanStem);
     let audioTxt = '';
     if (isListening) {
-      audioTxt = sanitizedChineseAudio || cleanStem.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+      audioTxt = sanitizedChineseAudio || displayChinese.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
     }
 
     parsedLocal.push(
       verifyAndFixQuizQuestionPinyin({
         id: `raw-q-${Date.now()}-${idx + 1}`,
-        type: isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning',
+        type: (isListening ? 'listening' : isFillBlank ? 'fill_blank' : 'meaning') as QuizQuestion['type'],
         prompt: displayPrompt,
         questionChinese: displayChinese,
         audioText: isListening ? audioTxt : sanitizedChineseAudio || undefined,
@@ -1792,6 +1796,10 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
       };
 
       // 2. Create AssignmentDoc
+      const isListeningOnly =
+        practiceMode === 'listening' ||
+        (questions.length > 0 && questions.every((q) => q.type === 'listening'));
+
       const newAssign: AssignmentDoc = {
         id: `assign-${Date.now()}`,
         title: assignTitle.trim(),
@@ -1799,7 +1807,7 @@ export const HomeworkWizardModal: React.FC<HomeworkWizardModalProps> = ({
         target_type: targetType,
         target_class_id: targetType === 'class' ? selectedClassId : undefined,
         hsk_level: targetLevel,
-        content_type: 'quiz',
+        content_type: isListeningOnly ? 'listening' : 'quiz',
         content_ref_id: newExamDoc.id,
         content_title: newExamDoc.title,
         exam_code: examCode,

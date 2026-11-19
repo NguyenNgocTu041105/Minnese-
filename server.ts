@@ -495,6 +495,7 @@ function buildRAGFallbackResponse(
 async function startServer() {
   assertStagingDatabaseIsolation();
   const app = express();
+  app.set('trust proxy', 1);
   const PORT = Number.parseInt(process.env.PORT || '3000', 10);
   const HOST = process.env.HOST || '0.0.0.0';
 
@@ -641,6 +642,12 @@ async function startServer() {
   const audioDir = path.join(process.cwd(), 'public', 'audio');
   fs.mkdirSync(audioDir, { recursive: true });
   app.use('/audio', express.static(audioDir));
+
+  // Ensure public/uploads directory exists and mount static serving for 5-tier Image Waterfall
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  const qbankImagesDir = path.join(uploadsDir, 'qbank-images');
+  fs.mkdirSync(qbankImagesDir, { recursive: true });
+  app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', immutable: true }));
 
   // Cloud Ephemeral Disk Auto-Recovery: If a static /audio/:filename.mp3 was wiped after container redeploy,
   // automatically look up the question in QBank DB, re-synthesize via Edge-TTS, cache to disk, and stream it!
@@ -2307,6 +2314,10 @@ QUY TẮC BẮT BUỘC:
       cleanedText = cleanedText
         .replace(/^(?:Câu|Bài|Question|Part|Phần)\s*\d+\s*[:：.\-)\]]\s*/i, '')
         .replace(/^(?:Đọc|Nghe)\s+(?:đoạn\s+)?(?:hội\s+thoại|câu|đoạn\s+văn)(?:\s+sau)?(?:\s+và\s+trả\s+lời(?:\s+câu\s+hỏi)?)?\s*[:：]?\s*/i, '')
+        .replace(/(?:^|[\r\n\s]+)(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|Gợi\s*ý|Chú\s*thích)\s*[:：][^\r\n]*/gi, ' ')
+        .replace(/(?:^|[\r\n\s]+)(?:人物|参与人物|对话人物|角色|背景|场景)\s*[:：][^\r\n]*/g, ' ')
+        .replace(/^(?:问|Question|Hỏi)\s*[:：]\s*/gi, '')
+        .replace(/([\r\n]+)\s*(?:Question|Hỏi)\s*[:：]\s*/gi, '$1')
         .replace(/\([^()\u4e00-\u9fff]*\)/g, ' ')
         .replace(/（[^（）\u4e00-\u9fff]*）/g, ' ')
         .replace(/_{2,}/g, '，')
@@ -2319,6 +2330,11 @@ QUY TẮC BẮT BUỘC:
       /(?:^|[\r\n\s])(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]/.test(
         textToSynth
       );
+
+    // If single voice mode, strip speaker tags so the narrator does not read character names aloud
+    const textForSingleVoice = textToSynth
+      .replace(/(?:^|[\r\n\s]+)(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]\s*/gi, ' ')
+      .trim();
 
     const hash = crypto.createHash('md5').update(`${voice}:${textToSynth}`).digest('hex');
 
@@ -2357,7 +2373,7 @@ QUY TẮC BẮT BUỘC:
           await new Promise<void>((resolve, reject) => {
             const args = isMultiDialogue
               ? [multiTtsScript, '--text', textToSynth, '--output', diskPath, '--voice', voice, '--no-chime']
-              : [synthScript, textToSynth, diskPath, voice === 'auto' ? 'zh-CN-XiaoxiaoNeural' : voice, '+0%'];
+              : [synthScript, textForSingleVoice || textToSynth, diskPath, voice === 'auto' ? 'zh-CN-XiaoxiaoNeural' : voice, '+0%'];
             execFile(
               pythonExec,
               args,

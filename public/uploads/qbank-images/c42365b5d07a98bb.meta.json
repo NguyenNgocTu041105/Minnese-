@@ -1,0 +1,11 @@
+{
+  "cacheKey": "c42365b5d07a98bb",
+  "rawPrompt": "airplane",
+  "imagePromptEn": "A clean, clear educational illustration of airplane, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "airplane",
+  "theme": "airplane",
+  "tier": "tier2_cloudflare",
+  "byteSize": 203425,
+  "createdAt": "2026-11-18T12:19:03.072Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

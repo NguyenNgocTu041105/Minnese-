@@ -11,6 +11,8 @@ import {
   getPartTypeContract,
   isFillBlankPartType,
   isReadingComprehensionPartType,
+  stripParenthesizedPinyin,
+  substituteBlankPlaceholders,
 } from './partTypeContract.js';
 import {
   computeNearDuplicateSignature as engineNearDupSig,
@@ -42,8 +44,8 @@ export function computeNearDuplicateSignature(stem: string, options: string[]): 
 }
 
 /**
- * Determines whether a question part_type requires visual SVG illustration.
- * Visual types include: listen_picture_match_4opt, listen_picture_match_3opt,
+ * Determines whether a question part_type requires visual illustration.
+ * Visual types include: listen_picture_match_4opt,
  * listen_dialogue_picture_match_6opt, read_sentence_picture_match_6opt, listen_choose_pic, etc.
  */
 export function isVisualQuestionType(partType?: string | null): boolean {
@@ -52,14 +54,82 @@ export function isVisualQuestionType(partType?: string | null): boolean {
   return /picture|image|tranh|choose_pic/i.test(partType.trim());
 }
 
+const OPTIONAL_STEM_VISUAL_PART_TYPES = new Set([
+  'listen_true_false_2opt',
+  'read_true_false_2opt',
+  'listen_short_dialogue_4opt',
+  'write_short_essay_80chars',
+  'write_sentence_from_picture_word',
+  'write_story_from_4pictures_100chars',
+]);
+
+export function allowsOptionalStemVisual(partType?: string | null): boolean {
+  if (!partType || typeof partType !== 'string') return false;
+  return OPTIONAL_STEM_VISUAL_PART_TYPES.has(partType.trim().toLowerCase());
+}
+
+export function isValidResolvedImageUrl(val?: string | null): boolean {
+  if (!val || typeof val !== 'string') return false;
+  const s = val.trim();
+  return /^(?:\/uploads\/[^\s"'<>]+|https?:\/\/[^\s"'<>]+|data:image\/[a-z0-9+.-]+;base64,[a-z0-9+/=]+)$/i.test(s);
+}
+
+export function isCleanEnglishVisualPrompt(val?: string | null): boolean {
+  if (!val || typeof val !== 'string') return false;
+  const s = val.trim();
+  if (s.length < 6) return false;
+  if (/[\u4e00-\u9fa5]/.test(s)) return false;
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/.test(s)) return false;
+  if (/\[?\s*IMG\s*:/i.test(s) || /【\s*IMG\s*:/i.test(s)) return false;
+  if (/^invalid[\s_]/i.test(s) || /^(?:none|null|undefined|n\/a)$/i.test(s)) return false;
+  if (/\b(?:correct\s*answer|answer\s*is|đáp\s*án)\b/i.test(s)) return false;
+  return /^[a-zA-Z0-9][a-zA-Z0-9\s,.'"\-()\/]+$/.test(s) && /\s+/.test(s);
+}
+
+function isValidVisualAsset(val?: string | null): boolean {
+  if (!val || typeof val !== 'string') return false;
+  return isValidIllustrationTheme(val) || isValidResolvedImageUrl(val) || isCleanEnglishVisualPrompt(val);
+}
+
+function inferThemeFromOptionText(text: string): string | null {
+  const s = String(text || '');
+  if (/茶/.test(s)) return 'tea';
+  if (/咖啡/.test(s)) return 'coffee';
+  if (/苹果/.test(s)) return 'apple';
+  if (/香蕉/.test(s)) return 'banana';
+  if (/西瓜/.test(s)) return 'watermelon';
+  if (/书|读|看书/.test(s)) return 'reading';
+  if (/出租车|打车/.test(s)) return 'taxi';
+  if (/飞机|机场/.test(s)) return 'airplane';
+  if (/火车/.test(s)) return 'train';
+  if (/医院|医生/.test(s)) return 'hospital';
+  if (/电影/.test(s)) return 'movie';
+  if (/游泳/.test(s)) return 'swimming';
+  if (/足球/.test(s)) return 'soccer';
+  if (/跑/.test(s)) return 'running';
+  if (/睡/.test(s)) return 'sleeping';
+  if (/唱/.test(s)) return 'singing';
+  if (/舞/.test(s)) return 'dance';
+  if (/猫/.test(s)) return 'cat';
+  if (/饭|菜|吃/.test(s)) return 'rice';
+  if (/晴|太阳/.test(s)) return 'sunny';
+  if (/雨/.test(s)) return 'rain';
+  if (/风/.test(s)) return 'wind';
+  if (/写/.test(s)) return 'writing';
+  if (/电话|手机/.test(s)) return 'phone';
+  if (/买|店|商/.test(s)) return 'shopping';
+  if (/学|校|老/.test(s)) return 'school';
+  if (/家/.test(s)) return 'home';
+  return null;
+}
+
 /**
  * Replaces blank placeholders (____, ___, __, （）, (), 【】, []) in stem with the correct option text
  * for semantic comparison, preventing blank placements from masking duplicates.
  */
 export function getComparableStem(stem: string, options?: string[], answerIdx?: number): string {
   if (options && typeof answerIdx === 'number' && answerIdx >= 0 && answerIdx < options.length) {
-    const ans = (options[answerIdx] || '').trim();
-    return (stem || '').replace(/(?:_{2,}|（\s*_*\s*）|\(\s*_*\s*\)|【\s*_*\s*】|\[\s*_*\s*\])/g, ans);
+    return substituteBlankPlaceholders(stem || '', options[answerIdx] || '');
   }
   return stem || '';
 }
@@ -183,6 +253,7 @@ export function getExpectedOptionCount(levelOrPartType?: number | string, partTy
   }
 
   if (!pType) return null;
+  if (/_3opt(?:\b|_)/i.test(pType) && !/dialogue_matching|word_bank/i.test(pType)) return null;
 
   const spec = getBlueprintPartSpec(level, pType);
   if (spec && typeof spec.n_options === 'number') return spec.n_options;
@@ -1215,7 +1286,7 @@ export function validateSemanticPragmaticCollocation(
  * 6. Target & Syllabus Verification layer: expected level/skill/part_type and actual text vocabulary check.
  */
 export function validateCandidate(
-  q: Partial<CandidateQuestion>,
+  q: Partial<CandidateQuestion> & { image_url?: string | null },
   existingStems: string[] = [],
   validationOptions?: ValidateCandidateOptions
 ): ExtendedValidationResult {
@@ -1298,7 +1369,14 @@ export function validateCandidate(
     }
   }
 
-  // 2. Options check: dynamically validated against task-type blueprints
+  // 2. Options check: dynamically validated against task-type blueprints (4-opt MCQ enforced; 0/2/5/6-opt and N-opt shared pool formats preserved)
+  const rawPartTypeStr = typeof q.part_type === 'string' ? q.part_type.trim() : '';
+  const isSharedPool3Opt = /(?:dialogue_matching|word_bank)_3opt/i.test(rawPartTypeStr);
+  const isDeprecated3OptPartType = /_3opt(?:\b|_)/i.test(rawPartTypeStr) && !isSharedPool3Opt;
+  if (isDeprecated3OptPartType) {
+    errors.push(`Legacy 3-option part_type '${q.part_type}' is not supported; HSK 1-6 MCQs require 4 options.`);
+  }
+
   const expectedOptions = q.part_type ? getExpectedOptionCount(q.level, q.part_type) : null;
 
   if (expectedOptions === 0) {
@@ -1307,13 +1385,18 @@ export function validateCandidate(
       errors.push(`Options must be empty for writing task type '${q.part_type}' (expected 0 options, got ${q.options.length})`);
     }
   } else {
+    if (!isDeprecated3OptPartType && !isSharedPool3Opt && Array.isArray(q.options) && q.options.length === 3) {
+      errors.push(
+        `3-option MCQs are not supported (got 3 options for '${q.part_type || 'unknown'}'); HSK 1-6 MCQs require 4 options (or 2 for True/False, 5-6 for matching/ordering/word-bank).`
+      );
+    }
     if (expectedOptions !== null) {
       if (!Array.isArray(q.options) || q.options.length !== expectedOptions) {
         errors.push(`Options must contain exactly ${expectedOptions} items for task type '${q.part_type}' (got ${Array.isArray(q.options) ? q.options.length : 0})`);
       }
-    } else {
-      if (!Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6) {
-        errors.push('Options must be an array of 2 to 6 items');
+    } else if (!isDeprecated3OptPartType) {
+      if (!Array.isArray(q.options) || q.options.length < 2 || q.options.length === 3 || q.options.length > 6) {
+        errors.push('Options must be an array of 2, 4, 5, or 6 items (3-option MCQs are not supported)');
       }
     }
 
@@ -1416,6 +1499,36 @@ export function validateCandidate(
     errors.push(`Listening question ('${q.part_type}') must not contain fill-in-the-blank placeholders (____)`);
   }
 
+  // Mandatory Writing Format Verification: prevent Reading fill-in-the-blank leakage into Writing tasks
+  if (q.part_type === 'write_component_assembly_6opt' && typeof q.stem === 'string') {
+    const hasAssemblyCue = /(?:部件|偏旁|组合成|组成|组字|汉字|\[[^\]]+\]|【[^】]+】)/.test(q.stem);
+    if (!hasAssemblyCue) {
+      errors.push(
+        `Writing component assembly ('write_component_assembly_6opt') stem must ask to combine radicals/components into a character (found reading-style stem: '${q.stem.slice(0, 40)}')`
+      );
+    }
+    if (Array.isArray(q.options)) {
+      const hasMultiWordOption = q.options.some((opt) => {
+        const cleanedOpt = cleanChineseText(String(opt || '').replace(/^[A-F][.、:\s]+/i, '').replace(/\([^)]*\)|（[^）]*）/g, ''));
+        return cleanedOpt.length > 2;
+      });
+      if (hasMultiWordOption) {
+        errors.push(
+          `Writing component assembly ('write_component_assembly_6opt') options must be single characters or 1-2 char components, not multi-character reading phrases`
+        );
+      }
+    }
+  }
+
+  if (q.part_type === 'write_sentence_reorder_4opt' && typeof q.stem === 'string') {
+    const hasReorderCue = q.stem.includes('/') || /(?:排列|连词成句|顺序)/.test(q.stem);
+    if (!hasReorderCue) {
+      errors.push(
+        `Writing sentence reorder ('write_sentence_reorder_4opt') stem must present scrambled words separated by '/'`
+      );
+    }
+  }
+
   // Mandatory Dialogue Turn Verification for dialogue listening questions
   const isDialogueListening =
     typeof q.part_type === 'string' &&
@@ -1436,20 +1549,21 @@ export function validateCandidate(
     }
   }
 
-  // Mandatory Monologue Verification for listen_talks_qa_4opt & listen_monologue_qa_3opt
+  // Mandatory Monologue Verification for listen_talks_qa_4opt & listen_monologue_qa_4opt
   const isMonologueListening =
     typeof q.part_type === 'string' &&
-    (q.part_type === 'listen_talks_qa_4opt' || q.part_type === 'listen_monologue_qa_3opt');
+    (q.part_type === 'listen_talks_qa_4opt' || q.part_type === 'listen_monologue_qa_4opt');
   if (isMonologueListening && typeof q.stem === 'string') {
-    const cleanStem = cleanChineseText(q.stem);
+    const passageStr = typeof q.passage === 'string' && q.passage.trim().length > 0 ? q.passage : '';
+    const audioStr = typeof (q as any).audio_text === 'string' && (q as any).audio_text.trim().length > 0 ? (q as any).audio_text : '';
+    const monologueSource = passageStr || audioStr || q.stem;
+    const cleanMonologue = cleanChineseText(monologueSource);
     const lvl = Number(q.level) || 1;
-    const minLen = q.part_type === 'listen_talks_qa_4opt'
-      ? (lvl >= 6 ? 90 : 70)
-      : (lvl === 1 ? 20 : (lvl === 2 ? 28 : (lvl === 3 ? 35 : 40)));
-    if (cleanStem.length < minLen) {
-      errors.push(`Monologue listening task '${q.part_type}' stem is too short (${cleanStem.length} chars, expected >= ${minLen} for HSK ${lvl})`);
+    const minLen = lvl === 1 ? 20 : lvl === 2 ? 28 : lvl === 3 ? 35 : (lvl >= 6 ? 90 : 70);
+    if (cleanMonologue.length < minLen) {
+      errors.push(`Monologue listening task '${q.part_type}' stem is too short (${cleanMonologue.length} chars, expected >= ${minLen} for HSK ${lvl})`);
     }
-    const hasQuestionMarker = /问[：:]|[？?]/.test(q.stem);
+    const hasQuestionMarker = /问[：:]|[？?]/.test(q.stem) || /问[：:]|[？?]/.test(monologueSource);
     if (!hasQuestionMarker) {
       errors.push(`Monologue listening task '${q.part_type}' must include a question prompt (e.g. '问：...' or question mark)`);
     }
@@ -1838,24 +1952,26 @@ export function validateCandidate(
   // Strips inline Latin/pinyin in parentheses so parenthesized pinyin annotations are properly handled)
   const latinVietnameseRegex = /[a-zA-ZàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/;
   const isPinyinPrompt = Boolean(q.part_type && /pinyin/i.test(q.part_type));
-  const stemForLatinCheck = typeof q.stem === 'string'
-    ? q.stem
-        .replace(/[\(\uff08][a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+[\)\uff09]/g, '')
-        .replace(/[\[【][a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+[\]】]/g, '')
-        .trim()
+  const isSentenceOrdering = Boolean(
+    q.part_type && /^(?:read_paragraph_sentence_ordering|read_sentence_order_5opt)$/i.test(q.part_type.trim())
+  );
+  let stemForLatinCheck = typeof q.stem === 'string'
+    ? stripParenthesizedPinyin(q.stem)
     : q.stem;
+  if (isSentenceOrdering && typeof stemForLatinCheck === 'string') {
+    stemForLatinCheck = stemForLatinCheck.replace(/(^|\n)\s*[A-E]\s*[.．、:：]\s*/g, '$1');
+  }
   if (stemForLatinCheck && !isPinyinPrompt && latinVietnameseRegex.test(stemForLatinCheck)) {
     errors.push('stem contains invalid Latin or Vietnamese characters');
   }
   if (q.options && Array.isArray(q.options)) {
     for (const opt of q.options) {
       if (typeof opt === 'string') {
-        const isLetterOrTfLabel = /^(?:[A-Fa-f]|对|错|√|×|✓|✗|Đúng|Sai|True|False|✓\s*Đúng|✗\s*Sai)$/i.test(opt.trim());
-        const optForLatinCheck = opt
-          .replace(/[\(\uff08][a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+[\)\uff09]/g, '')
-          .replace(/[\[【][a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+[\]】]/g, '')
-          .trim();
-        if (latinVietnameseRegex.test(optForLatinCheck) && !isLetterOrTfLabel) {
+        const trimmedOpt = opt.trim();
+        const isLetterOrTfLabel = /^(?:[A-Fa-f]|对|错|√|×|✓|✗|Đúng|Sai|True|False|✓\s*Đúng|✗\s*Sai)$/i.test(trimmedOpt);
+        const isOrderingSequence = isSentenceOrdering && /^[A-E](?:[-–,\s]+[A-E]){3,4}$/.test(trimmedOpt);
+        const optForLatinCheck = stripParenthesizedPinyin(opt);
+        if (latinVietnameseRegex.test(optForLatinCheck) && !isLetterOrTfLabel && !isOrderingSequence) {
           errors.push(`option '${opt}' contains invalid Latin or Vietnamese characters`);
         }
       }
@@ -1869,37 +1985,120 @@ export function validateCandidate(
 
   // 9. Visual Workflow & Theme Decoupling
   const requiresVisual = isVisualQuestionType(q.part_type);
+  const optionalStemVisual = allowsOptionalStemVisual(q.part_type);
   const imageOptionPartTypes = new Set([
-    'listen_picture_match_3opt',
+    'listen_picture_match_4opt',
     'listen_dialogue_picture_match_6opt',
     'listen_dialogue_picture_match_split',
+    'read_sentence_picture_match_4opt',
     'read_sentence_picture_match_6opt',
     'read_sentence_picture_match_split',
   ]);
   const requiresImageOptions = Boolean(q.part_type && imageOptionPartTypes.has(q.part_type));
-  const optionImages = Array.isArray(q.options_images) ? q.options_images : [];
-  if (requiresImageOptions && expectedOptions !== null && optionImages.length !== expectedOptions) {
-    errors.push(`options_images must contain exactly ${expectedOptions} images for task type '${q.part_type}'`);
-  }
-  if (optionImages.length > 0) {
-    if (!Array.isArray(q.options_images) || optionImages.length !== (q.options || []).length) {
-      errors.push('options_images must have one image per answer option');
-    }
-    const normalizedImages = optionImages.map((image) => String(image || '').trim().toLowerCase());
-    if (new Set(normalizedImages).size !== normalizedImages.length) {
-      errors.push('options_images must contain distinct image choices');
-    }
-    for (const image of normalizedImages) {
-      if (!isValidIllustrationTheme(image)) {
-        errors.push(`options_images contains unsupported SVG scene '${image}'`);
+
+  if (!requiresVisual && !optionalStemVisual) {
+    // Non-visual question: unconditionally strip hallucinated/stale visual fields
+    q.illustration_theme = null;
+    q.image_url = null;
+    q.options_images = [];
+  } else if (!requiresVisual && optionalStemVisual) {
+    // Optional stem visual (e.g. listen_true_false_2opt, write_short_essay_80chars, write_sentence_from_picture_word)
+    q.options_images = [];
+    if (typeof q.image_url === 'string' && q.image_url.trim().length > 0) {
+      if (!isValidResolvedImageUrl(q.image_url)) {
+        if (validationOptions?.lenientImport) {
+          q.image_url = null;
+        } else {
+          errors.push(`image_url '${q.image_url}' is not a valid image URL`);
+        }
       }
     }
-  }
-  if (requiresVisual) {
+    const rawTheme = typeof q.illustration_theme === 'string' ? q.illustration_theme.trim() : '';
+    if (rawTheme && rawTheme.toLowerCase() !== 'none' && rawTheme.toLowerCase() !== 'null') {
+      if (!isValidVisualAsset(rawTheme)) {
+        if (validationOptions?.lenientImport) {
+          q.illustration_theme = null;
+        } else {
+          errors.push(`illustration_theme '${q.illustration_theme}' is not one of the 27 supported SVG scenes`);
+        }
+      }
+    }
+  } else {
+    // Required visual question:
+    // Run lenientImport backfill BEFORE length/validity error checks
+    if (
+      requiresImageOptions &&
+      validationOptions?.lenientImport &&
+      Array.isArray(q.options) &&
+      q.options.length > 0
+    ) {
+      const currentImages = Array.isArray(q.options_images) ? q.options_images : [];
+      const allCurrentlyValid =
+        currentImages.length === q.options.length &&
+        new Set(currentImages.map((img) => String(img || '').trim().toLowerCase())).size === currentImages.length &&
+        currentImages.every((img) => isValidVisualAsset(String(img || '').trim()));
+      if (!allCurrentlyValid) {
+        const fallbackPool = [
+          'apple', 'banana', 'watermelon', 'taxi', 'train', 'airplane',
+          'tea', 'coffee', 'reading', 'hospital', 'movie', 'cat',
+        ];
+        const usedLower = new Set<string>();
+        const filled: string[] = [];
+        for (let idx = 0; idx < q.options.length; idx++) {
+          const existing = typeof currentImages[idx] === 'string' ? currentImages[idx].trim() : '';
+          if (existing && isValidVisualAsset(existing) && !usedLower.has(existing.toLowerCase())) {
+            usedLower.add(existing.toLowerCase());
+            filled.push(existing);
+            continue;
+          }
+          const inferred = inferThemeFromOptionText(q.options[idx]);
+          if (inferred && !usedLower.has(inferred)) {
+            usedLower.add(inferred);
+            filled.push(inferred);
+            continue;
+          }
+          const nextFallback = fallbackPool.find((t) => !usedLower.has(t)) || VALID_ILLUSTRATION_THEMES[idx % VALID_ILLUSTRATION_THEMES.length];
+          usedLower.add(nextFallback.toLowerCase());
+          filled.push(nextFallback);
+        }
+        q.options_images = filled;
+      }
+    }
+
+    const optionImages = Array.isArray(q.options_images) ? q.options_images : [];
+    if (requiresImageOptions && expectedOptions !== null && optionImages.length !== expectedOptions) {
+      errors.push(`options_images must contain exactly ${expectedOptions} images for task type '${q.part_type}'`);
+    }
+    if (optionImages.length > 0) {
+      if (!Array.isArray(q.options_images) || optionImages.length !== (q.options || []).length) {
+        errors.push('options_images must have one image per answer option');
+      }
+      const trimmedImages = optionImages.map((image) => String(image || '').trim());
+      const normalizedKeys = trimmedImages.map((image) => image.toLowerCase());
+      if (new Set(normalizedKeys).size !== normalizedKeys.length) {
+        errors.push('options_images must contain distinct image choices');
+      }
+      for (const image of trimmedImages) {
+        if (!isValidVisualAsset(image)) {
+          errors.push(`options_images contains unsupported SVG scene '${image}'`);
+        }
+      }
+    }
+
+    if (typeof q.image_url === 'string' && q.image_url.trim().length > 0 && !isValidResolvedImageUrl(q.image_url)) {
+      if (validationOptions?.lenientImport) {
+        q.image_url = null;
+      } else {
+        errors.push(`image_url '${q.image_url}' is not a valid image URL`);
+      }
+    }
+
     // Picture choices may be represented by a complete option image bank.
-    const hasValidImageBank = optionImages.length > 0 &&
+    const hasValidImageBank =
+      optionImages.length > 0 &&
       optionImages.length === (q.options || []).length &&
-      optionImages.every((image) => isValidIllustrationTheme(String(image || '').trim().toLowerCase()));
+      new Set(optionImages.map((img) => String(img || '').trim().toLowerCase())).size === optionImages.length &&
+      optionImages.every((image) => isValidVisualAsset(String(image || '').trim()));
 
     // Anti-leakage: when options are text choices for a single illustration, stem must not speak or display the correct option verbatim
     if (!hasValidImageBank && typeof q.answer_idx === 'number' && Array.isArray(q.options) && q.options[q.answer_idx]) {
@@ -1911,39 +2110,25 @@ export function validateCandidate(
       }
     }
 
+    const hasStemImageUrl = isValidResolvedImageUrl(q.image_url);
     if (requiresImageOptions && !hasValidImageBank) {
-      if (validationOptions?.lenientImport && Array.isArray(q.options) && q.options.length > 0) {
-        const fallbackThemes = ['apple', 'banana', 'watermelon', 'taxi', 'train', 'airplane'];
-        q.options_images = fallbackThemes.slice(0, q.options.length);
-      } else {
-        errors.push('options_images is required for this picture-choice task');
-      }
-    } else if (!hasValidImageBank && (
-      !q.illustration_theme ||
-      typeof q.illustration_theme !== 'string' ||
-      q.illustration_theme.trim().length === 0 ||
-      q.illustration_theme.trim().toLowerCase() === 'none' ||
-      q.illustration_theme.trim().toLowerCase() === 'null'
-    )) {
-      if (validationOptions?.lenientImport) {
-        q.illustration_theme = 'reading';
-      } else {
-        errors.push('illustration_theme is required for picture-matching questions');
-      }
-    } else if (!hasValidImageBank && !isValidIllustrationTheme(q.illustration_theme)) {
-      if (validationOptions?.lenientImport) {
-        q.illustration_theme = 'reading';
-      } else {
-        errors.push(`illustration_theme '${q.illustration_theme}' is not one of the 27 supported SVG scenes`);
-      }
-    }
-  } else {
-    // Non-visual question: illustration_theme may be null, undefined, "", "none", or "null"
-    const rawTheme = q.illustration_theme ? q.illustration_theme.trim().toLowerCase() : null;
-    if (rawTheme && rawTheme !== 'none' && rawTheme !== 'null') {
-      if (!isValidIllustrationTheme(rawTheme)) {
+      errors.push('options_images is required for this picture-choice task');
+    } else if (!hasValidImageBank && !hasStemImageUrl) {
+      if (
+        !q.illustration_theme ||
+        typeof q.illustration_theme !== 'string' ||
+        q.illustration_theme.trim().length === 0 ||
+        q.illustration_theme.trim().toLowerCase() === 'none' ||
+        q.illustration_theme.trim().toLowerCase() === 'null'
+      ) {
         if (validationOptions?.lenientImport) {
-          q.illustration_theme = null;
+          q.illustration_theme = 'reading';
+        } else {
+          errors.push('illustration_theme is required for picture-matching questions');
+        }
+      } else if (!isValidVisualAsset(q.illustration_theme)) {
+        if (validationOptions?.lenientImport) {
+          q.illustration_theme = 'reading';
         } else {
           errors.push(`illustration_theme '${q.illustration_theme}' is not one of the 27 supported SVG scenes`);
         }
@@ -1982,22 +2167,26 @@ export function validateCandidate(
     }
   }
 
-  if (typeof q.stem === 'string' && Array.isArray(q.options) && typeof q.answer_idx === 'number' && q.answer_idx >= 0 && q.answer_idx < q.options.length) {
-    const candidateFilled = getComparableStem(q.stem, q.options, q.answer_idx);
+  if (typeof q.stem === 'string' && Array.isArray(q.options)) {
+    const hasValidAnswerIdx =
+      typeof q.answer_idx === 'number' && q.answer_idx >= 0 && q.answer_idx < q.options.length;
+    const candidateFilled = hasValidAnswerIdx ? getComparableStem(q.stem, q.options, q.answer_idx) : q.stem;
     const candidateRawClean = cleanChineseText(q.stem);
-    for (const existing of existingStems) {
-      if (!existing || existing.trim().length === 0) continue;
-      // Check both filled stem and raw stem (catches shuffled options where blank was filled with a different index or raw stem was stored)
-      const simFilled = calculateJaccardSimilarity(candidateFilled, existing);
-      const simRaw = candidateRawClean.length >= 4 ? calculateJaccardSimilarity(q.stem, existing) : 0;
-      const sim = Math.max(simFilled, simRaw);
-      if (sim > maxSimilarity) {
-        maxSimilarity = sim;
-        matchedExisting = existing;
-      }
-      if (sim > 0.85) {
-        errors.push(`Stem similarity (${(sim * 100).toFixed(1)}%) exceeds 85% threshold with existing stem`);
-        break;
+    if (hasValidAnswerIdx || candidateRawClean.length >= 4) {
+      for (const existing of existingStems) {
+        if (!existing || existing.trim().length === 0) continue;
+        // Check both filled stem and raw stem (catches shuffled options where blank was filled with a different index or raw stem was stored)
+        const simFilled = hasValidAnswerIdx ? calculateJaccardSimilarity(candidateFilled, existing) : 0;
+        const simRaw = candidateRawClean.length >= 4 ? calculateJaccardSimilarity(q.stem, existing) : 0;
+        const sim = Math.max(simFilled, simRaw);
+        if (sim > maxSimilarity) {
+          maxSimilarity = sim;
+          matchedExisting = existing;
+        }
+        if (sim > 0.85) {
+          errors.push(`Stem similarity (${(sim * 100).toFixed(1)}%) exceeds 85% threshold with existing stem`);
+          break;
+        }
       }
     }
   }
@@ -2315,7 +2504,7 @@ export interface SixGateEvaluation {
 }
 
 export function evaluateCandidateSixGates(
-  q: Partial<CandidateQuestion>,
+  q: Partial<CandidateQuestion> & { image_url?: string | null },
   existingStems: string[] = [],
   options?: ValidateCandidateOptions
 ): SixGateEvaluation {
@@ -2325,7 +2514,7 @@ export function evaluateCandidateSixGates(
   const g1Errors = res.errors.filter((e) =>
     !/exceed(?:s|ing) HSK Level|out-of-syllabus|syllabus/i.test(e) &&
     !/rationale_vi/i.test(e) &&
-    /stem|options?|answer_idx|difficulty_tier|part_type|skill|level|characters|bracketed|audio|transcript|passage/i.test(e)
+    /stem|options?|answer_idx|difficulty_tier|part_type|skill|level|characters|bracketed|audio|transcript|passage|image_url|illustration_theme/i.test(e)
   );
   const gate1Passed = g1Errors.length === 0;
 

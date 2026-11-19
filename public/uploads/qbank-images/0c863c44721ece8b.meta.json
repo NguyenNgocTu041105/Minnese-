@@ -1,0 +1,11 @@
+{
+  "cacheKey": "0c863c44721ece8b",
+  "rawPrompt": "swimming",
+  "imagePromptEn": "A clean, clear educational illustration of swimming, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "swimming",
+  "theme": "swimming",
+  "tier": "tier2_cloudflare",
+  "byteSize": 325095,
+  "createdAt": "2026-11-18T12:19:11.932Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

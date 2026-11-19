@@ -1,0 +1,11 @@
+{
+  "cacheKey": "5977052dace43169",
+  "rawPrompt": "supermarket aisle with shopping basket",
+  "imagePromptEn": "A clean, clear educational illustration of supermarket aisle with shopping basket, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "supermarket aisle shopping",
+  "theme": "train",
+  "tier": "tier2_cloudflare",
+  "byteSize": 560103,
+  "createdAt": "2026-11-18T13:08:30.999Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

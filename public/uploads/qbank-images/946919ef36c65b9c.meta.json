@@ -1,0 +1,11 @@
+{
+  "cacheKey": "946919ef36c65b9c",
+  "rawPrompt": "quiet library room with tall wooden bookshelves",
+  "imagePromptEn": "A clean, clear educational illustration of quiet library room with tall wooden bookshelves, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "quiet library room",
+  "theme": "bookshelf",
+  "tier": "tier2_cloudflare",
+  "byteSize": 316446,
+  "createdAt": "2026-11-18T13:08:26.832Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

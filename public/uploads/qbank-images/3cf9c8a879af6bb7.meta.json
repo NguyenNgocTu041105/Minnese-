@@ -1,0 +1,11 @@
+{
+  "cacheKey": "3cf9c8a879af6bb7",
+  "rawPrompt": "movie",
+  "imagePromptEn": "A clean, clear educational illustration of movie, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "movie",
+  "theme": "movie",
+  "tier": "tier2_cloudflare",
+  "byteSize": 218997,
+  "createdAt": "2026-11-18T12:19:57.469Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

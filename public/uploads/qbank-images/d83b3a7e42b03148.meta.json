@@ -1,0 +1,11 @@
+{
+  "cacheKey": "d83b3a7e42b03148",
+  "rawPrompt": "teacher standing by classroom chalkboard with book",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of teacher standing by classroom chalkboard with book, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "teacher classroom chalkboard",
+  "theme": "reading",
+  "tier": "tier2_cloudflare",
+  "byteSize": 437523,
+  "createdAt": "2026-11-18T15:26:53.801Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

@@ -153,7 +153,7 @@ export const GEMINI_AI_VOICES: VoiceOption[] = [
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   voiceId: 'zh-CN-XiaoxiaoNeural', // Default to Xiaoxiao Neural (Nữ Chuẩn Giáo Trình HSK)
-  rate: 0.9,
+  rate: 1.0,
   pitch: 1.0,
   volume: 1.0,
   autoPinyinTone: true,
@@ -161,17 +161,15 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
 };
 
 /**
- * CLEC Standard HSK Level Speed & Pitch Audio Pacing Matrix
- * Lower HSK levels are articulated slower with slightly higher pitch for clarity,
- * while advanced levels reflect authentic real-world native Mandarin speed.
+ * Natural 1x Native Mandarin Audio Pacing Matrix across HSK 1–6 (no artificial slowdown).
  */
 export const HSK_LEVEL_AUDIO_PACING: Record<number, { rate: number; pitch: number }> = {
-  1: { rate: 0.78, pitch: 1.05 },
-  2: { rate: 0.82, pitch: 1.03 },
-  3: { rate: 0.86, pitch: 1.00 },
-  4: { rate: 0.90, pitch: 1.00 },
-  5: { rate: 0.95, pitch: 0.98 },
-  6: { rate: 1.00, pitch: 0.98 },
+  1: { rate: 1.00, pitch: 1.00 },
+  2: { rate: 1.00, pitch: 1.00 },
+  3: { rate: 1.00, pitch: 1.00 },
+  4: { rate: 1.00, pitch: 1.00 },
+  5: { rate: 1.00, pitch: 1.00 },
+  6: { rate: 1.00, pitch: 1.00 },
 };
 
 
@@ -517,8 +515,13 @@ export function parseDialogueTurns(raw: string): DialogueTurn[] | null {
 
   // Preamble before first role tag (e.g., short monologue before question)
   if (matches[0].index! > 0) {
-    const preamble = sanitized.slice(0, matches[0].index!).trim();
-    if (preamble) {
+    let preamble = sanitized.slice(0, matches[0].index!).trim();
+    // Strip character participant announcements, role setup headers, and scene context
+    preamble = preamble
+      .replace(/(?:^|[\r\n\s]+)(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|Gợi\s*ý|Chú\s*thích)\s*[:：][^\r\n]*/gi, '')
+      .replace(/(?:^|[\r\n\s]+)(?:人物|参与人物|对话人物|角色|背景|场景)\s*[:：][^\r\n]*/g, '')
+      .trim();
+    if (preamble && /[\u4e00-\u9fa5]/.test(preamble)) {
       turns.push({ role: 'narrator', text: preamble });
     }
   }
@@ -718,12 +721,16 @@ export async function playDialogueSequence(
       turns = parsed;
     } else {
       const sanitized = sanitizeQuestionAudioText(turnsOrScript) || sanitizeDialogueScript(turnsOrScript) || turnsOrScript;
+      // Strip any lingering speaker names so single voice doesn't read character names aloud
+      const cleanDialogueText = sanitized
+        .replace(/(?:^|[\r\n\s]+)(?:男|女|甲|乙|AI小语|小语|王老师|李老师|张老师|刘老师|陈老师|老师|学生|同学们|同学|爸爸|妈妈|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|儿子|女儿|小明|小红|小丽|大卫|玛丽|安娜|麦克|医生|服务员|经理|客人|A|B)\s*[:：]\s*/gi, ' ')
+        .trim();
       const singleVoice = selectContextualSingleVoice(turnsOrScript);
       try {
-        await playPutonghuaAudioStream(sanitized, effectiveRate ?? settings.rate ?? 0.9, singleVoice, false);
+        await playPutonghuaAudioStream(cleanDialogueText || sanitized, effectiveRate ?? settings.rate ?? 1.0, singleVoice, false);
         return;
       } catch {
-        await playBrowserUtterance(cleanAudioText(sanitized), settings, effectiveRate, effectivePitch);
+        await playBrowserUtterance(cleanAudioText(cleanDialogueText || sanitized), settings, effectiveRate, effectivePitch);
         return;
       }
     }
@@ -765,7 +772,7 @@ export async function playDialogueSequence(
         : voiceCast.narrator;
 
     try {
-      await playPutonghuaAudioStream(cleanText, effectiveRate ?? settings.rate ?? 0.9, roleVoice, true);
+      await playPutonghuaAudioStream(cleanText, effectiveRate ?? settings.rate ?? 1.0, roleVoice, true);
     } catch {
       if (!controller.signal.aborted) {
         await playBrowserUtterance(cleanText, settings, effectiveRate, turnPitch, turn.role, true);
@@ -908,7 +915,7 @@ function playBrowserUtterance(
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'zh-CN';
-      utterance.rate = overrideRate ?? settings.rate ?? 0.85;
+      utterance.rate = overrideRate ?? settings.rate ?? 1.0;
       utterance.volume = settings.volume ?? 1.0;
 
       const voices = window.speechSynthesis.getVoices();
@@ -1445,7 +1452,7 @@ export async function speakDialogueScript(
   if (!script || !script.trim()) return;
 
   const turns = parseDialogueTurns(script);
-  const pacing = HSK_LEVEL_AUDIO_PACING[level] || { rate: 0.86, pitch: 1.0 };
+  const pacing = HSK_LEVEL_AUDIO_PACING[level] || { rate: 1.0, pitch: 1.0 };
   const rate = overrideRate ?? pacing.rate;
   const pitch = overridePitch ?? pacing.pitch;
   const settings = getSavedVoiceSettings();

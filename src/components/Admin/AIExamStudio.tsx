@@ -26,7 +26,7 @@ import {
   Download,
 } from 'lucide-react';
 import { formatThemeTag } from '../QBankAdmin';
-import { saveOnlineExamToFirestore } from '../../lib/firebase';
+import { auth, saveOnlineExamToFirestore } from '../../lib/firebase';
 import { OnlineExamDoc, QuizQuestion, HSKLevel } from '../../types';
 import { ExportExamModal } from './ExportExamModal';
 
@@ -75,14 +75,14 @@ export const DEFAULT_BLUEPRINTS: Record<number, {
     maxScore: 200,
     passScore: 120,
     allocations: [
-      { skill: 'listening', part_type: 'listen_picture_match_3opt', part_name_vi: 'Nghe - Nhìn tranh chọn đáp án (3 lựa chọn)', count: 5, points_per_question: 5 },
-      { skill: 'listening', part_type: 'listen_question_answer_3opt', part_name_vi: 'Nghe - Nghe hỏi chọn đáp án (3 lựa chọn)', count: 5, points_per_question: 5 },
+      { skill: 'listening', part_type: 'listen_picture_match_4opt', part_name_vi: 'Nghe - Nhìn tranh chọn đáp án (4 lựa chọn)', count: 5, points_per_question: 5 },
+      { skill: 'listening', part_type: 'listen_dialogue_qa_4opt', part_name_vi: 'Nghe - Nghe hỏi chọn đáp án (4 lựa chọn)', count: 5, points_per_question: 5 },
       { skill: 'listening', part_type: 'listen_dialogue_picture_match_6opt', part_name_vi: 'Nghe - Đối thoại chọn tranh (6 lựa chọn)', count: 5, points_per_question: 5 },
-      { skill: 'listening', part_type: 'listen_monologue_qa_3opt', part_name_vi: 'Nghe - Độc thoại/đoạn ngắn (3 lựa chọn)', count: 5, points_per_question: 5 },
+      { skill: 'listening', part_type: 'listen_talks_qa_4opt', part_name_vi: 'Nghe - Độc thoại/đoạn ngắn (4 lựa chọn)', count: 5, points_per_question: 5 },
       { skill: 'reading', part_type: 'read_sentence_picture_match_6opt', part_name_vi: 'Đọc - Khớp câu với tranh (6 lựa chọn)', count: 5, points_per_question: 5 },
       { skill: 'reading', part_type: 'read_dialogue_matching_6opt', part_name_vi: 'Đọc - Ghép câu hỏi đáp (6 lựa chọn)', count: 5, points_per_question: 5 },
       { skill: 'reading', part_type: 'read_fill_blank_word_bank_6opt', part_name_vi: 'Đọc - Điền từ vào chỗ trống (Ngân hàng 6 từ)', count: 5, points_per_question: 5 },
-      { skill: 'reading', part_type: 'read_comprehension_short_3opt', part_name_vi: 'Đọc hiểu - Đoạn văn ngắn (3 lựa chọn)', count: 5, points_per_question: 5 },
+      { skill: 'reading', part_type: 'read_comprehension_4opt', part_name_vi: 'Đọc hiểu - Đoạn văn ngắn (4 lựa chọn)', count: 5, points_per_question: 5 },
     ],
   },
   2: {
@@ -92,13 +92,13 @@ export const DEFAULT_BLUEPRINTS: Record<number, {
     maxScore: 300,
     passScore: 180,
     allocations: [
-      { skill: 'listening', part_type: 'listen_picture_match_3opt', part_name_vi: 'Nghe - Nhìn tranh chọn đáp án', count: 5, points_per_question: 4 },
+      { skill: 'listening', part_type: 'listen_picture_match_4opt', part_name_vi: 'Nghe - Nhìn tranh chọn đáp án', count: 5, points_per_question: 4 },
       { skill: 'listening', part_type: 'listen_dialogue_picture_match_split', part_name_vi: 'Nghe - Đối thoại chọn tranh', count: 10, points_per_question: 4 },
-      { skill: 'listening', part_type: 'listen_dialogue_qa_3opt', part_name_vi: 'Nghe - Hội thoại ngắn chọn đáp án', count: 10, points_per_question: 4 },
+      { skill: 'listening', part_type: 'listen_dialogue_qa_4opt', part_name_vi: 'Nghe - Hội thoại ngắn chọn đáp án', count: 10, points_per_question: 4 },
       { skill: 'reading', part_type: 'read_sentence_picture_match_6opt', part_name_vi: 'Đọc - Khớp câu với tranh', count: 5, points_per_question: 4 },
       { skill: 'reading', part_type: 'read_fill_blank_word_bank_6opt', part_name_vi: 'Đọc - Điền từ vào chỗ trống', count: 5, points_per_question: 4 },
       { skill: 'reading', part_type: 'read_dialogue_matching_split', part_name_vi: 'Đọc - Ghép nối hội thoại', count: 10, points_per_question: 4 },
-      { skill: 'reading', part_type: 'read_comprehension_short_3opt', part_name_vi: 'Đọc hiểu - Đoạn văn ngắn', count: 5, points_per_question: 4 },
+      { skill: 'reading', part_type: 'read_comprehension_4opt', part_name_vi: 'Đọc hiểu - Đoạn văn ngắn', count: 5, points_per_question: 4 },
       { skill: 'writing', part_type: 'write_component_assembly_6opt', part_name_vi: 'Viết - Ghép bộ thủ thành chữ', count: 5, points_per_question: 10 },
       { skill: 'writing', part_type: 'write_tianzige_from_pinyin', part_name_vi: 'Viết - Nhìn pinyin viết chữ Hán', count: 5, points_per_question: 10 },
     ],
@@ -111,11 +111,11 @@ export const DEFAULT_BLUEPRINTS: Record<number, {
     passScore: 180,
     allocations: [
       { skill: 'listening', part_type: 'listen_dialogue_picture_match_split', part_name_vi: 'Nghe - Hội thoại chọn tranh', count: 10, points_per_question: 3.33 },
-      { skill: 'listening', part_type: 'listen_dialogue_qa_3opt', part_name_vi: 'Nghe - Đối thoại ngắn chọn đáp án', count: 10, points_per_question: 3.33 },
-      { skill: 'listening', part_type: 'listen_monologue_qa_3opt', part_name_vi: 'Nghe - Độc thoại/đoạn văn ngắn', count: 10, points_per_question: 3.33 },
+      { skill: 'listening', part_type: 'listen_dialogue_qa_4opt', part_name_vi: 'Nghe - Đối thoại ngắn chọn đáp án', count: 10, points_per_question: 3.33 },
+      { skill: 'listening', part_type: 'listen_talks_qa_4opt', part_name_vi: 'Nghe - Độc thoại/đoạn văn ngắn', count: 10, points_per_question: 3.33 },
       { skill: 'reading', part_type: 'read_sentence_matching_split', part_name_vi: 'Đọc - Ghép câu tương ứng', count: 10, points_per_question: 3.33 },
       { skill: 'reading', part_type: 'read_fill_blank_word_bank_split', part_name_vi: 'Đọc - Điền từ vào chỗ trống', count: 10, points_per_question: 3.33 },
-      { skill: 'reading', part_type: 'read_comprehension_short_and_medium_3opt', part_name_vi: 'Đọc hiểu - Đoạn văn ngắn & vừa', count: 10, points_per_question: 3.33 },
+      { skill: 'reading', part_type: 'read_comprehension_4opt', part_name_vi: 'Đọc hiểu - Đoạn văn ngắn & vừa', count: 10, points_per_question: 3.33 },
       { skill: 'writing', part_type: 'write_tianzige_from_pinyin', part_name_vi: 'Viết - Điền chữ Hán vào chỗ trống', count: 5, points_per_question: 10 },
       { skill: 'writing', part_type: 'write_sentence_from_picture_word', part_name_vi: 'Viết - Đặt câu theo tranh và từ', count: 5, points_per_question: 10 },
     ],
@@ -218,15 +218,43 @@ export const AIExamStudio: React.FC<ExamStudioProps> = ({
   const [poolInspection, setPoolInspection] = useState<any>(null);
   const [inspectionLoading, setInspectionLoading] = useState(false);
 
+  const buildStudioAuthHeaders = async (includeJson = false): Promise<Record<string, string>> => {
+    const token =
+      adminToken ||
+      sessionStorage.getItem('qbank_admin_token') ||
+      localStorage.getItem('qbank_admin_token') ||
+      '';
+    const headers: Record<string, string> = {};
+    if (includeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (token) {
+      headers['X-QBank-Admin-Token'] = token;
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (auth && !auth.currentUser && typeof auth.authStateReady === 'function') {
+      try {
+        await auth.authStateReady();
+      } catch {}
+    }
+    if (auth?.currentUser) {
+      try {
+        const fbToken = await auth.currentUser.getIdToken();
+        if (fbToken) {
+          headers['X-Firebase-Id-Token'] = fbToken;
+          if (!token) {
+            headers['Authorization'] = `Bearer ${fbToken}`;
+          }
+        }
+      } catch {}
+    }
+    return headers;
+  };
+
   const loadPoolInspection = async () => {
     setInspectionLoading(true);
     try {
-      const token = adminToken || sessionStorage.getItem('qbank_admin_token') || '';
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['X-QBank-Admin-Token'] = token;
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers = await buildStudioAuthHeaders(false);
       const res = await fetch(`/api/qbank/exam/pool-inspection?level=${level}`, { headers });
       if (res.ok) {
         const data = await res.json();
@@ -395,14 +423,7 @@ export const AIExamStudio: React.FC<ExamStudioProps> = ({
     setGenProgress({ current: 1, total: 2, message: 'Đang kiểm tra và ráp câu hỏi từ kho đã duyệt (0 API Call)...' });
 
     try {
-      const token = adminToken || sessionStorage.getItem('qbank_admin_token') || '';
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['X-QBank-Admin-Token'] = token;
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers = await buildStudioAuthHeaders(true);
 
       const res = await fetch('/api/qbank/exam/assemble-or-supplement', {
         method: 'POST',
@@ -454,14 +475,7 @@ export const AIExamStudio: React.FC<ExamStudioProps> = ({
     setGenProgress({ current: 1, total: 2, message: 'Đang gửi yêu cầu sinh bù có giới hạn vào hàng đợi duyệt...' });
 
     try {
-      const token = adminToken || sessionStorage.getItem('qbank_admin_token') || '';
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['X-QBank-Admin-Token'] = token;
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers = await buildStudioAuthHeaders(true);
 
       const res = await fetch('/api/qbank/exam/assemble-or-supplement', {
         method: 'POST',

@@ -180,6 +180,9 @@ function isAllowedFreeProvider(provider: LLMProviderConfig): boolean {
 }
 
 export function buildQuestionResponseFormat(level: number, skill: string, partType: string, count: number) {
+  if (/_3opt(?:\b|_)/i.test(partType || '')) {
+    throw new Error(`DEPRECATED_3OPT_PART_TYPE: '${partType}' is no longer supported; use 4-option canonical part_type.`);
+  }
   const boundedLevel = Math.max(1, Math.min(level || 1, 6));
   const boundedCount = Math.max(1, Math.min(count || 1, 50));
   const bpExpected = getExpectedOptionCount(boundedLevel, partType);
@@ -191,14 +194,14 @@ export function buildQuestionResponseFormat(level: number, skill: string, partTy
     : optionMatch
     ? Number(optionMatch[1])
     : (boundedLevel <= 2 && (skill === 'listening' || skill === 'reading' || /^listen_|^read_/i.test(partType))
-        ? (/6opt|split|word_bank|matching/i.test(partType) ? 6 : 3)
+        ? (/6opt|split|word_bank|matching/i.test(partType) ? 6 : 4)
         : 4);
   const isImageOptions = new Set([
-    'listen_picture_match_3opt',
     'listen_picture_match_4opt',
     'listen_dialogue_picture_match_6opt',
     'listen_dialogue_picture_match_split',
     'read_sentence_picture_match_6opt',
+    'read_sentence_picture_match_split',
   ]).has(partType);
   const nullableString = { anyOf: [{ type: 'string' }, { type: 'null' }] };
   const questionSchema = {
@@ -386,7 +389,7 @@ export function generateMockQuestions(
       answer_idx: 0,
       explanation_vi: 'Người không khỏe đi khám bác sĩ thì đến 医院 (bệnh viện). Các địa điểm khác không phù hợp ngữ cảnh khám bệnh.',
       part_type: 'read_fill_blank_4opt',
-      theme: 'hospital',
+      theme: null,
       skill: 'reading',
     },
     {
@@ -413,7 +416,7 @@ export function generateMockQuestions(
       answer_idx: 0,
       explanation_vi: 'Mười giờ tối là thời gian chuẩn bị đi ngủ (睡觉). Các động từ khác không phù hợp với thói quen sinh hoạt buổi tối.',
       part_type: 'read_fill_blank_4opt',
-      theme: 'sleeping',
+      theme: null,
       skill: 'reading',
     },
     {
@@ -422,7 +425,7 @@ export function generateMockQuestions(
       answer_idx: 0,
       explanation_vi: 'Giáo viên trong lớp học dạy học sinh viết chữ (写字). Cả 4 phương án đều là động từ hoạt động.',
       part_type: 'read_fill_blank_4opt',
-      theme: 'writing',
+      theme: null,
       skill: 'reading',
     },
     {
@@ -440,7 +443,7 @@ export function generateMockQuestions(
       answer_idx: 0,
       explanation_vi: 'Mẹ đang ở trong bếp nấu cơm (米饭), mùi thơm nức. Cả 4 lựa chọn đều là danh từ chỉ món ăn.',
       part_type: 'read_fill_blank_4opt',
-      theme: 'rice',
+      theme: null,
       skill: 'reading',
     },
     {

@@ -1,0 +1,11 @@
+{
+  "cacheKey": "df9ba32ee78c10f3",
+  "rawPrompt": "swimming",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of swimming, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "swimming",
+  "theme": "swimming",
+  "tier": "tier2_cloudflare",
+  "byteSize": 424789,
+  "createdAt": "2026-11-18T14:00:37.256Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

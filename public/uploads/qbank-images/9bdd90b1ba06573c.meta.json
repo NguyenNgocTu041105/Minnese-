@@ -1,0 +1,11 @@
+{
+  "cacheKey": "9bdd90b1ba06573c",
+  "rawPrompt": "modern clean hospital clinic building with medical cross",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of modern clean hospital clinic building with medical cross, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "hospital clinic building",
+  "theme": "hospital",
+  "tier": "tier2_cloudflare",
+  "byteSize": 527758,
+  "createdAt": "2026-11-18T13:59:49.571Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

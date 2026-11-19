@@ -1,0 +1,11 @@
+{
+  "cacheKey": "adec96a027705136",
+  "rawPrompt": "close up of one big shiny red apple on wooden table in cozy kitchen",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of close up of one big shiny red apple on wooden table in cozy kitchen, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "close up one",
+  "theme": "apple",
+  "tier": "tier2_cloudflare",
+  "byteSize": 449335,
+  "createdAt": "2026-11-18T13:59:41.552Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

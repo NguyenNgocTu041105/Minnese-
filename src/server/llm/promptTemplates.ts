@@ -242,18 +242,12 @@ export const HSK_LEVEL_SPECS: Record<number, HskLevelSpec> = {
  */
 export function getQuestionTypeInstructions(partType: string, level = 1): string {
   switch (partType) {
-    case 'listen_question_answer_3opt':
-      return `QUESTION TYPE: Listening question and response (HSK 1 sample format)
-- The stem contains only one short spoken Chinese question; the application will play it as audio.
-- Provide exactly 3 concise spoken-response options. One response must be the only natural, direct answer.
-- Do not add a written question after the audio script.`;
-
     case 'listen_true_false_2opt':
     case 'read_true_false_2opt':
-      if (level <= 2) {
+      if (partType === 'listen_true_false_2opt' && level <= 2) {
         return `QUESTION TYPE: Picture True/False Judgment (Nhìn tranh phán đoán Đúng/Sai - HSK 1-2)
 - The Chinese stem is a single spoken word, phrase, or short sentence (e.g. "看书" or "他在坐出租车去学校。").
-- "illustration_theme" MUST be strictly ONE valid SVG scene key from:
+- "illustration_theme" MUST be either a clean, non-leaking English visual scene description (no Chinese characters, no Pinyin, no answer words) OR one valid SVG scene key from:
   [${VALID_ILLUSTRATION_THEMES.join(', ')}]
 - "options" MUST be exactly 2 choices: ["正确", "错误"] (hoặc ["对", "错"]).
 - If answer_idx is 0 (Đúng), the stem MUST accurately describe the illustration_theme scene.
@@ -269,15 +263,6 @@ export function getQuestionTypeInstructions(partType: string, level = 1): string
 - If answer_idx is 0 (Đúng), the ★ statement is fully supported by the text.
 - If answer_idx is 1 (Sai), the ★ statement is contradicted or refuted by the text.
 - "explanation_vi" MUST contrast the statement against the passage and explain why it is correct or incorrect.`;
-
-    case 'listen_monologue_qa_3opt':
-      return `QUESTION TYPE: Listening short utterance / monologue and answer (HSK 1-3 format - 3 Options: A, B, C)
-- The stem contains ONE short, clear spoken narrative (1-2 sentences) followed by one clear spoken question ("问：...").
-  * For HSK 1: Length 20 to 35 Chinese characters. Strictly HSK 1 words only! NO comparative structures (比, 更, 厚, 薄). NO double questions.
-  * For HSK 2-3: Length 30 to 60 Chinese characters. Exactly 1 question.
-- ABSOLUTELY NEVER include blank placeholders ("____") in the stem.
-- Provide EXACTLY 3 concise Chinese answer choices (A, B, C); exactly one is supported by the audio script.
-- Distractors must be contextually plausible within target level scope.`;
 
     case 'listen_dialogue_picture_match_6opt':
     case 'listen_dialogue_picture_match_split':
@@ -358,27 +343,18 @@ export function getQuestionTypeInstructions(partType: string, level = 1): string
   * E.g. For "reading", stem can be: "他在安静的房间里认真地读小说。" (Option: 看书, Image: reading).
 - Exactly one option matches the sentence; the other 5 options describe completely different scenes.`;
 
-    case 'listen_dialogue_qa_3opt':
-      return `QUESTION TYPE: Elementary Listening Dialogue Q&A (3 Options: A, B, C)
-- The Chinese stem consists of 2 short conversational turns with speaker labels (e.g. 男：... \n女：...) followed by a question ("问：...").
-- ABSOLUTELY NEVER include blank placeholders ("____") in the stem. This is a listening dialogue test, NOT a fill-in-the-blank test!
-- Provide EXACTLY 3 concise Chinese answer choices (A, B, C); exactly one is supported by the dialogue.
-- Distractors must be plausible alternatives within the target HSK syllabus.`;
-
-    case 'read_comprehension_short_and_medium_3opt':
-      return `QUESTION TYPE: Short & Medium Reading Comprehension with Question (3 Options: A, B, C)
-- STRUCTURE CONTRACT:
-  * "stem" MUST consist of a passage of 30 to 60 Chinese characters followed by "★" and a clear question.
-    Canonical format: "<Passage>。★ <Question>？"
-- ABSOLUTELY NEVER include blank placeholders ("____") in the stem (this is reading comprehension, not fill-in-the-blank).
-- Provide EXACTLY 3 concise Chinese choices (A, B, C). Exactly one choice is undeniably supported by the text.
-- "completed_stem" MUST be identical to "stem".`;
-
     case 'write_component_assembly_6opt':
-      return `QUESTION TYPE: Character Component Assembly (HSK 2 Writing Part 1 - 6 Options: A–F)
-- The Chinese stem presents a character assembly task with radicals/components (e.g. "组字题：将给出的部件组合成正确的汉字").
-- Provide EXACTLY 6 distinct Chinese character options (A, B, C, D, E, F) that could be formed or selected.
-- Exactly one option correctly combines the target components.`;
+      return `QUESTION TYPE: Character Component / Radical Assembly (HSK 2 Writing Part 1 - 6 Options: A–F)
+- STRUCTURE CONTRACT (STRICTLY ENFORCED):
+  * This is a WRITING / HANZI STRUCTURE task, NOT a reading fill-in-the-blank task!
+  * "stem" MUST ask the student to combine a given radical/component (偏旁/部件) to form a target Chinese character in pure Chinese (NO Vietnamese/Latin characters in stem), e.g.:
+    "请选择正确的部件与偏旁 [氵] 组合成汉字 [河]。"
+  * "options" MUST contain EXACTLY 6 distinct single Chinese characters or single-character components (1–2 characters each, e.g. ["可", "口", "日", "月", "木", "门"]).
+  * Exactly ONE option combines with the given radical/component in "stem" to form the target character.
+- STRICT NEGATIVE CONSTRAINTS (INSTANT REJECTION IF VIOLATED):
+  * ABSOLUTELY NEVER include "____", "___", or any sentence fill-in-the-blank placeholder in "stem"!
+  * ABSOLUTELY NEVER generate a reading cloze sentence like "我每天____跑两公里。" or multi-word phrase options like "晚上跑步"!
+  * "completed_stem" MUST be identical to "stem".`;
 
     case 'read_fill_blank_word_bank_6opt':
     case 'read_fill_blank_word_bank_split':
@@ -394,31 +370,6 @@ export function getQuestionTypeInstructions(partType: string, level = 1): string
 - The Chinese stem is a spoken statement or question requiring a corresponding match.
 - Provide EXACTLY 6 distinct Chinese response options (A, B, C, D, E, F).
 - Exactly one option forms the natural, logical pairing.`;
-
-    case 'read_comprehension_short_3opt':
-      return `QUESTION TYPE: Short Reading Comprehension with Question (HSK 1 Official Part 4 Format)
-- STRUCTURE CONTRACT:
-  * "stem" MUST consist of two distinct parts in a single string:
-    1. A short, complete statement or 1-2 sentence passage in Chinese.
-    2. Followed by a space, the special question marker symbol "★", and a concise question directly testing the statement.
-    Canonical format: "<Statement>。★ <Question>？"
-  * STRICT NEGATIVE CONSTRAINT (CRITICAL AUDIT):
-    - ABSOLUTELY NEVER include "____", "___", or any blank placeholder in "stem"!
-    - This is a reading comprehension task, NOT a fill-in-the-blank task. Any placeholder will cause instant rejection by automated quality gates.
-  * "options" MUST contain EXACTLY 3 concise Chinese choices.
-  * Exactly ONE choice is undeniably supported by the statement. The other 2 choices are plausible distractors contradicted or unsupported by the text.
-  * The statement MUST contain complete factual evidence to answer the question without external knowledge or speculation.
-  * "completed_stem" MUST be exactly identical to "stem" (since there is no blank to fill).
-  * Tone-marked Pinyin must map 1-to-1 to the Chinese characters in "stem".
-- VALID EXAMPLE (GOOD):
-  Stem: "我上午去学校看书。★ 我什么时候去学校？"
-  Options: ["上午", "下午", "晚上"]
-  Answer Index: 0 ("上午")
-  Completed Stem: "我上午去学校看书。★ 我什么时候去学校？"
-- INVALID EXAMPLES (BAD - INSTANT QUALITY GATE REJECTION):
-  * BAD 1 (Contains blank placeholder): "我现在想打电话给朋友，然后晚上八点____。" -> REJECTED: Contains "____".
-  * BAD 2 (Missing ★ question): "爸爸在医院工作，他是医生。" -> REJECTED: Missing question marked with "★".
-  * BAD 3 (Contradictory / Ungrounded logic): "爸爸在客厅里打电话，他的手机响了。" -> REJECTED: Contradictory action / ungrounded details.`;
 
     case 'read_fill_blank_4opt':
       return `QUESTION TYPE: Fill in the Blank with 4 Options (HSK Reading Part 3 Format)
@@ -491,16 +442,19 @@ export function getQuestionTypeInstructions(partType: string, level = 1): string
 - The Chinese stem consists of a passage of 50 to 80 Chinese characters (2 to 3 sentences) followed by a question ("根据这段话，可以知道什么？").
 - Vocabulary strictly within HSK 1-3. Only 1 option is supported by text; 3 distractors are contradicted or unmentioned.`;
       }
-      return `QUESTION TYPE: Basic Reading Comprehension (Đọc hiểu HSK 1-2 - Đoạn văn 25-50 chữ)
-- The Chinese stem consists of 1 to 2 simple sentences followed by a question.
+      return `QUESTION TYPE: Basic Reading Comprehension (Đọc hiểu HSK 1-2 - Đoạn văn 25-50 chữ, 4 phương án A, B, C, D)
+- STRUCTURE CONTRACT:
+  * The Chinese stem consists of 1 to 2 simple sentences followed by a clear question (e.g. "<Statement>。★ <Question>？").
+  * ABSOLUTELY NEVER include "____", "___", or any blank placeholder in "stem"!
+  * "completed_stem" MUST be identical to "stem".
+  * Provide EXACTLY 4 concise Chinese options (A, B, C, D); only 1 is supported by the text.
 - All vocabulary strictly within HSK 1 or HSK 2 syllabus.`;
 
     case 'listen_picture_match_4opt':
-    case 'listen_picture_match_3opt':
-      return `QUESTION TYPE: Listening & Picture Matching (Nghe / nhìn tranh chọn đáp án)
+      return `QUESTION TYPE: Listening & Picture Matching (Nghe / nhìn tranh chọn đáp án - 4 Options: A, B, C, D)
 - The stem contains only a short spoken Chinese phrase or sentence; it must not expose the answer as text.
-- "options" must have exactly ${partType.endsWith('_3opt') ? 3 : 4} unique Chinese review labels.
-- "options_images" must contain exactly ${partType.endsWith('_3opt') ? 3 : 4} distinct SVG scene keys, one per choice, selected from the 27 allowed keys below.
+- "options" must have exactly 4 unique Chinese review labels.
+- "options_images" must contain exactly 4 distinct items (either clean non-leaking English visual scene descriptions with zero Chinese characters/answer words, or SVG scene keys from the 27 allowed keys below), one per choice.
 - Do not use one shared "illustration_theme" for all answer choices.
 - Allowed SVG scene keys:
   [${VALID_ILLUSTRATION_THEMES.join(', ')}]
@@ -581,10 +535,11 @@ export function getQuestionTypeInstructions(partType: string, level = 1): string
 - Simple, authentic social interactions (asking directions, simple shopping, meeting friends, illness/hospital).
 - All vocabulary strictly within HSK 1-2. Distractors must be plausible alternatives of the same category.`;
       }
-      return `QUESTION TYPE: Basic Listening Dialogue Q&A (Nghe đối thoại HSK 1 - 2 lượt thoại ngắn 15-30 chữ)
-- The Chinese stem consists of 2 very concise turns (15 to 30 Chinese characters) followed by a question ("问：...").
-- Vocabulary strictly limited to HSK 1 verified 300 words. Straightforward and unambiguous.`;
+      return `QUESTION TYPE: Basic Listening Dialogue Q&A (Nghe đối thoại HSK 1 - 1-2 lượt thoại ngắn 15-30 chữ, 4 phương án A, B, C, D)
+- The Chinese stem consists of 1-2 very concise spoken turns followed by a question ("问：...") and 4 distinct options (A, B, C, D).
+- Vocabulary strictly limited to HSK 1 verified words. Straightforward and unambiguous.`;
 
+    case 'listen_monologue_qa_4opt':
     case 'listen_talks_qa_4opt':
       if (level >= 6) {
         return `QUESTION TYPE: Advanced Monologue / Speech Q&A (Nghe bài nói HSK 6 - Đoạn văn dài 160-220 chữ)
@@ -685,7 +640,7 @@ export function getQuestionTypeInstructions(partType: string, level = 1): string
  */
 export function isOpenEndedWritingTask(partType?: string): boolean {
   if (!partType) return false;
-  if (/_4opt/i.test(partType) || /_6opt/i.test(partType) || /_3opt/i.test(partType) || /_5opt/i.test(partType)) {
+  if (/_4opt/i.test(partType) || /_6opt/i.test(partType) || /_5opt/i.test(partType)) {
     return false;
   }
   return /^write_/i.test(partType) || /_(?:0opt|0_opt)/i.test(partType);
@@ -939,8 +894,22 @@ function getExampleOptionsForPrompt(
   if (partType.includes('true_false')) {
     return ['正确', '错误'];
   }
+  if (partType === 'read_paragraph_sentence_ordering' || partType === 'read_sentence_order_5opt') {
+    return ['B-D-A-C-E', 'B-A-D-C-E', 'D-B-A-C-E', 'B-D-C-A-E', 'D-B-C-A-E'].slice(0, expectedOptions);
+  }
   if (partType.startsWith('read_sentence_picture_match')) {
     return ['热茶', '苹果', '看书', '医院', '出租车', '飞机'].slice(0, expectedOptions);
+  }
+  if (partType === 'write_component_assembly_6opt') {
+    return ['可', '口', '日', '月', '木', '门'].slice(0, expectedOptions);
+  }
+  if (partType === 'write_sentence_reorder_4opt') {
+    return [
+      '我每天早上在公园跑步。',
+      '我早上每天跑步在公园。',
+      '在公园每天我早上跑步。',
+      '跑步我每天早上在公园。',
+    ].slice(0, expectedOptions);
   }
   if (partType.includes('picture_match') || partType.includes('choose_pic')) {
     return ['喝茶', '吃苹果', '看书', '去医院', '坐出租车', '坐飞机'].slice(0, expectedOptions);
@@ -952,7 +921,13 @@ function getExampleOptionsForPrompt(
     if (boundedLevel === 4) {
       return ['适度活动并喝一杯温水', '多喝浓茶或咖啡提神', '马上卧床睡一个小时', '继续坚持长时间工作'].slice(0, expectedOptions);
     }
-    return ['去公园锻炼身体', '在家里看电视', '去医院看医生'].slice(0, expectedOptions);
+    if (boundedLevel === 2) {
+      return ['很冷', '很热', '下雨', '暖和'].slice(0, expectedOptions);
+    }
+    if (boundedLevel === 1) {
+      return ['三年', '一年', '两年', '五年'].slice(0, expectedOptions);
+    }
+    return ['去公园锻炼身体', '在家里看电视', '去医院看医生', '去学校上课'].slice(0, expectedOptions);
   }
   if (partType.startsWith('listen_dialogue_qa')) {
     if (boundedLevel >= 5) {
@@ -979,18 +954,18 @@ function getExampleOptionsForPrompt(
     return ['十分繁忙', '喜欢运动', '经常迟到', '工作轻松'].slice(0, expectedOptions);
   }
   if (boundedLevel === 1) {
-    return (expectedOptions === 6 ? ['书', '水', '茶', '苹果', '飞机', '学校'] : ['书', '水', '茶', '苹果']).slice(0, expectedOptions);
+    return (expectedOptions >= 5 ? ['书', '水', '茶', '苹果', '飞机', '学校'] : ['书', '水', '茶', '苹果']).slice(0, expectedOptions);
   }
   if (boundedLevel === 2) {
-    return (expectedOptions === 6 ? ['进', '走', '出', '跑', '买', '看'] : ['进', '走', '出', '跑']).slice(0, expectedOptions);
+    return (expectedOptions >= 5 ? ['进', '走', '出', '跑', '买', '看'] : ['进', '走', '出', '跑']).slice(0, expectedOptions);
   }
   if (boundedLevel >= 5) {
-    return (expectedOptions === 6 ? ['缓解', '推卸', '摆脱', '消除', '克服', '适应'] : ['缓解', '推卸', '摆脱', '消除']).slice(0, expectedOptions);
+    return (expectedOptions >= 5 ? ['缓解', '推卸', '摆脱', '消除', '克服', '适应'] : ['缓解', '推卸', '摆脱', '消除']).slice(0, expectedOptions);
   }
   if (boundedLevel === 4) {
-    return (expectedOptions === 6 ? ['合适', '适合', '符合', '配合', '安排', '调整'] : ['合适', '适合', '符合', '配合']).slice(0, expectedOptions);
+    return (expectedOptions >= 5 ? ['合适', '适合', '符合', '配合', '安排', '调整'] : ['合适', '适合', '符合', '配合']).slice(0, expectedOptions);
   }
-  return (expectedOptions === 6 ? ['解决', '解释', '决定', '检查', '照顾', '清楚'] : ['解决', '解释', '决定', '检查']).slice(0, expectedOptions);
+  return (expectedOptions >= 5 ? ['解决', '解释', '决定', '检查', '照顾', '清楚'] : ['解决', '解释', '决定', '检查']).slice(0, expectedOptions);
 }
 
 /**
@@ -1007,6 +982,9 @@ export function buildHskPrompt(
   targetGrammar?: string,
   trapType?: TrapType | string
 ): string {
+  if (/_3opt(?:\b|_)/i.test(String(partType || ''))) {
+    throw new Error(`DEPRECATED_3OPT_PART_TYPE: '${partType}' is no longer supported; use 4-option canonical part_type.`);
+  }
   const boundedLevel = Math.max(1, Math.min(level, 6));
   const spec = HSK_LEVEL_SPECS[boundedLevel] || HSK_LEVEL_SPECS[1];
   const grammarGuideline = HSK_GRAMMAR_LEVEL_GUIDELINES[boundedLevel] || HSK_GRAMMAR_LEVEL_GUIDELINES[1];
@@ -1044,14 +1022,14 @@ export function buildHskPrompt(
             : (expectedOptionsMatch
                 ? Number(expectedOptionsMatch[1])
                 : (boundedLevel <= 2 && (skill === 'listening' || skill === 'reading' || /^listen_|^read_/i.test(partType))
-                    ? (/6opt|split|word_bank|matching/i.test(partType) ? 6 : 3)
+                    ? (/6opt|split|word_bank|matching/i.test(partType) ? 6 : 4)
                     : 4))));
   const imageOptionPartTypes = new Set([
-    'listen_picture_match_3opt',
     'listen_picture_match_4opt',
     'listen_dialogue_picture_match_6opt',
     'listen_dialogue_picture_match_split',
     'read_sentence_picture_match_6opt',
+    'read_sentence_picture_match_split',
   ]);
   const usesImageOptions = imageOptionPartTypes.has(partType);
   const exampleOptions = getExampleOptionsForPrompt(partType, boundedLevel, expectedOptions, isWriting);
@@ -1070,16 +1048,18 @@ export function buildHskPrompt(
       {"option_idx": 4, "option_text": "照顾", "rationale_vi": "照顾: Mang nghĩa là chăm sóc, không kết hợp với '办法...问题'."},
       {"option_idx": 5, "option_text": "清楚", "rationale_vi": "清楚: Mang nghĩa là rõ ràng, không phải động từ giải quyết vấn đề."}
     ]`
-    : (expectedOptions === 3
-        ? `[
-          {"option_idx": 1, "option_text": "解释", "rationale_vi": "解释: Mang nghĩa là giải thích, không kết hợp với '办法...问题'."},
-          {"option_idx": 2, "option_text": "决定", "rationale_vi": "决定: Mang nghĩa là quyết định, không phải giải quyết vấn đề."}
-        ]`
-        : `[
-          {"option_idx": 1, "option_text": "解释", "rationale_vi": "解释: Mang nghĩa là giải thích, không kết hợp với '办法...问题'."},
-          {"option_idx": 2, "option_text": "决定", "rationale_vi": "决定: Mang nghĩa là quyết định, không phải giải quyết vấn đề."},
-          {"option_idx": 3, "option_text": "检查", "rationale_vi": "检查: Mang nghĩa là kiểm tra, không mang nghĩa giải quyết dứt điểm vấn đề."}
-        ]`);
+    : expectedOptions === 5
+    ? `[
+      {"option_idx": 1, "option_text": "解释", "rationale_vi": "解释: Mang nghĩa là giải thích, không kết hợp với '办法...问题'."},
+      {"option_idx": 2, "option_text": "决定", "rationale_vi": "决定: Mang nghĩa là quyết định, không phải giải quyết vấn đề."},
+      {"option_idx": 3, "option_text": "检查", "rationale_vi": "检查: Mang nghĩa là kiểm tra, không mang nghĩa giải quyết dứt điểm vấn đề."},
+      {"option_idx": 4, "option_text": "照顾", "rationale_vi": "照顾: Mang nghĩa là chăm sóc, không kết hợp với '办法...问题'."}
+    ]`
+    : `[
+      {"option_idx": 1, "option_text": "解释", "rationale_vi": "解释: Mang nghĩa là giải thích, không kết hợp với '办法...问题'."},
+      {"option_idx": 2, "option_text": "决定", "rationale_vi": "决定: Mang nghĩa là quyết định, không phải giải quyết vấn đề."},
+      {"option_idx": 3, "option_text": "检查", "rationale_vi": "检查: Mang nghĩa là kiểm tra, không mang nghĩa giải quyết dứt điểm vấn đề."}
+    ]`;
   let sampleExplanationSummary = '"Dịch nghĩa: Khi gặp khó khăn, chúng ta phải nghĩ cách giải quyết vấn đề."';
   let sampleAnswerRationale = '"解决: Kết hợp chuẩn tạo thành cụm từ cố định [解决问题] (giải quyết vấn đề)."';
 
@@ -1105,27 +1085,22 @@ export function buildHskPrompt(
       sampleTargetVocab = '"茶"';
       sampleExplanationSummary = '"Dịch nghĩa: Nam bảo trời bên ngoài lạnh, khuyên vào nhà sưởi ấm. Nữ cảm ơn và xin một cốc nước nóng, phù hợp nhất với hình ảnh tách trà nóng (tea)."';
       sampleAnswerRationale = '"喝茶 (tea): Ngữ cảnh trời lạnh muốn uống đồ nóng để làm ấm người phù hợp với hình ảnh tách trà (tea). Đối thoại không lộ nguyên văn từ khóa nhằm rèn luyện tư duy ngữ cảnh."';
-      sampleRationales = expectedOptions === 3
+      sampleRationales = expectedOptions === 4
         ? `[
           {"option_idx": 1, "option_text": "看书", "rationale_vi": "看书: Đọc sách (reading), không liên quan đến việc uống trà."},
-          {"option_idx": 2, "option_text": "坐出租车", "rationale_vi": "坐出租车: Đi taxi (taxi), không liên quan đến ăn uống."}
+          {"option_idx": 2, "option_text": "坐出租车", "rationale_vi": "坐出租车: Đi taxi (taxi), không liên quan đến ăn uống."},
+          {"option_idx": 3, "option_text": "去医院", "rationale_vi": "去医院: Đi bệnh viện (hospital), đoạn thoại không nhắc đến ốm đau."}
         ]`
-        : (expectedOptions === 4
-            ? `[
-              {"option_idx": 1, "option_text": "看书", "rationale_vi": "看书: Đọc sách (reading), không liên quan đến việc uống trà."},
-              {"option_idx": 2, "option_text": "坐出租车", "rationale_vi": "坐出租车: Đi taxi (taxi), không liên quan đến ăn uống."},
-              {"option_idx": 3, "option_text": "去医院", "rationale_vi": "去医院: Đi bệnh viện (hospital), đoạn thoại không nhắc đến ốm đau."}
-            ]`
-            : `[
-              {"option_idx": 1, "option_text": "吃苹果", "rationale_vi": "吃苹果: Ăn táo (apple), không khớp với việc uống trà."},
-              {"option_idx": 2, "option_text": "看书", "rationale_vi": "看书: Đọc sách (reading), không liên quan đến nội dung đối thoại."},
-              {"option_idx": 3, "option_text": "去医院", "rationale_vi": "去医院: Đi bệnh viện (hospital), đoạn thoại không nhắc đến ốm đau."},
-              {"option_idx": 4, "option_text": "坐出租车", "rationale_vi": "坐出租车: Đi taxi (taxi), không liên quan đến ăn uống."},
-              {"option_idx": 5, "option_text": "飞机", "rationale_vi": "飞机: Đi máy bay (airplane), không liên quan đến đối thoại."}
-            ]`);
+        : `[
+          {"option_idx": 1, "option_text": "吃苹果", "rationale_vi": "吃苹果: Ăn táo (apple), không khớp với việc uống trà."},
+          {"option_idx": 2, "option_text": "看书", "rationale_vi": "看书: Đọc sách (reading), không liên quan đến nội dung đối thoại."},
+          {"option_idx": 3, "option_text": "去医院", "rationale_vi": "去医院: Đi bệnh viện (hospital), đoạn thoại không nhắc đến ốm đau."},
+          {"option_idx": 4, "option_text": "坐出租车", "rationale_vi": "坐出租车: Đi taxi (taxi), không liên quan đến ăn uống."},
+          {"option_idx": 5, "option_text": "飞机", "rationale_vi": "飞机: Đi máy bay (airplane), không liên quan đến đối thoại."}
+        ]`;
     }
   } else if (partType.includes('true_false')) {
-    if (boundedLevel <= 2) {
+    if (boundedLevel <= 2 && partType === 'listen_true_false_2opt') {
       sampleStem = '"他在坐出租车去学校。"';
       sampleCompletedStem = '"他在坐出租车去学校。"';
       samplePinyin = '"tā zài zuò chū zū chē qù xué xiào."';
@@ -1185,6 +1160,47 @@ export function buildHskPrompt(
                 ? '"Câu mẫu chuẩn ngữ pháp: 周末我们在家里打扫房间，到处都很干净。"'
                 : '"Chữ Hán chính xác là [书], tạo thành cụm từ 看书 (đọc sách)."'));
     }
+  } else if (partType === 'write_component_assembly_6opt') {
+    sampleStem = '"请选择正确的部件与偏旁 [氵] 组合成汉字 [河]。"';
+    sampleCompletedStem = sampleStem;
+    samplePinyin = '"qǐng xuǎn zé zhèng què de bù jiàn yǔ piān páng zǔ hé chéng hàn zì."';
+    sampleTargetVocab = '"河"';
+    sampleRationales = `[
+      {"option_idx": 1, "option_text": "口", "rationale_vi": "口: Ghép với bộ [氵] không tạo thành chữ [河] (hé)."},
+      {"option_idx": 2, "option_text": "日", "rationale_vi": "日: Bộ [氵] ghép với [日] không phải chữ [河]."},
+      {"option_idx": 3, "option_text": "月", "rationale_vi": "月: Bộ [氵] ghép với [月] không tạo thành chữ [河]."},
+      {"option_idx": 4, "option_text": "木", "rationale_vi": "木: Ghép với [氵] tạo thành chữ [沐], không phải [河]."},
+      {"option_idx": 5, "option_text": "门", "rationale_vi": "门: Bộ [氵] ghép với [门] không tạo thành chữ [河]."}
+    ]`;
+    sampleExplanationSummary = '"Dịch nghĩa: Hãy chọn bộ phận đúng kết hợp với bộ thủ [氵] (ba chấm thủy) để ghép thành chữ Hán [河] (hé - con sông)."';
+    sampleAnswerRationale = '"可: Bộ [氵] kết hợp với [可] ở bên phải tạo thành chữ [河] (hé - sông)."';
+  } else if (partType === 'write_sentence_reorder_4opt') {
+    sampleStem = '"把下列词语排列成一句通顺的话：我 / 每天早上 / 在公园 / 跑步"';
+    sampleCompletedStem = sampleStem;
+    samplePinyin = '"bǎ xià liè cí yǔ pái liè chéng yí jù tōng shùn de huà: wǒ / měi tiān zǎo shang / zài gōng yuán / pǎo bù."';
+    sampleTargetVocab = '"跑步"';
+    sampleRationales = `[
+      {"option_idx": 1, "option_text": "我早上每天跑步在公园。", "rationale_vi": "我早上每天跑步在公园: Sai vị trí trạng ngữ địa điểm [在公园], trong tiếng Trung trạng ngữ nơi chốn phải đặt trước động từ [跑步]."},
+      {"option_idx": 2, "option_text": "在公园每天我早上跑步。", "rationale_vi": "在公园每天我早上跑步: Trật tự chủ ngữ [我] và trạng ngữ thời gian [每天早上] bị đảo lộn thiếu tự nhiên."},
+      {"option_idx": 3, "option_text": "跑步我每天早上在公园。", "rationale_vi": "跑步我每天早上在公园: Động từ [跑步] bị đẩy lên đầu câu sai cấu trúc S + Thời gian + Địa điểm + V."}
+    ]`;
+    sampleExplanationSummary = '"Dịch nghĩa: Sắp xếp các từ thành câu hoàn chỉnh: Sáng nào tôi cũng chạy bộ ở công viên."';
+    sampleAnswerRationale = '"我每天早上在公园跑步。: Tuân thủ đúng trật tự ngữ pháp tiếng Trung: Chủ ngữ (我) + Thời gian (每天早上) + Địa điểm (在公园) + Động từ (跑步)."';
+  } else if (partType === 'read_paragraph_sentence_ordering' || partType === 'read_sentence_order_5opt') {
+    sampleStem = JSON.stringify(
+      "请将下列5个句子排列成一段连贯通顺的话：\nA. 因此，学会合理分配时间尤为重要。\nB. 现代生活节奏越来越快。\nC. 只有这样，我们才能兼顾工作与生活。\nD. 很多人每天都感到时间不够用。\nE. 首先要分清事情的轻重缓急。"
+    );
+    sampleCompletedStem = sampleStem;
+    samplePinyin = '"qǐng jiāng xià liè wǔ gè jù zi pái liè chéng yí duàn lián guàn tōng shùn de huà."';
+    sampleTargetVocab = '"因此"';
+    sampleRationales = `[
+      {"option_idx": 1, "option_text": "B-A-D-C-E", "rationale_vi": "B-A-D-C-E: Liên từ kết luận [因此] ở câu A chưa có nguyên nhân [D] đứng trước."},
+      {"option_idx": 2, "option_text": "D-B-A-C-E", "rationale_vi": "D-B-A-C-E: Câu kết [C] chứa [只有这样] không thể đứng trước câu giải pháp [E]."},
+      {"option_idx": 3, "option_text": "B-D-C-A-E", "rationale_vi": "B-D-C-A-E: Câu C đặt ngay sau D làm đứt gãy mạch [因此] và [首先]."},
+      {"option_idx": 4, "option_text": "D-B-C-A-E", "rationale_vi": "D-B-C-A-E: Sai trật tự dẫn nhập bối cảnh [B] trước hệ quả [D] và giải pháp [E]."}
+    ]`;
+    sampleExplanationSummary = '"Dịch nghĩa: Nhịp sống hiện đại ngày càng nhanh (B), nhiều người thấy thiếu thời gian (D). Do đó cần phân bổ thời gian hợp lý (A): trước tiên phân biệt việc gấp/quan trọng (E), chỉ như vậy mới cân bằng được công việc và cuộc sống (C)."';
+    sampleAnswerRationale = '"B-D-A-C-E: B mở đầu bối cảnh, D nêu thực trạng, A nối bằng [因此], C/E hoàn thiện mạch lập luận."';
   } else if (partType.startsWith('listen_dialogue_qa')) {
     if (boundedLevel >= 5) {
       sampleStem = JSON.stringify(
@@ -1230,16 +1246,6 @@ export function buildHskPrompt(
       sampleCompletedStem = sampleStem;
       samplePinyin = '"nán: jīn tiān tiān qì zhè me hǎo, wǒ men yì qǐ qí zì xíng chē qù gōng yuán ba. nǚ: wǒ běn lái yě xiǎng qù, kě shì gāng cái lǎo shī fā xiāo xi shuō, xià wǔ liǎng diǎn yào bǎ zuò yè jiāo shàng qù, wǒ děi xiān zuò wán. wèn: nǚ de xià wǔ yào zuò shén me?"';
       sampleTargetVocab = '"作业"';
-      sampleRationales = expectedOptions === 3
-        ? `[
-        {"option_idx": 1, "option_text": "去公园骑车", "rationale_vi": "去公园骑车: Đây là lời mời của bạn nam và ý định ban đầu (本来想去), nhưng nữ đã từ chối vì bận làm bài tập."},
-        {"option_idx": 2, "option_text": "在家里睡觉", "rationale_vi": "在家里睡觉: Đoạn thoại không hề nhắc tới việc đi ngủ."}
-      ]`
-        : `[
-        {"option_idx": 1, "option_text": "去公园骑车", "rationale_vi": "去公园骑车: Đây là lời mời của bạn nam và ý định ban đầu (本来想去), nhưng nữ đã từ chối vì bận làm bài tập."},
-        {"option_idx": 2, "option_text": "在家里睡觉", "rationale_vi": "在家里睡觉: Đoạn thoại không hề nhắc tới việc đi ngủ."},
-        {"option_idx": 3, "option_text": "去医院看医生", "rationale_vi": "去医院看医生: Nữ không bị ốm, chỉ phải làm bài tập nộp cho giáo viên."}
-      ]`;
       sampleRationales = `[
         {"option_idx": 1, "option_text": "去公园骑车", "rationale_vi": "去公园骑车: Đây là lời mời của bạn nam và ý định ban đầu (本来想去), nhưng nữ đã từ chối vì bận làm bài tập."},
         {"option_idx": 2, "option_text": "在家里睡觉", "rationale_vi": "在家里睡觉: Đoạn thoại không hề nhắc tới việc đi ngủ."},
@@ -1260,7 +1266,7 @@ export function buildHskPrompt(
       sampleExplanationSummary = '"Dịch nghĩa: Nam hỏi cuộc họp 9:30 sáng mai có bị hoãn không. Nữ thông báo đổi sang 2:15 chiều mai vì hiệu trưởng tiếp khách."';
       sampleAnswerRationale = '"明天下午两点一刻: Nữ nói rõ [会议改到明天下午两点一刻吧], đây là quyết định cuối cùng."';
     }
-  } else if (partType === 'listen_talks_qa_4opt' || partType === 'listen_monologue_qa_3opt') {
+  } else if (partType === 'listen_talks_qa_4opt' || partType === 'listen_monologue_qa_4opt') {
     if (boundedLevel >= 5) {
       sampleStem = JSON.stringify(
         "在传统观念中，很多管理者认为严格的规章制度是提升团队执行力的唯一保障。然而，最新的一项组织心理学研究却得出了出人意料的结论：过度严苛的考核机制反而会严重抑制员工的创新意识和主动担当精神。相反，那些给予员工适度自主权并鼓励试错的企业，其长期业绩表现和核心竞争力往往显著优于前者。真正的领导力，绝非体现在细枝末节的监控上，而在于能否为团队营造一个充满信任与安全感的成长空间。\n问：这项研究的核心发现是什么？"
@@ -1298,7 +1304,8 @@ export function buildHskPrompt(
       sampleTargetVocab = '"坚持"';
       sampleRationales = `[
         {"option_idx": 1, "option_text": "在家里看电视", "rationale_vi": "在家里看电视: Không được nhắc đến, ông cụ ra công viên vận động."},
-        {"option_idx": 2, "option_text": "去医院看医生", "rationale_vi": "去医院看医生: Ông cụ sức khỏe rất tốt nhờ tập luyện thường xuyên."}
+        {"option_idx": 2, "option_text": "去医院看医生", "rationale_vi": "去医院看医生: Ông cụ sức khỏe rất tốt nhờ tập luyện thường xuyên."},
+        {"option_idx": 3, "option_text": "去学校上课", "rationale_vi": "去学校上课: Ông cụ đã hơn 70 tuổi, chỉ đi tập thể dục ở công viên chứ không đi học."}
       ]`;
       sampleExplanationSummary = '"Dịch nghĩa: Ông nội hơn 70 tuổi, sáng nào cũng đi công viên tập Thái Cực Quyền để rèn luyện sức khỏe."';
       sampleAnswerRationale = '"去公园锻炼身体: Đoạn văn nêu rõ [每天早上都坚持去公园打太极拳]."';
@@ -1311,7 +1318,8 @@ export function buildHskPrompt(
       sampleTargetVocab = '"冷"';
       sampleRationales = `[
         {"option_idx": 1, "option_text": "很热", "rationale_vi": "很热: Trái ngược với thông tin trong bài nói rằng bên ngoài rất lạnh."},
-        {"option_idx": 2, "option_text": "下雨", "rationale_vi": "下雨: Bài nói chỉ đề cập nhiệt độ thấp và trời lạnh, không nói trời mưa."}
+        {"option_idx": 2, "option_text": "下雨", "rationale_vi": "下雨: Bài nói chỉ đề cập nhiệt độ thấp và trời lạnh, không nói trời mưa."},
+        {"option_idx": 3, "option_text": "暖和", "rationale_vi": "暖和: Trái ngược với nhiệt độ âm năm độ và thời tiết rất lạnh."}
       ]`;
       sampleExplanationSummary = '"Dịch nghĩa: Hôm nay ngoài trời rất lạnh, nhiệt độ cao nhất chỉ có âm năm độ, ra ngoài nhất định phải mặc thêm một cái áo."';
       sampleAnswerRationale = '"很冷: Bài nói nêu rõ [今天外面很冷]."';
@@ -1324,7 +1332,8 @@ export function buildHskPrompt(
       sampleTargetVocab = '"住"';
       sampleRationales = `[
         {"option_idx": 1, "option_text": "一年", "rationale_vi": "一年: Không đúng với số năm trong bài nói (三年)."},
-        {"option_idx": 2, "option_text": "两年", "rationale_vi": "两年: Không đúng với số năm trong bài nói (三年)."}
+        {"option_idx": 2, "option_text": "两年", "rationale_vi": "两年: Không đúng với số năm trong bài nói (三年)."},
+        {"option_idx": 3, "option_text": "五年", "rationale_vi": "五年: Không đúng với số năm trong bài nói (三年)."}
       ]`;
       sampleExplanationSummary = '"Dịch nghĩa: Tôi sống ở Bắc Kinh được ba năm rồi, tôi rất thích món ăn Trung Quốc ở đây. Hỏi: Anh ấy đã sống ở Bắc Kinh mấy năm?"';
       sampleAnswerRationale = '"三年: Đoạn nói ngắn gọn nêu rõ [我在北京住了三年]. Toàn bộ từ vựng nằm trọn trong 150 từ cơ bản của HSK 1."';
@@ -1376,24 +1385,19 @@ export function buildHskPrompt(
     sampleCompletedStem = '"我想去商店买两本书。"';
     samplePinyin = '"wǒ xiǎng qù shāng diàn mǎi liǎng běn shū."';
     sampleTargetVocab = '"书"';
-    sampleRationales = expectedOptions === 3
+    sampleRationales = expectedOptions === 6
       ? `[
-      {"option_idx": 1, "option_text": "水", "rationale_vi": "水: Lượng từ '本' dùng cho sách vở, không dùng cho đồ uống như '水'."},
-      {"option_idx": 2, "option_text": "茶", "rationale_vi": "茶: Lượng từ '本' không thể đi với '茶', '茶' dùng lượng từ '杯'."}
-    ]`
-      : (expectedOptions === 6
-          ? `[
       {"option_idx": 1, "option_text": "水", "rationale_vi": "水: Lượng từ '本' dùng cho sách vở, không dùng cho đồ uống như '水'."},
       {"option_idx": 2, "option_text": "茶", "rationale_vi": "茶: Lượng từ '本' không thể đi với '茶', '茶' dùng lượng từ '杯'."},
       {"option_idx": 3, "option_text": "苹果", "rationale_vi": "苹果: Lượng từ '本' không dùng cho hoa quả, '苹果' dùng lượng từ '个'."},
       {"option_idx": 4, "option_text": "飞机", "rationale_vi": "飞机: Lượng từ '本' không dùng cho máy bay, '飞机' dùng lượng từ '架'."},
       {"option_idx": 5, "option_text": "学校", "rationale_vi": "学校: Lượng từ '本' không dùng cho trường học, '学校' dùng lượng từ '所'."}
     ]`
-          : `[
+      : `[
       {"option_idx": 1, "option_text": "水", "rationale_vi": "水: Lượng từ '本' dùng cho sách vở, không dùng cho đồ uống như '水'."},
       {"option_idx": 2, "option_text": "茶", "rationale_vi": "茶: Lượng từ '本' không thể đi với '茶', '茶' dùng lượng từ '杯'."},
       {"option_idx": 3, "option_text": "苹果", "rationale_vi": "苹果: Lượng từ '本' không dùng cho hoa quả, '苹果' dùng lượng từ '个'."}
-    ]`);
+    ]`;
     sampleExplanationSummary = '"Dịch nghĩa: Tôi muốn đến cửa hàng mua hai cuốn sách."';
     sampleAnswerRationale = '"书: Đi kèm với lượng từ [本] (cuốn/quyển) để chỉ sách vở."';
   } else if (boundedLevel === 2) {
@@ -1401,24 +1405,19 @@ export function buildHskPrompt(
     sampleCompletedStem = '"门外太冷了，你快进来吧。"';
     samplePinyin = '"mén wài tài lěng le, nǐ kuài jìn lái ba."';
     sampleTargetVocab = '"进"';
-    sampleRationales = expectedOptions === 3
+    sampleRationales = expectedOptions === 6
       ? `[
-      {"option_idx": 1, "option_text": "走", "rationale_vi": "走: Không kết hợp thành cụm xu hướng thích hợp khi yêu cầu vào trong nhà."},
-      {"option_idx": 2, "option_text": "出", "rationale_vi": "出: '出来' có nghĩa là ra ngoài, trái với ngữ cảnh bên ngoài đang lạnh."}
-    ]`
-      : (expectedOptions === 6
-          ? `[
       {"option_idx": 1, "option_text": "走", "rationale_vi": "走: Không kết hợp thành cụm xu hướng thích hợp khi yêu cầu vào trong nhà."},
       {"option_idx": 2, "option_text": "出", "rationale_vi": "出: '出来' có nghĩa là ra ngoài, trái với ngữ cảnh bên ngoài đang lạnh."},
       {"option_idx": 3, "option_text": "跑", "rationale_vi": "跑: '跑来' chỉ chạy lại đây, không diễn đạt rõ hành động vào trong nhà để tránh lạnh."},
       {"option_idx": 4, "option_text": "买", "rationale_vi": "买: '买' có nghĩa là mua, không kết hợp với '来' trong ngữ cảnh tránh rét."},
       {"option_idx": 5, "option_text": "看", "rationale_vi": "看: '看' có nghĩa là nhìn/xem, không diễn đạt hành động vào nhà."}
     ]`
-          : `[
+      : `[
       {"option_idx": 1, "option_text": "走", "rationale_vi": "走: Không kết hợp thành cụm xu hướng thích hợp khi yêu cầu vào trong nhà."},
       {"option_idx": 2, "option_text": "出", "rationale_vi": "出: '出来' có nghĩa là ra ngoài, trái với ngữ cảnh bên ngoài đang lạnh."},
       {"option_idx": 3, "option_text": "跑", "rationale_vi": "跑: '跑来' chỉ chạy lại đây, không diễn đạt rõ hành động vào trong nhà để tránh lạnh."}
-    ]`);
+    ]`;
     sampleExplanationSummary = '"Dịch nghĩa: Ngoài cửa lạnh quá, bạn mau vào đây đi."';
     sampleAnswerRationale = '"进: Kết hợp với [来] tạo thành bổ ngữ xu hướng [进来] (vào đây), phù hợp ngữ cảnh tránh rét."';
   }
@@ -1466,7 +1465,7 @@ ${
     : `1. EXACTLY ${expectedOptions} DISTINCT OPTIONS:
    - "options" MUST contain exactly ${expectedOptions} non-empty, unique strings.
    - For word-bank or matching tasks, repeat the same shared choice bank in every question in this generated batch.
-   ${usesImageOptions ? `- "options_images" MUST contain exactly ${expectedOptions} distinct allowed SVG theme keys, one per image choice.\n   - These labels are for reviewer metadata; exam mode displays only the images and A-F labels.` : ''}
+   ${usesImageOptions ? `- "options_images" MUST contain exactly ${expectedOptions} distinct visual descriptors (either clean non-leaking English scene descriptions without Chinese characters or answer words, or allowed SVG theme keys), one per image choice.\n   - These labels are for reviewer metadata; exam mode displays only the images and A-F labels.` : '- "options_images" MUST be an empty array [].'}
    - Exactly 1 option is the grounded, undeniable correct answer.
    - "answer_idx" MUST be the exact integer index of the correct answer (0 through ${Math.max(0, expectedOptions - 1)}).
 
@@ -1507,7 +1506,7 @@ ${
      * Construct "completed_stem" by replacing the "____" in "stem" with EXACTLY "options[answer_idx]".
      * NEVER leave "____" or empty placeholders inside "completed_stem".
      * Literal substitution only: do not add, remove, reorder, or alter any other character or word.
-   - For reading comprehension tasks (e.g. read_comprehension_short_3opt, read_comprehension_4opt):
+    - For reading comprehension tasks (e.g. read_comprehension_4opt, read_comprehension_passages_4opt):
      * "stem" has NO blank placeholder and MUST NOT contain "____".
      * "completed_stem" MUST be exactly identical to "stem".
    - Provide tone-marked Pinyin for that exact completed sentence. Do not add, omit, or infer Chinese words in Pinyin.
@@ -1525,11 +1524,11 @@ ${
    - Complete a final self-check: grammar/naturalness, exactly one defensible answer, option-index/text alignment, complete rationales, and pinyin for the exact literal completed_stem. This self-check never replaces backend validation or human review.
    - Every Vietnamese field must be complete, coherent, and end with suitable punctuation. Output truncation is not acceptable.
 
-7. 27 ALLOWED SVG ILLUSTRATION THEMES:
+7. VISUAL ILLUSTRATION RULES (CLEAN NON-LEAKING ENGLISH PROMPTS OR 27 SVG KEYS):
    - If a picture-choice task has "options_images", use null for "illustration_theme"; do not assign a shared scene to all choices.
-   - Otherwise, if part_type is picture-based, "illustration_theme" MUST be strictly one of these 27 keys:
+   - Otherwise, if part_type is visual (picture-based, listen_true_false_2opt at HSK 1-2, or picture writing), "illustration_theme" MUST be either a clean non-leaking English visual scene description (zero Chinese characters, zero Pinyin, zero answer words) OR strictly one of these 27 keys:
      ${VALID_ILLUSTRATION_THEMES.join(', ')}
-   - For non-picture questions, "illustration_theme" MUST be null.
+   - For all non-visual questions, "illustration_theme" MUST be null and "options_images" MUST be [].
 
 ======================================================================
 4. JSON OUTPUT CONTRACT
@@ -1546,60 +1545,25 @@ SCHEMA (containing ${count} distinct items in "questions"):
 {
   "questions": [
   {
-    "stem": ${
-      partType === 'read_comprehension_short_3opt'
-        ? '"我上午去学校看书。★ 我什么时候去学校？"'
-        : sampleStem
-    },
-    "completed_stem": ${
-      partType === 'read_comprehension_short_3opt'
-        ? '"我上午去学校看书。★ 我什么时候去学校？"'
-        : sampleCompletedStem
-    },
-    "options": ${
-      isWriting
-        ? '[]'
-        : (partType === 'read_comprehension_short_3opt'
-            ? JSON.stringify(['上午', '下午', '晚上'])
-            : JSON.stringify(exampleOptions))
-    },
+    "stem": ${sampleStem},
+    "completed_stem": ${sampleCompletedStem},
+    "options": ${isWriting ? '[]' : JSON.stringify(exampleOptions)},
     "options_images": ${JSON.stringify(usesImageOptions ? exampleImageOptions : [])},
     "answer_idx": 0,
-    "pinyin": ${
-      partType === 'read_comprehension_short_3opt'
-        ? '"wǒ shàng wǔ qù xué xiào kàn shū. wǒ shén me shí hou qù xué xiào?"'
-        : samplePinyin
-    },
-    "difficulty_tier": "${difficultyTier || (boundedLevel >= 5 ? 'tier2_very_difficult' : (boundedLevel >= 3 ? 'tier1_difficult' : 'tier1_difficult'))}",
+    "pinyin": ${samplePinyin},
+    "difficulty_tier": "${difficultyTier || (boundedLevel >= 5 ? 'tier2_very_difficult' : 'tier1_difficult')}",
     "trap_type": "${trapType || (partType.startsWith('listen_') ? (boundedLevel >= 5 ? 'anti_verbatim' : 'self_correction') : (partType.startsWith('read_comprehension') ? (boundedLevel >= 5 ? 'anti_verbatim' : 'context_scope') : 'collocation'))}",
     "target_grammar": "${targetGrammar || (boundedLevel >= 5 ? '复句逻辑与转折关联词 (与其...不如...)' : (partType === 'listen_dialogue_qa_4opt' ? '时间状语与转折复句' : (partType.startsWith('read_comprehension') ? '同义转述与态度推断' : '基本SVO与处所词')))}",
-    "target_vocabulary": ${isWriting ? '"缓解"' : (partType === 'read_comprehension_short_3opt' ? '"上午"' : sampleTargetVocab)},
-    "distractor_rationales": ${
-      isWriting
-        ? '[]'
-        : (partType === 'read_comprehension_short_3opt'
-            ? `[
-      {"option_idx": 1, "option_text": "下午", "rationale_vi": "Văn bản nêu rõ thời gian là buổi sáng (上午), không phải buổi chiều (下午)."},
-      {"option_idx": 2, "option_text": "晚上", "rationale_vi": "Văn bản nêu rõ thời gian là buổi sáng (上午), không phải buổi tối (晚上)."}
-    ]`
-            : sampleRationales)
-    },
+    "target_vocabulary": ${isWriting ? '"缓解"' : sampleTargetVocab},
+    "distractor_rationales": ${isWriting ? '[]' : sampleRationales},
     "naturalness_review": {"status":"natural","rationale_vi":"Câu hoàn chỉnh tự nhiên, đúng trật tự từ và đủ thành phần trong ngữ cảnh."},
-    "explanation_summary_vi": ${
-      partType === 'read_comprehension_short_3opt'
-        ? '"Dịch nghĩa: Tôi buổi sáng đến trường đọc sách. ★ Tôi khi nào đến trường? Đáp án là buổi sáng (上午)."'
-        : sampleExplanationSummary
-    },
-    "answer_rationale_vi": ${
-      partType === 'read_comprehension_short_3opt'
-        ? '"Đoạn văn nêu rõ hoạt động diễn ra vào buổi sáng (上午)."'
-        : sampleAnswerRationale
-    },
+    "explanation_summary_vi": ${sampleExplanationSummary},
+    "answer_rationale_vi": ${sampleAnswerRationale},
     "level": ${boundedLevel},
     "skill": "${skill === 'all' ? (isWriting ? 'writing' : (partType.startsWith('listen_') ? 'listening' : 'reading')) : skill}",
     "part_type": "${partType}",
     "illustration_theme": ${
-      (partType === 'listen_true_false_2opt' || partType === 'read_true_false_2opt' || partType === 'write_sentence_from_picture_word') && boundedLevel <= 2
+      (partType === 'listen_true_false_2opt' || partType === 'write_sentence_from_picture_word') && boundedLevel <= 2
         ? '"taxi"'
         : 'null'
     },

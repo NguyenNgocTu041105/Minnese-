@@ -1,0 +1,11 @@
+{
+  "cacheKey": "c7585f5da1b4d78c",
+  "rawPrompt": "fresh crisp red apple fruit on white plate",
+  "imagePromptEn": "A clean, clear educational illustration of fresh crisp red apple fruit on white plate, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "crisp red apple",
+  "theme": "apple",
+  "tier": "tier2_cloudflare",
+  "byteSize": 151397,
+  "createdAt": "2026-11-18T13:07:48.759Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

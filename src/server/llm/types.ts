@@ -98,6 +98,8 @@ export interface CandidateQuestion {
   passage_pinyin?: string | null;
   audio_text_pinyin?: string | null;
   illustration_theme?: string | null;
+  image_url?: string | null;
+  illustration_resolved_url?: string | null;
   options_images?: string[];
   passage?: string | null;
   audio_text?: string | null;

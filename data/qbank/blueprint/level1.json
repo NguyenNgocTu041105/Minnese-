@@ -45,21 +45,21 @@
       "parts": {
         "listening_1": {
           "name": "第一部分：看图选择",
-          "type": "listen_picture_match_3opt",
+          "type": "listen_picture_match_4opt",
           "skill": "listening",
           "n_questions": 5,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 3,
-          "description": "听短语或简单句（听两遍），从3张图片中选出相符的图片（第1-5题）。"
+          "description": "听短语或简单句（听两遍），从4张图片中选出相符的图片（第1-5题）。"
         },
         "listening_2": {
           "name": "第二部分：听问句选答语",
-          "type": "listen_question_answer_3opt",
+          "type": "listen_dialogue_qa_4opt",
           "skill": "listening",
           "n_questions": 5,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 3,
-          "description": "听一个简短问句（听两遍），从3个文本选项中选择正确回答（第6-10题）。"
+          "description": "听一个简短问句（听两遍），从4个文本选项中选择正确回答（第6-10题）。"
         },
         "listening_3": {
           "name": "第三部分：听对话选图",
@@ -72,12 +72,12 @@
         },
         "listening_4": {
           "name": "第四部分：听短对话/单句选答案",
-          "type": "listen_monologue_qa_3opt",
+          "type": "listen_talks_qa_4opt",
           "skill": "listening",
           "n_questions": 5,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 3,
-          "description": "听简短叙述加问句（听两遍），从3个文本选项中选择正确答案（第16-20题）。"
+          "description": "听简短叙述加问句（听两遍），从4个文本选项中选择正确答案（第16-20题）。"
         }
       }
     },
@@ -117,12 +117,12 @@
         },
         "reading_4": {
           "name": "第四部分：单句/短文理解",
-          "type": "read_comprehension_short_3opt",
+          "type": "read_comprehension_4opt",
           "skill": "reading",
           "n_questions": 5,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 5,
-          "description": "短文阅读理解，读1-2句短文，根据★问题从3个选项中选出正确答案（第36-40题）。"
+          "description": "短文阅读理解，读1-2句短文，根据★问题从4个选项中选出正确答案（第36-40题）。"
         }
       }
     }

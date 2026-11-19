@@ -413,7 +413,7 @@ export default function App() {
   }, [submissions]);
 
   const handleStartAssignment = async (asg: AssignmentDoc) => {
-    if (asg.content_type === 'quiz') {
+    if (asg.content_type === 'quiz' || asg.content_type === 'listening') {
       let questions = asg.questions || [];
       if (questions.length === 0 && asg.exam_code) {
         try {

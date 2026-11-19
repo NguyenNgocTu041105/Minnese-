@@ -1,0 +1,11 @@
+{
+  "cacheKey": "b5fa95b94295f6fc",
+  "rawPrompt": "sliced fresh red watermelon",
+  "imagePromptEn": "A clean, clear educational illustration of sliced fresh red watermelon, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "sliced red watermelon",
+  "theme": "watermelon",
+  "tier": "tier2_cloudflare",
+  "byteSize": 186855,
+  "createdAt": "2026-11-18T13:08:16.294Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

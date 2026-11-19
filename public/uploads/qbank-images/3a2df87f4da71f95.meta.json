@@ -1,0 +1,11 @@
+{
+  "cacheKey": "3a2df87f4da71f95",
+  "rawPrompt": "fresh crisp red apple fruit on white plate",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of fresh crisp red apple fruit on white plate, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "crisp red apple",
+  "theme": "apple",
+  "tier": "tier2_cloudflare",
+  "byteSize": 299629,
+  "createdAt": "2026-11-18T13:59:25.790Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

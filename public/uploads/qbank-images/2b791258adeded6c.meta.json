@@ -1,0 +1,11 @@
+{
+  "cacheKey": "2b791258adeded6c",
+  "rawPrompt": "two business partners handshake",
+  "imagePromptEn": "A clean, clear educational illustration of two business partners handshake, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "two business partners",
+  "theme": "handshake",
+  "tier": "tier2_cloudflare",
+  "byteSize": 212542,
+  "createdAt": "2026-11-18T12:57:44.007Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

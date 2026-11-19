@@ -1,0 +1,11 @@
+{
+  "cacheKey": "6a0be7a7cbaaf7ae",
+  "rawPrompt": "apple",
+  "imagePromptEn": "A clean, clear educational illustration of apple, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "apple",
+  "theme": "apple",
+  "tier": "tier2_cloudflare",
+  "byteSize": 89822,
+  "createdAt": "2026-11-18T12:19:08.046Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

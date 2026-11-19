@@ -13,7 +13,10 @@ import {
   Sliders,
   FileText,
   CheckCircle2,
+  ListOrdered,
+  AlertCircle,
 } from 'lucide-react';
+import { getQuestionCountOptionsForLevel } from '../../utils/externalAiPromptBuilder';
 
 export type GoldenPromptFormatKey =
   | 'reading_mcq'
@@ -21,7 +24,15 @@ export type GoldenPromptFormatKey =
   | 'dialogue_matching'
   | 'fill_in_blank'
   | 'true_false'
-  | 'json_strict';
+  | 'json_strict'
+  | 'write_sentence_reorder_4opt'
+  | 'write_tianzige_from_pinyin'
+  | 'write_short_essay_80chars'
+  | 'write_topic_essay_200chars'
+  | 'write_summary_shortening_400chars'
+  | 'read_find_faulty_sentence_4opt'
+  | 'read_paragraph_sentence_ordering'
+  | 'listen_talks_qa_4opt';
 
 export interface GoldenPromptFormatMeta {
   key: GoldenPromptFormatKey;
@@ -57,7 +68,7 @@ export const GOLDEN_PROMPT_FORMATS: GoldenPromptFormatMeta[] = [
     label: 'Nối câu / Hội thoại (Dialogue Matching)',
     shortLabel: 'Ghép câu',
     icon: ArrowRightLeft,
-    description: 'Bài tập nối câu đối thoại chuẩn HSK với kho phương án chung (3 đến 5 lựa chọn)',
+    description: 'Bài tập nối câu đối thoại chuẩn HSK với kho phương án chung (4 đến 5 lựa chọn)',
     supportedLevels: [1, 2, 3, 4, 5, 6],
     skill: 'reading',
   },
@@ -88,6 +99,78 @@ export const GOLDEN_PROMPT_FORMATS: GoldenPromptFormatMeta[] = [
     supportedLevels: [1, 2, 3, 4, 5, 6],
     skill: 'reading',
   },
+  {
+    key: 'write_sentence_reorder_4opt',
+    label: 'Sắp xếp câu hoàn chỉnh (连词成句 - HSK 3–5)',
+    shortLabel: 'Sắp xếp câu',
+    icon: ListOrdered,
+    description: '4–5 cụm từ / ngữ khối bị xáo trộn, yêu cầu sắp xếp lại thành câu hoàn chỉnh đúng ngữ pháp',
+    supportedLevels: [3, 4, 5],
+    skill: 'writing',
+  },
+  {
+    key: 'write_tianzige_from_pinyin',
+    label: 'Nhìn Pinyin gõ chữ Hán (看拼音写字/词 - HSK 2–3)',
+    shortLabel: 'Pinyin gõ Hanzi',
+    icon: Edit3,
+    description: 'Câu ngữ cảnh có từ để trống kèm Pinyin trong ngoặc đơn, thí sinh gõ chữ Hán chuẩn qua IME',
+    supportedLevels: [2, 3],
+    skill: 'writing',
+  },
+  {
+    key: 'write_short_essay_80chars',
+    label: 'Viết đoạn văn ngắn ~80 chữ (HSK 4–5)',
+    shortLabel: 'Viết ~80 chữ',
+    icon: FileText,
+    description: 'Viết đoạn văn ngắn khoảng 80 chữ dựa trên 5 từ khóa gợi ý hoặc hình ảnh miêu tả tình huống',
+    supportedLevels: [4, 5],
+    skill: 'writing',
+  },
+  {
+    key: 'write_topic_essay_200chars',
+    label: 'Nghị luận theo chủ đề ~200 chữ (HSK 5)',
+    shortLabel: 'Nghị luận 200 chữ',
+    icon: FileText,
+    description: 'Viết bài văn nghị luận xã hội / quan điểm cá nhân khoảng 200 chữ theo chủ đề cho sẵn',
+    supportedLevels: [5],
+    skill: 'writing',
+  },
+  {
+    key: 'write_summary_shortening_400chars',
+    label: 'Rút gọn văn bản 1000 chữ thành 400 chữ (HSK 6 缩写)',
+    shortLabel: 'Rút gọn 400 chữ',
+    icon: FileText,
+    description: 'Đọc văn bản tự sự 1000 chữ trong 10 phút, tóm tắt lại thành bài văn ~400 chữ kèm tiêu đề tự đặt',
+    supportedLevels: [6],
+    skill: 'writing',
+  },
+  {
+    key: 'read_find_faulty_sentence_4opt',
+    label: 'Tìm câu sai ngữ pháp (病句辨析 - HSK 6)',
+    shortLabel: 'Bắt lỗi câu (病句)',
+    icon: AlertCircle,
+    description: 'Mỗi câu gồm 4 câu độc lập A, B, C, D, tìm duy nhất 1 câu có lỗi ngữ pháp điển hình',
+    supportedLevels: [6],
+    skill: 'reading',
+  },
+  {
+    key: 'read_paragraph_sentence_ordering',
+    label: 'Sắp xếp trật tự đoạn văn (段落排序 - HSK 5)',
+    shortLabel: 'Sắp xếp đoạn văn',
+    icon: ListOrdered,
+    description: '5 câu văn A, B, C, D, E bị đảo lộn thứ tự, ghép nối thành đoạn văn hoàn chỉnh theo mạch logic',
+    supportedLevels: [5],
+    skill: 'reading',
+  },
+  {
+    key: 'listen_talks_qa_4opt',
+    label: 'Bài nói / Phỏng vấn / Diễn thuyết (HSK 4–6 Talks QA)',
+    shortLabel: 'Nghe bài nói',
+    icon: Headphones,
+    description: 'Bài nói / diễn thuyết dài kèm 2–4 câu hỏi trắc nghiệm A, B, C, D kiểm tra chi tiết và suy luận',
+    supportedLevels: [4, 5, 6],
+    skill: 'listening',
+  },
 ];
 
 export const HSK_LEVEL_META: Record<
@@ -96,32 +179,32 @@ export const HSK_LEVEL_META: Record<
 > = {
   1: {
     label: 'HSK 1',
-    vocabTarget: '150 - 300 từ cơ bản (sinh hoạt hàng ngày, xưng hô, ăn uống, số đếm)',
+    vocabTarget: '500 từ chuẩn GF 0025-2021 (sinh hoạt hàng ngày, xưng hô, ăn uống, số đếm)',
     grammarFocus: 'Câu đơn giản S + V + O, câu hỏi 是...吗, câu vị ngữ tính từ, 在 + địa điểm',
   },
   2: {
     label: 'HSK 2',
-    vocabTarget: '300 - 600 từ (mua sắm, du lịch, hỏi đường, thời tiết, sức khỏe)',
+    vocabTarget: '1.272 từ tích lũy GF 0025-2021 (mua sắm, du lịch, hỏi đường, thời tiết, sức khỏe)',
     grammarFocus: 'Câu so sánh 比, trợ từ động thái 了/过/着, kết cấu 是...的, liên từ 因为...所以...',
   },
   3: {
     label: 'HSK 3',
-    vocabTarget: '600 - 1200 từ (công việc, học tập, giải trí, sở thích, mô tả chi tiết)',
+    vocabTarget: '2.245 từ tích lũy GF 0025-2021 (công việc, học tập, giải trí, sở thích, mô tả chi tiết)',
     grammarFocus: 'Bổ ngữ kết quả/xu hướng, câu chữ 把/被, liên từ 虽然...但是..., 除了...以外',
   },
   4: {
     label: 'HSK 4',
-    vocabTarget: '1200 - 2500 từ (giao tiếp xã hội, cảm xúc, thảo luận chủ đề đa dạng)',
+    vocabTarget: '3.245 từ tích lũy GF 0025-2021 (giao tiếp xã hội, cảm xúc, thảo luận chủ đề đa dạng)',
     grammarFocus: 'Phức câu điều kiện/nhượng bộ (无论/即使/只要), bổ ngữ khả năng, thành ngữ thông dụng',
   },
   5: {
     label: 'HSK 5',
-    vocabTarget: '2500 - 4000 từ (đọc báo, xem phim, bình luận chuyên sâu, bài viết nghị luận)',
+    vocabTarget: '4.316 từ tích lũy GF 0025-2021 (đọc báo, xem phim, bình luận chuyên sâu, bài viết nghị luận)',
     grammarFocus: 'Cấu trúc thư tịch, văn ngôn hóa, hư từ cao cấp, phân tích logic trừu tượng',
   },
   6: {
     label: 'HSK 6',
-    vocabTarget: '4000 - 5400+ từ (thông thạo như người bản ngữ, văn học, chuyên ngành hàn lâm)',
+    vocabTarget: '5.456 từ tích lũy GF 0025-2021 (thông thạo như người bản ngữ, văn học, chuyên ngành hàn lâm)',
     grammarFocus: 'Ngữ pháp biểu cảm cao, thành ngữ 4 chữ cổ điển, liên kết văn bản phức hợp',
   },
 };
@@ -165,7 +248,23 @@ export function buildGoldenPrompt(params: GoldenPromptBuilderParams): string {
 
   // Normalize format aliases if needed
   let formatKey: GoldenPromptFormatKey = 'reading_mcq';
-  if (rawFormat.includes('listen')) {
+  if (rawFormat.includes('reorder') || rawFormat.includes('sentence_reorder')) {
+    formatKey = 'write_sentence_reorder_4opt';
+  } else if (rawFormat.includes('tianzige') || rawFormat.includes('pinyin_to_hanzi') || rawFormat.includes('pinyin')) {
+    formatKey = 'write_tianzige_from_pinyin';
+  } else if (rawFormat.includes('short_essay') || rawFormat.includes('essay_80') || rawFormat.includes('80char')) {
+    formatKey = 'write_short_essay_80chars';
+  } else if (rawFormat.includes('topic_essay') || rawFormat.includes('essay_200') || rawFormat.includes('200char')) {
+    formatKey = 'write_topic_essay_200chars';
+  } else if (rawFormat.includes('summary') || rawFormat.includes('shortening') || rawFormat.includes('400char')) {
+    formatKey = 'write_summary_shortening_400chars';
+  } else if (rawFormat.includes('faulty') || rawFormat.includes('error') || rawFormat.includes('bingju')) {
+    formatKey = 'read_find_faulty_sentence_4opt';
+  } else if (rawFormat.includes('paragraph') || rawFormat.includes('sentence_order') || rawFormat.includes('ordering')) {
+    formatKey = 'read_paragraph_sentence_ordering';
+  } else if (rawFormat.includes('talk') || rawFormat.includes('monologue') || rawFormat.includes('lecture')) {
+    formatKey = 'listen_talks_qa_4opt';
+  } else if (rawFormat.includes('listen')) {
     formatKey = 'listening_dialogue';
   } else if (rawFormat.includes('match') || rawFormat.includes('dialogue_match')) {
     formatKey = 'dialogue_matching';
@@ -176,7 +275,8 @@ export function buildGoldenPrompt(params: GoldenPromptBuilderParams): string {
   } else if (rawFormat.includes('json')) {
     formatKey = 'json_strict';
   } else {
-    formatKey = 'reading_mcq';
+    const matched = GOLDEN_PROMPT_FORMATS.find((f) => f.key === rawFormat);
+    formatKey = matched ? matched.key : 'reading_mcq';
   }
 
   const questionCount = Math.max(params.questionCount || 5, 1);
@@ -239,7 +339,7 @@ Hãy tạo ${questionCount} câu hỏi Nghe hiểu hội thoại đa dạng nhâ
 
 YÊU CẦU KỸ THUẬT VÀ ĐỊNH DẠNG BẮT BUỘC (TUÂN THỦ 100% ĐỂ HỆ THỐNG TỰ ĐỘNG BÓC TÁCH VÀ PHÂN VAI GIỌNG ĐỌC NEURAL TTS THEO NHÂN VẬT):
 1. Đa dạng hóa tình huống và tuyến nhân vật sát hợp với bài học (ví dụ: thầy/cô giáo 王老师/李老师 với học sinh 学生/同学, AI小语 với bạn học, bố mẹ 爸爸/妈妈 với con cái, đồng nghiệp/bạn bè 大卫/玛丽, nhân viên 服务员 với khách 客人, hoặc cặp nhân vật 男/女).
-2. Mỗi câu hỏi gồm lời thoại đối đáp của 2 nhân vật, sau đó là câu hỏi 问： và BẮT BUỘC đủ 4 phương án A, B, C, D (tuyệt đối không chỉ có 3 đáp án):
+2. Mỗi câu hỏi gồm lời thoại đối đáp của 2 nhân vật, sau đó là câu hỏi 问： và BẮT BUỘC đủ 4 phương án A, B, C, D (chuẩn đề thi nghe HSK 1–6):
    Câu [STT]:
    男：[Lời thoại nhân vật 1 bằng chữ Hán (có thể dùng 男： hoặc tên nhân vật phù hợp bài học như 王老师：, 学生：, 爸爸：)]${pinyinExample}
    女：[Lời thoại nhân vật 2 bằng chữ Hán (có thể dùng 女： hoặc tên nhân vật đối đáp như 学生：, AI小语：, 妈妈：)]${pinyinExample}
@@ -248,15 +348,17 @@ YÊU CẦU KỸ THUẬT VÀ ĐỊNH DẠNG BẮT BUỘC (TUÂN THỦ 100% ĐỂ 
    B. [Phương án B]
    C. [Phương án C]
    D. [Phương án D]
-3. Bẫy tư duy: Cài cắm chi tiết đổi ý hoặc thông tin gây nhiễu tự nhiên giữa hai nhân vật để kiểm tra năng lực nghe hiểu thực chất.
-4. BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+3. LƯU Ý PHÁT ÂM: TUYỆT ĐỐI KHÔNG thêm dòng chú thích như "Nhân vật tham gia:", "Tuyến nhân vật:", "Bối cảnh:", "Tình huống:", "人物：", "角色：" trước câu thoại. Mỗi câu hỏi chỉ viết trực tiếp lời thoại bắt đầu bằng 男： và 女： để hệ thống tự động đọc đúng hội thoại.
+4. Bẫy tư duy: Cài cắm chi tiết đổi ý hoặc thông tin gây nhiễu tự nhiên giữa hai nhân vật để kiểm tra năng lực nghe hiểu thực chất.
+5. QUY TẮC HÌNH ẢNH (nếu là câu nghe có tranh như listen_true_false_2opt, listen_picture_match_4opt, listen_dialogue_picture_match_6opt): Bắt buộc dùng thẻ [IMG: <english scene description without Chinese characters or answer words>] viết hoàn toàn bằng tiếng Anh mô tả bối cảnh tự nhiên (TUYỆT ĐỐI KHÔNG chứa chữ Hán, Pinyin hay từ khóa đáp án) đặt trước dòng 男： cho tranh ở câu hỏi, hoặc đặt ngay sau A./B./C./D. (hoặc A.–F. cho bảng ghép 6 tranh).
+6. BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
 ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
 Câu 1: [A/B/C/D]. Giải thích: [Dịch toàn bộ lời thoại sang tiếng Việt, giải thích chi tiết vì sao đáp án này đúng và phân tích bẫy nghe].
 Câu 2: [A/B/C/D]. Giải thích: ...`;
     }
 
     case 'dialogue_matching': {
-      const optionLetters = ['A', 'B', 'C', 'D', 'E'].slice(0, Math.min(Math.max(questionCount, 3), 5));
+      const optionLetters = ['A', 'B', 'C', 'D', 'E'].slice(0, Math.min(Math.max(questionCount, 4), 5));
       const poolCount = optionLetters.length;
       return `Bạn là Giáo viên Khảo thí Tiếng Trung HSK.
 Hãy biên soạn bài tập ghép nối hội thoại chuẩn HSK ${level} gồm ${poolCount} câu ngữ cảnh và ${poolCount} phương án đối đáp lựa chọn A đến ${optionLetters[optionLetters.length - 1]} (mỗi phương án chỉ dùng một lần).${lessonHeaderLine}
@@ -342,7 +444,212 @@ Hãy tạo ${questionCount} câu hỏi HSK ${level} chất lượng cao và tr�
     "part_type": "read_fill_blank_4opt"
   }
 ]
-\`\`\``;
+\`\`\`
+LƯU Ý BẮT BUỘC:
+- Mọi câu trắc nghiệm MCQ phải có đủ 4 phương án A, B, C, D (tuyệt đối không tạo câu chỉ có A, B, C).
+- Đối với câu Nghe có hình ảnh (listen_true_false_2opt, listen_picture_match_4opt, listen_dialogue_picture_match_6opt) hoặc bài Viết miêu tả tranh (write_short_essay_80chars), điền trường "illustration_theme" hoặc mảng "options_images" bằng mô tả cảnh tiếng Anh tự nhiên (tuyệt đối không chứa chữ Hán, Pinyin hay từ khóa đáp án).`;
+    }
+
+    case 'write_sentence_reorder_4opt': {
+      return `Bạn là Chuyên gia Khảo thí Tiếng Trung Quốc tế chuẩn HSK 3.0.
+Hãy biên soạn ${questionCount} câu hỏi phần thi Viết: Sắp xếp câu hoàn chỉnh (连词成句) trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC SƯ PHẠM & THI MÁY (CBT):
+1. Mỗi câu gồm 4 đến 5 ngữ khối (chunks) đã bị xáo trộn thứ tự, ngăn cách rõ ràng bởi dấu gạch chéo /.
+2. Toàn bộ từ vựng phải nằm trong khung HSK ${level}.
+3. Đảm bảo câu hoàn chỉnh chỉ có DUY NHẤT 1 trật tự ngữ pháp đúng, tự nhiên, không thể đảo ngữ tùy tiện.
+4. Cung cấp 4 phương án trật tự lựa chọn A, B, C, D cho câu hỏi thi máy.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1: [Ngữ khối 1] / [Ngữ khối 2] / [Ngữ khối 3] / [Ngữ khối 4] / [Ngữ khối 5]
+A. [Trật tự A]
+B. [Trật tự B]
+C. [Trật tự C]
+D. [Trật tự D]
+Câu 2: ...
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: [A/B/C/D]. Giải thích: [Câu hoàn chỉnh: ... Dịch nghĩa tiếng Việt, phân tích công thức ngữ pháp áp dụng và giải thích vì sao các trật tự khác sai].
+Câu 2: [A/B/C/D]. Giải thích: ...`;
+    }
+
+    case 'write_tianzige_from_pinyin': {
+      return `Bạn là Chuyên gia Khảo thí Tiếng Trung HSK 3.0.
+Hãy biên soạn ${questionCount} câu hỏi phần thi Viết: Nhìn phiên âm gõ chữ Hán trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC THI MÁY (CBT):
+1. Mỗi câu là một ngữ cảnh giao tiếp thực tế hoàn chỉnh, trong đó có một từ/chữ Hán để trống kèm phiên âm Pinyin có thanh điệu đặt trong ngoặc đơn: （píngguǒ） hoặc （bān）.
+2. Từ cần điền là từ vựng cốt lõi HSK ${level}. Ngữ cảnh câu văn phải đủ chặt chẽ để từ đó là lựa chọn chuẩn xác duy nhất.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1: 今天早上妈妈去超市买了一些（píngguǒ）。
+Câu 2: ...
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: 苹果. Giải thích: [Dịch nghĩa câu sang tiếng Việt, phân tích từ loại và ý nghĩa của từ trong câu].
+Câu 2: ...`;
+    }
+
+    case 'write_short_essay_80chars': {
+      return `Bạn là Chuyên gia Khảo thí Tiếng Trung HSK 3.0.
+Hãy biên soạn ${questionCount} đề bài phần thi Viết: Viết đoạn văn ngắn ~80 chữ trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC SƯ PHẠM:
+1. Mỗi đề bài cung cấp 5 từ vựng gợi ý thuộc khung HSK ${level} hoặc tình huống miêu tả tranh kèm thẻ [IMG: <english scene description without Chinese characters or answer words>].
+2. Nếu là đề miêu tả tranh, đặt thẻ [IMG: ...] viết hoàn toàn bằng tiếng Anh tự nhiên ở dòng đầu của đề bài (tuyệt đối không chứa chữ Hán, Pinyin hay từ khóa đáp án).
+3. Thí sinh phải viết một đoạn văn ngắn khoảng 80 chữ Hán (70–90 chữ) liên kết mạch lạc 5 từ khóa hoặc bám sát tình huống hình ảnh.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1 (Từ khóa): 请结合以下5个词语写一篇80字左右的短文：[Từ 1]、[Từ 2]、[Từ 3]、[Từ 4]、[Từ 5]
+Câu 2 (Miêu tả tranh tùy chọn):
+[IMG: <english scene description without Chinese characters or answer words>]
+请根据图片写一篇80字左右的短文。
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: Bài văn mẫu (~80 chữ). Giải thích: [Đoạn văn tiếng Trung mẫu mực, dịch nghĩa tiếng Việt và phân tích cách liên kết từ khóa].
+Câu 2: ...`;
+    }
+
+    case 'write_topic_essay_200chars': {
+      return `Bạn là Chuyên gia Khảo thí Tiếng Trung HSK ${level}.
+Hãy biên soạn ${questionCount} đề bài phần thi Viết: Nghị luận theo chủ đề ~200 chữ trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC SƯ PHẠM:
+1. Đề tài thảo luận vấn đề xã hội đương đại hoặc quan điểm sống.
+2. Thí sinh viết bài văn nghị luận khoảng 200 chữ Hán (180–220 chữ) có luận điểm, dẫn chứng và kết luận.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1: 题目：谈谈你对[Chủ đề nghị luận]的看法，写一篇200字左右的议论文。
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: Bài văn mẫu (~200 chữ). Giải thích: [Bài văn nghị luận mẫu mực, dịch nghĩa tiếng Việt và phân tích cấu trúc lập luận].
+Câu 2: ...`;
+    }
+
+    case 'write_summary_shortening_400chars': {
+      return `Bạn là Chuyên gia Khảo thí Tiếng Trung HSK ${level}.
+Hãy biên soạn ${questionCount} đề bài phần thi Viết: Rút gọn văn bản 1000 chữ thành 400 chữ (缩写) trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC KHẢO THÍ HSK ${level}:
+1. Cung cấp câu chuyện tự sự 1000 chữ Hán hoàn chỉnh.
+2. Thí sinh tóm tắt thành đoạn văn ~400 chữ (350–450 chữ) kèm tiêu đề tự đặt, không đưa quan điểm cá nhân.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1: 阅读下面1000字左右的文章，在35分钟内将其缩写成一篇400字左右的短文，并自拟标题：
+[Toàn bộ bài đọc tự sự 1000 chữ]
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: Tiêu đề & Bài rút gọn mẫu (~400 chữ). Giải thích: [Bản rút gọn mẫu mực, dịch nghĩa tiếng Việt và phân tích kỹ thuật tóm tắt].
+Câu 2: ...`;
+    }
+
+    case 'read_find_faulty_sentence_4opt': {
+      return `Bạn là Chuyên gia Khảo thí HSK ${level} chuẩn HSK 3.0.
+Hãy biên soạn ${questionCount} câu hỏi Đọc hiểu: Phát hiện câu có lỗi ngữ pháp (病句辨析) trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC HỌC THUẬT:
+1. Mỗi câu hỏi gồm đúng 4 câu độc lập A, B, C, D (văn phong trang trọng).
+2. DUY NHẤT 1 câu có lỗi ngữ pháp điển hình (thiếu thành phần, kết hợp sai, trật tự sai, trộn lẫn cấu trúc, mâu thuẫn logic). 3 câu còn lại hoàn toàn chuẩn xác.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1: 下列句子中，有语病的一项是：
+A. [Câu tiếng Trung A]
+B. [Câu tiếng Trung B]
+C. [Câu tiếng Trung C]
+D. [Câu tiếng Trung D]
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: [A/B/C/D]. Giải thích: [Chỉ rõ từ ngữ hoặc kết cấu bị sai, dạng lỗi ngữ pháp, cách sửa chuẩn và dịch nghĩa câu].
+Câu 2: [A/B/C/D]. Giải thích: ...`;
+    }
+
+    case 'read_paragraph_sentence_ordering': {
+      return `Bạn là Chuyên gia Khảo thí HSK 3.0.
+Hãy biên soạn ${questionCount} bộ bài tập Đọc hiểu: Sắp xếp thứ tự đoạn văn (段落排序) trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC CẤU TRÚC:
+1. Mỗi bài tập gồm 5 câu văn độc lập (A, B, C, D, E) bị đảo lộn trật tự logic.
+2. Ghép lại thành đoạn văn nghị luận hoặc thuyết minh hoàn chỉnh có liên từ rõ ràng. Cung cấp 4 phương án trật tự A, B, C, D.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+Câu 1:
+A. [Câu A]
+B. [Câu B]
+C. [Câu C]
+D. [Câu D]
+E. [Câu E]
+Trật tự lựa chọn:
+A. [Trật tự 1, ví dụ: B-D-A-C-E]
+B. [Trật tự 2, ví dụ: B-A-D-C-E]
+C. [Trật tự 3, ví dụ: D-B-A-C-E]
+D. [Trật tự 4, ví dụ: B-D-C-A-E]
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: [A/B/C/D]. Giải thích: [Thứ tự đúng: B-D-A-C-E. Dịch toàn bộ đoạn văn sang tiếng Việt và phân tích mạch logic liên kết].
+Câu 2: [A/B/C/D]. Giải thích: ...`;
+    }
+
+    case 'listen_talks_qa_4opt': {
+      return `Bạn là Chuyên gia Khảo thí Nghe hiểu HSK 3.0.
+Hãy biên soạn bài nghe hiểu dạng độc thoại / bài nói chuyện / diễn thuyết (Talks QA) kèm ${questionCount} câu hỏi trắc nghiệm trình độ HSK ${level}.${lessonHeaderLine}
+- Khung từ vựng mục tiêu: ${vocabTargetLine}
+- Điểm ngữ pháp trọng tâm: ${grammarFocusLine}
+- Chủ đề: ${topic}
+- ${pinyinInstruction}
+
+QUY TẮC KỸ THUẬT:
+1. Ghi rõ bài nói kèm nhãn 独白/讲话录音内容： để hệ thống bóc tách audio phát âm Neural TTS.
+2. Kèm các câu hỏi trắc nghiệm với 4 phương án lựa chọn A, B, C, D.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+独白/讲话录音内容：
+[Toàn bộ nội dung bài nói tiếng Trung chuẩn HSK ${level}]
+
+Câu 1: [Câu hỏi 1 về bài nói]
+A. [Phương án A]
+B. [Phương án B]
+C. [Phương án C]
+D. [Phương án D]
+
+BẮT BUỘC ở cuối bài cung cấp bảng đáp án và giải thích theo đúng cấu trúc sau:
+ĐÁP ÁN VÀ GIẢI THÍCH CHI TIẾT:
+Câu 1: [A/B/C/D]. Giải thích: [Dịch nghĩa câu hỏi và bài nói, chỉ rõ lý do chọn đáp án và phân tích bẫy nghe].
+Câu 2: [A/B/C/D]. Giải thích: ...`;
     }
   }
 }
@@ -367,14 +674,23 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
   const [selectedLevel, setSelectedLevel] = useState<number>(initialLevel);
   const [selectedFormat, setSelectedFormat] = useState<GoldenPromptFormatKey>(() => {
     const raw = (initialFormat || 'reading_mcq').toLowerCase();
+    if (raw.includes('reorder')) return 'write_sentence_reorder_4opt';
+    if (raw.includes('tianzige') || raw.includes('pinyin')) return 'write_tianzige_from_pinyin';
+    if (raw.includes('short_essay') || raw.includes('80char')) return 'write_short_essay_80chars';
+    if (raw.includes('topic_essay') || raw.includes('200char')) return 'write_topic_essay_200chars';
+    if (raw.includes('summary') || raw.includes('400char')) return 'write_summary_shortening_400chars';
+    if (raw.includes('faulty') || raw.includes('bingju')) return 'read_find_faulty_sentence_4opt';
+    if (raw.includes('paragraph') || raw.includes('ordering')) return 'read_paragraph_sentence_ordering';
+    if (raw.includes('talk') || raw.includes('lecture')) return 'listen_talks_qa_4opt';
     if (raw.includes('listen')) return 'listening_dialogue';
     if (raw.includes('match')) return 'dialogue_matching';
     if (raw.includes('blank') || raw.includes('fill')) return 'fill_in_blank';
     if (raw.includes('true') || raw.includes('false')) return 'true_false';
     if (raw.includes('json')) return 'json_strict';
-    return 'reading_mcq';
+    const matched = GOLDEN_PROMPT_FORMATS.find((f) => f.key === raw);
+    return matched ? matched.key : 'reading_mcq';
   });
-  const [questionCount, setQuestionCount] = useState<number>(5);
+  const [questionCount, setQuestionCount] = useState<number>(10);
   const [topic, setTopic] = useState<string>(() =>
     lessonContext
       ? `Bài ${lessonContext.lessonNumber}: ${lessonContext.titleHanzi} (${lessonContext.titleVietnamese})`
@@ -400,14 +716,12 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
     }
   }, [isOpen, initialLevel, lessonContext]);
 
-  // Adjust pinyin default when level changes (HSK 1-3 defaults to true, HSK 4-6 defaults to false)
+  // Adjust pinyin default and clamp question count when level changes
   const handleLevelChange = useCallback((level: number) => {
     setSelectedLevel(level);
-    if (level >= 4) {
-      setIncludePinyin(false);
-    } else {
-      setIncludePinyin(true);
-    }
+    setIncludePinyin(level <= 3);
+    const validOpts = getQuestionCountOptionsForLevel(level).map((o) => o.value);
+    setQuestionCount((prev) => (validOpts.includes(prev) ? prev : validOpts[0] || 10));
   }, []);
 
   // Compute the live generated prompt text
@@ -556,7 +870,7 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
             <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-wider">
               2. Chọn Định Dạng Đề Thi (Diverse Question Formats):
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
               {GOLDEN_PROMPT_FORMATS.map((fmt) => {
                 const IconComponent = fmt.icon;
                 const isSelected = selectedFormat === fmt.key;
@@ -609,7 +923,7 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
               {/* Question Count Selector */}
               <div className="sm:col-span-3 space-y-1">
                 <label className="text-[11px] font-semibold text-[var(--color-text-secondary)]">
-                  Số lượng câu hỏi:
+                  Số lượng câu hỏi (theo HSK {selectedLevel}):
                 </label>
                 <select
                   data-testid="select-question-count"
@@ -617,11 +931,11 @@ export const GoldenPromptLibraryModal: React.FC<GoldenPromptLibraryModalProps> =
                   onChange={(e) => setQuestionCount(parseInt(e.target.value, 10))}
                   className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-bold text-[var(--color-text-primary)] focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                 >
-                  <option value={3}>3 câu</option>
-                  <option value={5}>5 câu (chuẩn)</option>
-                  <option value={10}>10 câu</option>
-                  <option value={15}>15 câu</option>
-                  <option value={20}>20 câu</option>
+                  {getQuestionCountOptionsForLevel(selectedLevel).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

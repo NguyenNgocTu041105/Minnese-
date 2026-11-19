@@ -1,0 +1,11 @@
+{
+  "cacheKey": "ba853e6a08c6d15c",
+  "rawPrompt": "quiet library room with tall wooden bookshelves",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of quiet library room with tall wooden bookshelves, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "quiet library room",
+  "theme": "bookshelf",
+  "tier": "tier2_cloudflare",
+  "byteSize": 861427,
+  "createdAt": "2026-11-18T13:59:51.293Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

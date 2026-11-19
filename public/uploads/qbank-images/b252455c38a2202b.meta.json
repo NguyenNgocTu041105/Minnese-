@@ -1,0 +1,11 @@
+{
+  "cacheKey": "b252455c38a2202b",
+  "rawPrompt": "bicycle parked in green park",
+  "imagePromptEn": "A clean, clear educational illustration of bicycle parked in green park, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "bicycle parked green",
+  "theme": "sleeping",
+  "tier": "tier2_cloudflare",
+  "byteSize": 432523,
+  "createdAt": "2026-11-18T13:08:02.802Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

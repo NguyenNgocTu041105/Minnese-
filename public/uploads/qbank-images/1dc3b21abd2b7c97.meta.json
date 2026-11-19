@@ -1,0 +1,11 @@
+{
+  "cacheKey": "1dc3b21abd2b7c97",
+  "rawPrompt": "tea",
+  "imagePromptEn": "A clean, clear educational illustration of tea, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "tea",
+  "theme": "tea",
+  "tier": "tier2_cloudflare",
+  "byteSize": 179133,
+  "createdAt": "2026-11-18T12:19:35.702Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

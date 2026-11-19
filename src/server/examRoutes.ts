@@ -631,7 +631,7 @@ export function loadApprovedQuestionsFromDb(
       FROM questions q
       LEFT JOIN exam_eligible_pool p ON q.id = p.question_id
       WHERE q.level = ? AND q.status = 'approved' AND COALESCE(q.is_active, 1) = 1
-      ORDER BY q.rowid ASC
+      ORDER BY CASE WHEN q.id LIKE 'cf_%' THEN 0 ELSE 1 END, q.rowid DESC
     `);
     let rows: any[] = stmt.all(level);
 
@@ -639,7 +639,7 @@ export function loadApprovedQuestionsFromDb(
     if (rows.length === 0) {
       try {
         const fallbackStmt = db.prepare(
-          `SELECT * FROM qb_questions WHERE level = ? AND status = 'approved' AND COALESCE(is_active, 1) = 1 ORDER BY rowid ASC`
+          `SELECT * FROM qb_questions WHERE level = ? AND status = 'approved' AND COALESCE(is_active, 1) = 1 ORDER BY CASE WHEN question_id LIKE 'cf_%' THEN 0 ELSE 1 END, rowid DESC`
         );
         rows = fallbackStmt.all(level);
       } catch {
@@ -741,7 +741,7 @@ export function loadApprovedQuestionsFromDb(
         id: row.id || row.question_id || `qbank-approved-${row.level || level}-${idx + 1}`,
         level: Number(row.level) || level,
         section: validSection as 'listening' | 'reading' | 'writing',
-        part_type: row.part_type || 'read_comprehension_short_3opt',
+        part_type: row.part_type || 'read_comprehension_4opt',
         item_number: idx + 1,
         stem: row.stem || '',
         pinyin_stem: row.pinyin_stem || row.pinyin || '',
@@ -751,6 +751,7 @@ export function loadApprovedQuestionsFromDb(
         explanation_vi: row.explanation_vi || 'Đáp án chính xác theo ngân hàng đề thi HSK chuẩn.',
         audio_text: row.audio_text || (validSection === 'listening' ? row.stem : undefined),
         audio_url: row.audio_url || undefined,
+        image_url: row.image_url || row.media_url || undefined,
         illustration: row.illustration || row.illustration_theme || row.media_url || undefined,
         audio_playback: level <= 3 ? 2 : 1,
         passage: passageVal,
@@ -1734,6 +1735,8 @@ examRouter.post('/submit', (req: Request, res: Response) => {
         section: q.section,
         part_type: q.part_type,
         audio_text: q.audio_text,
+        audio_url: (q as any).audio_url,
+        image_url: (q as any).image_url,
         illustration: q.illustration,
         passage: (q as any).passage,
       };

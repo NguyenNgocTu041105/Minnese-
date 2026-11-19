@@ -1,0 +1,11 @@
+{
+  "cacheKey": "07ff68cd1957d846",
+  "rawPrompt": "student reading an open book quietly at library desk",
+  "imagePromptEn": "A clean, clear educational illustration of student reading an open book quietly at library desk, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "student reading open",
+  "theme": "reading",
+  "tier": "tier2_cloudflare",
+  "byteSize": 247569,
+  "createdAt": "2026-11-18T13:07:53.384Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

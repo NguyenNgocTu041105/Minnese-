@@ -694,15 +694,39 @@ export function solveWordBankGroup(
  */
 function findOptimalBipartiteAssignment(matrix: number[][], m: number, n: number): number[] {
   if (m === 0) return [];
-  if (n < m) {
-    // If fewer options than questions, greedily assign
-    return Array.from({ length: m }, (_, i) => i % n);
+  if (n === 0) return Array.from({ length: m }, () => 0);
+
+  // Guard against factorial explosion when m > 6 or n > 6 (e.g., large multi-part exams of 40–100 questions)
+  if (n < m || m > 6 || n > 6) {
+    const result: number[] = new Array(m).fill(0);
+    const usedCols = new Array(n).fill(false);
+    for (let i = 0; i < m; i++) {
+      // Reset used columns every n items so 5-option pools can repeat across groups of 5
+      if (i > 0 && i % n === 0) {
+        usedCols.fill(false);
+      }
+      let bestCol = -1;
+      let bestVal = -Infinity;
+      for (let j = 0; j < n; j++) {
+        const val = matrix[i]?.[j] ?? 0;
+        if (!usedCols[j] && val > bestVal) {
+          bestVal = val;
+          bestCol = j;
+        }
+      }
+      if (bestCol === -1) {
+        bestCol = i % n;
+      }
+      usedCols[bestCol] = true;
+      result[i] = bestCol;
+    }
+    return result;
   }
 
   let bestScore = -Infinity;
   let bestPerm: number[] = Array.from({ length: m }, (_, i) => i);
 
-  // Generate permutations of size m from {0..n-1}
+  // Generate permutations of size m from {0..n-1} (guaranteed m <= 6 && n <= 6 -> max 720 steps)
   const currentPerm: number[] = [];
   const used = new Array(n).fill(false);
 

@@ -1,0 +1,11 @@
+{
+  "cacheKey": "5a7daeb1ca3cfbdf",
+  "rawPrompt": "hospital",
+  "imagePromptEn": "A clean, clear educational illustration of hospital, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "hospital",
+  "theme": "hospital",
+  "tier": "tier2_cloudflare",
+  "byteSize": 203245,
+  "createdAt": "2026-11-18T12:19:05.714Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

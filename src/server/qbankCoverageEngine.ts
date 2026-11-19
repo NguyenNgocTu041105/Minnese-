@@ -2894,7 +2894,7 @@ function getBlueprintParts(): Map<number, BlueprintPartInfo[]> {
 /**
  * Normalizes compatible question part_types with official exam blueprint part_types.
  * Supports HSK 1–6 question variants (e.g. read_fill_blank_4opt <-> read_fill_blank_word_bank_6opt,
- * listen_picture_match_4opt <-> listen_picture_match_3opt, fill_blank <-> read_fill_blank_word_bank_split).
+ * listen_talks_qa_4opt <-> listen_monologue_qa_4opt, fill_blank <-> read_fill_blank_word_bank_split).
  */
 export function isCompatiblePartType(blueprintPartType: string, questionPartType: string): boolean {
   const bp = (blueprintPartType || '').toLowerCase().trim();
@@ -3144,9 +3144,9 @@ export function computeCoverageMatrix(
       const skill = String(r.skill || '').toLowerCase().trim();
       const qPartType = String(r.part_type || '').trim();
 
-      // Find exact match first, then compatible match
+      // Find exact match first, then compatible match (never count legacy *_3opt rows as valid *_4opt blueprint coverage)
       let matchedPart = parts.find((p) => p.skill === skill && p.part_type === qPartType);
-      if (!matchedPart) {
+      if (!matchedPart && !/_3opt(?:\b|_)/i.test(qPartType)) {
         matchedPart = parts.find((p) => p.skill === skill && isCompatiblePartType(p.part_type, qPartType));
       }
 
@@ -3197,7 +3197,7 @@ export function computeCoverageMatrix(
       const qPartType = String(r.part_type || '').trim();
 
       let matchedPart = parts.find((p) => p.skill === skill && p.part_type === qPartType);
-      if (!matchedPart) {
+      if (!matchedPart && !/_3opt(?:\b|_)/i.test(qPartType)) {
         matchedPart = parts.find((p) => p.skill === skill && isCompatiblePartType(p.part_type, qPartType));
       }
 

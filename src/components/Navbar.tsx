@@ -280,22 +280,62 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                       {/* Danh sách bài tập cần làm */}
                       {actionableAssignments.map((asg) => {
+                        const isListening =
+                          asg.content_type === 'listening' ||
+                          (asg.questions && asg.questions.length > 0 && asg.questions.every((q) => q.type === 'listening')) ||
+                          /luyện nghe|nghe hiểu|nghe hội thoại/i.test(asg.title || '') ||
+                          /luyện nghe|nghe hiểu|nghe hội thoại/i.test(asg.description || '');
+
                         const typeMeta =
-                          asg.content_type === 'speaking'
-                            ? { label: 'Luyện nói', cta: 'Ghi âm / Nộp bài nói →', badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' }
+                          isListening
+                            ? {
+                                label: 'Luyện nghe',
+                                cta: 'Luyện nghe ngay →',
+                                badgeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
+                                btnClass: 'bg-sky-600 hover:bg-sky-500 text-white shadow-xs',
+                              }
+                            : asg.content_type === 'speaking'
+                            ? {
+                                label: 'Luyện nói',
+                                cta: 'Ghi âm / Nộp bài nói →',
+                                badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                                btnClass: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs',
+                              }
                             : asg.content_type === 'writing'
-                            ? { label: 'Viết tay', cta: 'Làm bài viết →', badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20' }
+                            ? {
+                                label: 'Viết tay',
+                                cta: 'Làm bài viết →',
+                                badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+                                btnClass: 'bg-purple-600 hover:bg-purple-500 text-white shadow-xs',
+                              }
                             : asg.content_type === 'reading'
-                            ? { label: 'Đọc hiểu', cta: 'Đọc & trả lời →', badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20' }
+                            ? {
+                                label: 'Đọc hiểu',
+                                cta: 'Đọc & trả lời →',
+                                badgeClass: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+                                btnClass: 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs',
+                              }
                             : asg.content_type === 'deck'
-                            ? { label: 'Flashcard', cta: 'Học bộ thẻ →', badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20' }
-                            : { label: 'Trắc nghiệm', cta: 'Làm bài ngay →', badgeClass: 'bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary)]/20' };
+                            ? {
+                                label: 'Flashcard',
+                                cta: 'Học bộ thẻ →',
+                                badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+                                btnClass: 'bg-amber-600 hover:bg-amber-500 text-white shadow-xs',
+                              }
+                            : {
+                                label: 'Trắc nghiệm',
+                                cta: 'Làm bài ngay →',
+                                badgeClass: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30',
+                                btnClass: 'bg-[var(--color-primary)] hover:opacity-90 text-white shadow-xs',
+                              };
 
                         const summaryText =
                           asg.content_type === 'speaking'
                             ? (asg.speaking_prompt ? `Đề nói: ${asg.speaking_prompt}` : 'Ghi âm trực tiếp hoặc tải file phát âm')
                             : asg.description?.trim()
                             ? asg.description.trim()
+                            : isListening
+                            ? `${asg.question_count || asg.questions?.length || 10} câu luyện nghe hội thoại · ${asg.duration_minutes || 15} phút`
                             : asg.content_type === 'quiz'
                             ? `${asg.question_count || asg.questions?.length || 10} câu hỏi · ${asg.duration_minutes || 15} phút`
                             : asg.content_type === 'deck'
@@ -340,7 +380,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   onSelectTab('quizzes');
                                 }
                               }}
-                              className="w-full py-1.5 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold text-[11px] text-center border border-[var(--color-border)] transition-colors cursor-pointer"
+                              className={`w-full py-1.5 rounded-lg font-bold text-[11px] text-center transition-all cursor-pointer ${typeMeta.btnClass}`}
                             >
                               {typeMeta.cta}
                             </button>

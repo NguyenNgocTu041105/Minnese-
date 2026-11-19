@@ -1,0 +1,11 @@
+{
+  "cacheKey": "4d166152ae044771",
+  "rawPrompt": "cinema auditorium with red seats and movie screen",
+  "imagePromptEn": "Close-up full-frame educational textbook illustration of cinema auditorium with red seats and movie screen, large centered subject filling the frame, warm soft colorful background setting, vibrant colors, clean modern 2D vector art style, textless",
+  "stockQueryEn": "cinema auditorium red",
+  "theme": "movie",
+  "tier": "tier2_cloudflare",
+  "byteSize": 433153,
+  "createdAt": "2026-11-18T13:59:54.472Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

@@ -796,6 +796,12 @@ export function sanitizeDialogueScript(raw: string): string {
   // 7. Strip Vietnamese dialogue section prefixes: e.g. `Đoạn hội thoại 1:`, `Hội thoại 1:`, `Bài 1:`, `Câu 1:`, `Phần 1:`
   text = text.replace(/(?<=^|[^\p{L}])(?:Đoạn hội thoại|Hội thoại|Bài|Câu|Phần)\s*\d+[\s:：.]*/gui, ' ');
 
+  // 7b. Strip character participant announcements, role setup headers, and scene context:
+  // e.g. "Nhân vật tham gia:", "Tuyến nhân vật:", "Nhân vật:", "Người tham gia:", "Bối cảnh:", "Tình huống:", "Ngữ cảnh:",
+  // or Chinese equivalents: "人物：", "参与人物：", "对话人物：", "角色：", "背景：", "场景："
+  text = text.replace(/(?:^|[\r\n\s]+)(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|Gợi\s*ý|Chú\s*thích)\s*[:：][^\r\n]*/gui, ' ');
+  text = text.replace(/(?:^|[\r\n\s]+)(?:人物|参与人物|对话人物|角色|背景|场景)\s*[:：][^\r\n]*/gu, ' ');
+
   // 8. Normalize Chinese speaker labels preserving preceding punctuation (`。`, `！`, `？`):
   // `男: ` -> `男：`, `女: ` -> `女：`, `问: ` -> `问：`, `★: ` -> `★：`
   text = text.replace(/(?<=^|[^\p{L}])(男|女|问|甲|乙|★)\s*[:：]\s*/gu, ' $1：');
@@ -847,8 +853,20 @@ export function sanitizeQuestionAudioText(raw: string): string {
   const lines = raw
     .split(/\r?\n/)
     .map((line) => {
+      const trimmedLine = line.trim();
+      // 0. Skip lines that announce participating characters, scene setup, or context
+      if (/^(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|Gợi\s*ý|Chú\s*thích)\s*[:：]/i.test(trimmedLine)) {
+        return '';
+      }
+      if (/^(?:人物|参与人物|对话人物|角色|背景|场景)\s*[:：]/.test(trimmedLine)) {
+        return '';
+      }
+
       // 1. Strip parenthesized or bracketed annotations that do NOT contain Chinese Hanzi
       let cleaned = line.replace(/[\(（\[【][^()（）\[\]【】\u4e00-\u9fa5]*[\)）\]】]/g, ' ');
+
+      // Also strip inline metadata tags e.g. (Nhân vật: ...) even if containing Chinese
+      cleaned = cleaned.replace(/[\(（\[【]\s*(?:Nhân\s*vật(?:\s*tham\s*gia)?|Tuyến\s*nhân\s*vật|Người\s*tham\s*gia|Bối\s*cảnh|Tình\s*huống|Ngữ\s*cảnh|人物|参与人物|对话人物|角色|背景|场景)\s*[:：][^\)）\]】]*[\)）\]】]/gi, ' ');
 
       // 2. Replace fill-in-the-blank underscores (____) or empty parens
       cleaned = cleaned

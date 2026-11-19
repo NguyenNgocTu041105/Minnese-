@@ -1,0 +1,11 @@
+{
+  "cacheKey": "05a5b6a6b5f15db1",
+  "rawPrompt": "passenger airplane flying in blue sky",
+  "imagePromptEn": "A clean, clear educational illustration of passenger airplane flying in blue sky, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "passenger airplane flying",
+  "theme": "airplane",
+  "tier": "tier2_cloudflare",
+  "byteSize": 188641,
+  "createdAt": "2026-11-18T13:07:57.410Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

@@ -1,0 +1,11 @@
+{
+  "cacheKey": "2910284fba5dec27",
+  "rawPrompt": "bicycle in park",
+  "imagePromptEn": "A clean, clear educational illustration of bicycle in park, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "bicycle park",
+  "theme": "singing",
+  "tier": "tier2_cloudflare",
+  "byteSize": 596263,
+  "createdAt": "2026-11-18T12:40:12.348Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

@@ -18,6 +18,7 @@ import { CandidateQuestion, DifficultyTier, DistractorRationaleItem } from './ty
 import {
   isFillBlankPartType,
   isReadingComprehensionPartType,
+  substituteBlankPlaceholders,
 } from './partTypeContract.js';
 import {
   formatExplanationWithDistractorRationales,
@@ -199,7 +200,7 @@ export function normalizeQuestionAliases(
 
   // Normalize part_type
   const rawPartType = raw.part_type || raw.partType;
-  const partType = String(rawPartType || (blankPattern.test(stem) ? 'read_fill_blank_4opt' : 'read_comprehension_short_3opt')).trim();
+  const partType = String(rawPartType || (blankPattern.test(stem) ? 'read_fill_blank_4opt' : 'read_comprehension_4opt')).trim();
 
   // Normalize options array
   let options: string[] = [];
@@ -307,7 +308,7 @@ export function normalizeQuestionAliases(
     if (typeof raw.completed_stem === 'string' && raw.completed_stem.trim().length > 0) {
       targetStemForPinyin = raw.completed_stem.trim();
     } else if (blankPatternForPinyin.test(stem) && Array.isArray(options) && typeof answerIdx === 'number' && answerIdx >= 0 && answerIdx < options.length) {
-      targetStemForPinyin = stem.replace(blankPatternForPinyin, (options[answerIdx] || '').trim());
+      targetStemForPinyin = substituteBlankPlaceholders(stem, (options[answerIdx] || '').trim());
     }
     try {
       pinyin = generateAccuratePinyin(targetStemForPinyin);
@@ -529,7 +530,7 @@ export function normalizeQuestionAliases(
     }
   } else if (isFillBlankPartType(partType) || blankPattern.test(stem)) {
     if (options && typeof answerIdx === 'number' && answerIdx >= 0 && answerIdx < options.length) {
-      canonicalCompletedStem = stem.replace(blankPattern, (options[answerIdx] || '').trim());
+      canonicalCompletedStem = substituteBlankPlaceholders(stem, (options[answerIdx] || '').trim());
     }
   }
 
@@ -568,6 +569,7 @@ export function normalizeQuestionAliases(
     distractor_rationales: distractorRationales,
     naturalness_review: naturalnessReview,
     is_imported: Boolean(raw.is_imported || raw.imported),
+    image_url: raw.image_url || raw.illustration_resolved_url || null,
     audio_url: raw.audio_url || null,
     passage: raw.passage || null,
     audio_text: raw.audio_text || null,

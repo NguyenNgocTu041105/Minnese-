@@ -1,0 +1,11 @@
+{
+  "cacheKey": "714ee7727aed27b5",
+  "rawPrompt": "sunny",
+  "imagePromptEn": "A clean, clear educational illustration of sunny, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "sunny",
+  "theme": "sunny",
+  "tier": "tier2_cloudflare",
+  "byteSize": 232050,
+  "createdAt": "2026-11-18T12:19:48.072Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

@@ -1207,10 +1207,8 @@ function inferQuestionPartType(
     if (options.length === 4) return 'read_fill_blank_4opt';
     if (options.length >= 3 && options.length <= 6) return `read_fill_blank_word_bank_${options.length}opt`;
   } else {
-    if (stem.includes('★') && options.length === 3) return 'read_comprehension_short_3opt';
-    if (stem.includes('★') && options.length === 4) return 'read_comprehension_4opt';
-    if (skill === 'listening' && options.length === 4) return 'listen_dialogue_qa_4opt';
-    if (skill === 'listening' && options.length === 3) return 'listen_monologue_qa_3opt';
+    if (stem.includes('★') && options.length >= 3) return 'read_comprehension_4opt';
+    if (skill === 'listening' && options.length >= 3) return 'listen_dialogue_qa_4opt';
     if (options.length >= 2 && options.length <= 6) {
       return `read_dialogue_matching_${options.length}opt`;
     }

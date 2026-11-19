@@ -54,21 +54,21 @@
         },
         "listening_2": {
           "name": "第二部分：听短对话回答问题",
-          "type": "listen_dialogue_qa_3opt",
+          "type": "listen_dialogue_qa_4opt",
           "skill": "listening",
           "n_questions": 10,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 9,
-          "description": "听对话及问句选答案（11-15题为1轮对话，16-20题为2轮长对话），3个选项。"
+          "description": "听对话及问句选答案（11-15题为1轮对话，16-20题为2轮长对话），4个选项。"
         },
         "listening_3": {
           "name": "第三部分：听单人独白/短文回答问题",
-          "type": "listen_monologue_qa_3opt",
+          "type": "listen_talks_qa_4opt",
           "skill": "listening",
           "n_questions": 10,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 10,
-          "description": "听短文叙述加问句（听两遍），从3个文本选项中选择正确答案（第21-30题）。"
+          "description": "听短文叙述加问句（听两遍），从4个文本选项中选择正确答案（第21-30题）。"
         }
       }
     },
@@ -99,12 +99,12 @@
         },
         "reading_3": {
           "name": "第三部分：短文阅读理解",
-          "type": "read_comprehension_short_and_medium_3opt",
+          "type": "read_comprehension_4opt",
           "skill": "reading",
           "n_questions": 10,
-          "n_options": 3,
+          "n_options": 4,
           "time_min": 10,
-          "description": "阅读理解，51-56题短文单题（6篇，各1题），57-60题中长文双题（2篇，各2题），3个选项。"
+          "description": "阅读理解，51-56题短文单题（6篇，各1题），57-60题中长文双题（2篇，各2题），4个选项。"
         }
       }
     },

@@ -1,0 +1,11 @@
+{
+  "cacheKey": "27a8a95ba5c9a1ad",
+  "rawPrompt": "water",
+  "imagePromptEn": "A clean, clear educational illustration of water, textbook illustration style, pure visual scene on a clean simple background, centered, textless",
+  "stockQueryEn": "water",
+  "theme": "water",
+  "tier": "tier2_cloudflare",
+  "byteSize": 205874,
+  "createdAt": "2026-11-18T12:19:37.762Z",
+  "attribution": "Cloudflare Workers AI flux-1-schnell"
+}

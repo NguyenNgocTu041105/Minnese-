@@ -31,12 +31,93 @@ import {
   solveWordBankGroup,
   solveSingleQuestionSync,
 } from './autoAnswerSolver.js';
+import { isOpenEndedWritingTask } from './promptTemplates.js';
+import {
+  PINYIN_INLINE_CHAR_CLASS,
+  substituteBlankPlaceholders,
+} from './partTypeContract.js';
+
+const INLINE_PINYIN_PAREN_CAPTURE_RE = new RegExp(
+  `[\\(\\uff08\\[\\u3010]([${PINYIN_INLINE_CHAR_CLASS}0-9\\s,.:;\\?!'’\\-_：；、，。？！]+)[\\)\\uff09\\]\\u3011]`
+);
+const INLINE_PINYIN_PAREN_STRIP_RE = new RegExp(
+  `[\\(\\uff08\\[\\u3010][${PINYIN_INLINE_CHAR_CLASS}0-9\\s,.:;\\?!'’\\-_：；、，。？！]+[\\)\\uff09\\]\\u3011]`,
+  'g'
+);
+const STEM_PINYIN_MATCH_RE = new RegExp(
+  `[\\(\\uff08\\[\\u3010](?=[^\\)\\uff09\\]\\u3011]*[${PINYIN_INLINE_CHAR_CLASS}])([${PINYIN_INLINE_CHAR_CLASS}0-9\\s,.:;\\?!'’\\-_：；、，。？！]+)[\\)\\uff09\\]\\u3011]`,
+  'g'
+);
+const STEM_PINYIN_STRIP_RE = new RegExp(
+  `\\s*[\\(\\uff08\\[\\u3010](?=[^\\)\\uff09\\]\\u3011]*[${PINYIN_INLINE_CHAR_CLASS}])([${PINYIN_INLINE_CHAR_CLASS}0-9\\s,.:;\\?!'’\\-_：；、，。？！]+)[\\)\\uff09\\]\\u3011]\\s*`,
+  'g'
+);
+
+/**
+ * Regex patterns to detect and extract [IMG: ...] and [IMAGE: ...] tags
+ * without stripping them as pinyin or discarding them from question stems/options.
+ */
+export const IMG_TAG_REGEX = /\[(?:IMG|IMAGE)[:：\s]+([^\]]+)\]/i;
+export const IMG_TAG_GLOBAL_REGEX = /\[(?:IMG|IMAGE)[:：\s]+([^\]]+)\]/gi;
+export const CHINESE_BRACKET_IMG_REGEX = /【(?:IMG|IMAGE)[:：\s]+([^】]+)】/i;
+export const CHINESE_BRACKET_IMG_GLOBAL_REGEX = /【(?:IMG|IMAGE)[:：\s]+([^】]+)】/gi;
+
+/**
+ * Extracts image prompt from text if present, returning cleaned text and prompt.
+ */
+export function extractImageTag(text: string): { cleanText: string; imagePrompt: string | null } {
+  if (!text || typeof text !== 'string') return { cleanText: '', imagePrompt: null };
+  const match = text.match(IMG_TAG_REGEX) || text.match(CHINESE_BRACKET_IMG_REGEX);
+  if (!match) return { cleanText: text, imagePrompt: null };
+  const imagePrompt = match[1].trim();
+  const cleanText = text
+    .replace(IMG_TAG_GLOBAL_REGEX, '')
+    .replace(CHINESE_BRACKET_IMG_GLOBAL_REGEX, '')
+    .trim();
+  return { cleanText, imagePrompt };
+}
+
+/**
+ * Safely strips option prefix (e.g., 'A. ', 'A: ', '(A) ') while preserving
+ * hyphenated sequence orderings like 'A. B-D-C-A-E' -> 'B-D-C-A-E'.
+ * Also protects standalone sequence orderings like 'B-D-C-A-E' from being stripped to 'D-C-A-E'.
+ */
+export function safeStripOptionPrefix(opt: string): string {
+  if (!opt || typeof opt !== 'string') return '';
+  const trimmed = opt.trim();
+  if (/^[A-Za-z](?:\s*[-–—]\s*[A-Za-z])+$/.test(trimmed)) {
+    return trimmed;
+  }
+  const seqMatch = trimmed.match(
+    /^(?:[-*•+]\s*)?(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?([A-Fa-f\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ]|[1-6])[\)\]）\.\:、\/\uFF0E\uFF1A\s]+\s*([A-Za-z](?:\s*[-–—]\s*[A-Za-z])+)$/
+  );
+  if (seqMatch) {
+    return seqMatch[2].trim();
+  }
+  const stripped = stripOptionPrefix(trimmed);
+  if (!/^[A-Za-z](?:\s*[-–—]\s*[A-Za-z])+$/.test(stripped)) {
+    const fallbackSeq = trimmed
+      .replace(
+        /^(?:[-*•+]\s*)?(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-Fa-f\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\uFF0E\uFF1A\s]+/,
+        ''
+      )
+      .trim();
+    if (/^[A-Za-z](?:\s*[-–—]\s*[A-Za-z])+$/.test(fallbackSeq)) {
+      return fallbackSeq;
+    }
+  }
+  return stripped;
+}
 
 export interface UniversalParseOptions {
   default_level?: number;
   default_skill?: 'listening' | 'reading' | 'writing' | string;
   default_part_type?: string;
   default_topic?: string;
+  defaultLevel?: number;
+  defaultSkill?: 'reading' | 'listening' | 'writing';
+  defaultPartType?: string;
+  defaultTopic?: string;
 }
 
 interface ExtractedAnswerKey {
@@ -116,18 +197,31 @@ export function parseUniversalQuestions(
     return [];
   }
 
+  // Feature 8: DeepSeek / GLM Model Pre-Cleaning
+  let text = input.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // Normalize Chinese bracket delimiters
+  text = text
+    .replace(/【题目】/g, '### Câu hỏi:\n')
+    .replace(/【选项】/g, '\n')
+    .replace(/【答案】/g, '\nĐáp án: ')
+    .replace(/【解析】/g, '\nGiải thích: ')
+    .replace(/【听力文本】/g, '### Bài nghe:\n');
+
   // Feature 1: Normalize full-width Latin letters \uFF21-\uFF26 to ASCII A-F
-  const normalizedInput = normalizeFullWidthLetters(input);
+  const normalizedInput = normalizeFullWidthLetters(text);
 
   const trimmed = normalizedInput.trim();
-  const defaultLevel = options?.default_level && options.default_level >= 1 && options.default_level <= 6
-    ? options.default_level
+  const rawDefLevel = options?.default_level ?? options?.defaultLevel;
+  const defaultLevel = rawDefLevel && rawDefLevel >= 1 && rawDefLevel <= 6
+    ? rawDefLevel
     : 1;
-  const defaultSkill = (options?.default_skill === 'listening' || options?.default_skill === 'writing'
-    ? options.default_skill
+  const rawDefSkill = options?.default_skill ?? options?.defaultSkill;
+  const defaultSkill = (rawDefSkill === 'listening' || rawDefSkill === 'writing'
+    ? rawDefSkill
     : 'reading') as 'listening' | 'reading' | 'writing';
-  const defaultPartType = options?.default_part_type?.trim() || 'read_fill_blank_4opt';
-  const defaultTopic = options?.default_topic?.trim() || null;
+  const defaultPartType = (options?.default_part_type ?? options?.defaultPartType)?.trim() || 'read_fill_blank_4opt';
+  const defaultTopic = (options?.default_topic ?? options?.defaultTopic)?.trim() || null;
 
   // =========================================================================
   // Strategy 1: Attempt JSON Parse (Direct JSON or Markdown Fenced JSON)
@@ -172,25 +266,58 @@ function tryParseJsonQuestions(
       (parsed.$schema?.includes('hsk-exam') || parsed.metadata?.generator?.includes('Minnese')) &&
       Array.isArray(parsed.questions)
     ) {
-      return parsed.questions.map((q: any) => ({
-        id: q.id,
-        stem: q.stem,
-        pinyin: q.pinyin,
-        passage: q.passage,
-        options: Array.isArray(q.options) ? q.options.map((opt: any) => stripOptionPrefix(String(opt ?? ''))).filter(Boolean) : [],
-        answer_idx: typeof q.answer_idx === 'number' ? q.answer_idx : 0,
-        explanation_vi: q.explanation_vi || '',
-        level: q.level || defaultLevel,
-        skill: q.skill || defaultSkill,
-        part_type: q.part_type || defaultPartType,
-        topic: q.topic,
-        target_grammar: q.target_grammar,
-        tested_vocab: q.tested_vocab,
-        difficulty_tier: q.difficulty_tier,
-        trap_type: q.trap_type,
-        illustration_theme: q.illustration_theme,
-        options_images: q.options_images,
-      }));
+      return parsed.questions.map((q: any) => {
+        let stem = q.stem;
+        let illustrationTheme = q.illustration_theme || null;
+        if (typeof stem === 'string') {
+          const ext = extractImageTag(stem);
+          if (ext.imagePrompt) {
+            illustrationTheme = illustrationTheme || ext.imagePrompt;
+            stem = ext.cleanText || ext.imagePrompt || '看图选择正确答案';
+          }
+        }
+        let options = Array.isArray(q.options)
+          ? q.options.map((opt: any) => stripOptionPrefix(String(opt ?? ''))).filter(Boolean)
+          : [];
+        let optionsImages = Array.isArray(q.options_images) ? [...q.options_images] : [];
+        if (options.length > 0 && optionsImages.length === 0) {
+          const extractedOptImages: string[] = [];
+          options = options.map((opt: string, idx: number) => {
+            const ext = extractImageTag(opt);
+            if (ext.imagePrompt) {
+              extractedOptImages[idx] = ext.imagePrompt;
+              return ext.cleanText || String.fromCharCode(65 + idx);
+            }
+            return opt;
+          });
+          if (extractedOptImages.filter(Boolean).length > 0) {
+            optionsImages = extractedOptImages;
+          }
+        }
+        return {
+          id: q.id,
+          stem,
+          pinyin: q.pinyin,
+          passage: q.passage,
+          audio_url: q.audio_url || null,
+          audio_text: q.audio_text || undefined,
+          transcript: q.transcript || null,
+          image_url: q.image_url || null,
+          options,
+          answer_idx: typeof q.answer_idx === 'number' ? q.answer_idx : 0,
+          explanation_vi: q.explanation_vi || '',
+          level: q.level || defaultLevel,
+          skill: q.skill || defaultSkill,
+          part_type: q.part_type || defaultPartType,
+          topic: q.topic,
+          target_grammar: q.target_grammar,
+          tested_vocab: q.tested_vocab,
+          difficulty_tier: q.difficulty_tier,
+          trap_type: q.trap_type,
+          illustration_theme: illustrationTheme,
+          options_images: optionsImages.length > 0 ? optionsImages : undefined,
+        };
+      });
     }
 
     const rawList: any[] = [];
@@ -212,9 +339,34 @@ function tryParseJsonQuestions(
     const results: CandidateQuestion[] = [];
     for (const rawItem of rawList) {
       if (!rawItem || typeof rawItem !== 'object') continue;
+      let rawTheme = rawItem.illustration_theme || rawItem.theme || rawItem.illustration || null;
+      if (typeof rawItem.stem === 'string') {
+        const extStem = extractImageTag(rawItem.stem);
+        if (extStem.imagePrompt) {
+          rawTheme = rawTheme || extStem.imagePrompt;
+          rawItem.stem = extStem.cleanText || extStem.imagePrompt || '看图选择正确答案';
+        }
+      }
+      let rawOptImages = Array.isArray(rawItem.options_images) ? [...rawItem.options_images] : [];
+      if (Array.isArray(rawItem.options)) {
+        const extractedOptImages: string[] = [];
+        rawItem.options = rawItem.options.map((opt: any, idx: number) => {
+          const ext = extractImageTag(String(opt ?? ''));
+          if (ext.imagePrompt) {
+            extractedOptImages[idx] = ext.imagePrompt;
+            return ext.cleanText || String.fromCharCode(65 + idx);
+          }
+          return opt;
+        });
+        if (extractedOptImages.filter(Boolean).length > 0 && rawOptImages.length === 0) {
+          rawOptImages = extractedOptImages;
+        }
+      }
       const normalized = normalizeQuestionAliases(
         {
           ...rawItem,
+          illustration_theme: rawTheme,
+          options_images: rawOptImages.length > 0 ? rawOptImages : undefined,
           part_type: rawItem.part_type || rawItem.partType || defaultPartType,
           topic: rawItem.topic || defaultTopic,
         },
@@ -222,7 +374,27 @@ function tryParseJsonQuestions(
         defaultSkill,
         false
       );
-      if (normalized && normalized.stem && Array.isArray(normalized.options) && normalized.options.length >= 2) {
+      if (!normalized || !normalized.stem) continue;
+
+      // Preserve hyphenated sequence orderings in options (e.g. B-D-C-A-E)
+      if (Array.isArray(normalized.options) && Array.isArray(rawItem.options)) {
+        for (let i = 0; i < rawItem.options.length; i++) {
+          const rawOpt = String(rawItem.options[i] ?? '').trim();
+          const cleanSeq = safeStripOptionPrefix(rawOpt);
+          if (/^[A-Za-z](?:\s*[-–—]\s*[A-Za-z])+$/.test(cleanSeq)) {
+            normalized.options[i] = cleanSeq;
+          }
+        }
+      }
+
+      const isWriting0Opt =
+        (isOpenEndedWritingTask(normalized.part_type) ||
+          normalized.skill === 'writing' ||
+          (normalized.part_type && normalized.part_type.startsWith('write_'))) &&
+        Array.isArray(normalized.options) &&
+        normalized.options.length === 0;
+
+      if (Array.isArray(normalized.options) && (normalized.options.length >= 2 || isWriting0Opt)) {
         results.push(normalized);
       }
     }
@@ -245,7 +417,7 @@ function extractBottomAnswerKey(text: string): {
 } {
   const answerKeyMap = new Map<number, ExtractedAnswerKey>();
 
-  const headerRegex = /(?:^|\n+|(?<=[。！？\.\!\?\]\)]))\s*(?:[-*=~_#\s]+)?(?:ĐÁP\s*ÁN\s*(?:VÀ|&)\s*GIẢI\s*THÍCH\s*CHI\s*TIẾT(?:\s*\(ANSWER\s*KEY\))?|BẢNG\s*ĐÁP\s*ÁN(?:\s*(?:VÀ|&)\s*GIẢI\s*THÍCH\s*CHI\s*TIẾT)?(?:\s*\(ANSWER\s*KEY\))?|ANSWER\s*KEY|参考答案|答案及解析|LỜI\s*GIẢI\s*CHI\s*TIẾT|KEY\s*[:：]?(?=\s*(?:\n|\d+[\.\:\-]))|ĐÁP\s*ÁN\s*[:：]?(?=\s*(?:[-*=~_#]*\n\s*(?:Câu\s*)?\d+[\.\:、\s\-]|(?:\d+[\.\:\-]))))(?:\s*[:：])?(?:\s*[-*=~_#]+)?/i;
+  const headerRegex = /(?:^|\n+|(?<=[。！？\.\!\?\]\)]))\s*(?:[-*=~_#\s]+)?(?:(?:PHẦN|MỤC)\s*)?(?:ĐÁP\s*ÁN\s*(?:VÀ|&)\s*GIẢI\s*THÍCH(?:\s*CHI\s*TIẾT)?(?:\s*\([^\)]*\))?|BẢNG\s*ĐÁP\s*ÁN(?:\s*(?:VÀ|&)\s*GIẢI\s*THÍCH(?:\s*CHI\s*TIẾT)?)?(?:\s*\([^\)]*\))?|ANSWER\s*KEY(?:\s*\([^\)]*\))?|参考答案(?:及解析)?|答案及解析|LỜI\s*GIẢI\s*CHI\s*TIẾT(?:\s*\([^\)]*\))?|KEY\s*[:：]?(?=\s*(?:\n|\d+[\.\:\-–—]))|ĐÁP\s*ÁN\s*[:：]?(?=\s*(?:[-*=~_#]*\n\s*(?:Câu\s*)?\d+[\.\:、\s\-–—]|(?:\d+[\.\:\-–—]))))(?:\s*[:：])?(?:\s*[-*=~_#]+)?/i;
   const match = text.match(headerRegex);
   if (!match || match.index === undefined) {
     return { examText: text, answerKeyMap };
@@ -255,7 +427,7 @@ function extractBottomAnswerKey(text: string): {
   const answerKeyText = text.substring(match.index + match[0].length).trim();
 
   if (!answerKeyText) {
-    return { examText, answerKeyMap };
+    return { examText: text, answerKeyMap };
   }
 
   const resolveKeyTokenToIdx = (ansRaw: string): number | undefined => {
@@ -273,7 +445,7 @@ function extractBottomAnswerKey(text: string): {
 
   // Pass 1: Extract compact inline multi-key sequences like "Câu 1: B | Câu 2: A" or "1.A 2.B 3.C 4.D" or "1-A, 2-B"
   const compactMultiMatches = Array.from(
-    answerKeyText.matchAll(/(?:Câu|第|Question|Q)?\s*(\d+)\s*[\.\:、\-]\s*(?:(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Ans|Key|Answer|=>|->)\s*[:：\-]?\s*)?([A-Fa-f\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ]|对|错|√|×|✓|✗|Đúng|Sai|True|False)\b/gi)
+    answerKeyText.matchAll(/(?:Câu|第|Question|Q)?\s*(\d+)\s*[\.\:、\-–—]\s*(?:(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Ans|Key|Answer|=>|->|→)\s*[:：\-–—]?\s*)?([A-Fa-f\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ]|对|错|√|×|✓|✗|Đúng|Sai|True|False)\b/gi)
   );
   for (const cm of compactMultiMatches) {
     const qNum = parseInt(cm[1], 10);
@@ -293,18 +465,18 @@ function extractBottomAnswerKey(text: string): {
 
   for (const line of lines) {
     // Skip multiple-key summary lines already handled in Pass 1
-    if ((line.match(/(?:Câu|第|Q)?\s*\d+\s*[\.\:、\-]/gi) || []).length >= 2) {
+    if ((line.match(/(?:Câu|第|Q)?\s*\d+\s*[\.\:、\-–—]/gi) || []).length >= 2) {
       continue;
     }
 
     const itemMatch = line.match(
-      /^(?:[-*•+]\s*)?(?:Câu|第|Question|Q)?\s*(\d+)[\.\:、\s\-]+(?:(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Ans|Key|Answer|=>|->)\s*[:：\-]?\s*)?([A-Fa-f0-9\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ对错√×✓✗TrueFalseĐúngSai]+)(?:\s*\([^\)]*\))?(?:[\.\s:：\-]+(.*))?$/i
+      /^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Câu|第|Question|Q|Bài)?\s*(\d+)(?:\s*(?:题|câu))?(?:\*{1,2})?[\.\:、\s\-–—]+(?:\*{1,2})?(?:(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Ans|Key|Answer|=>|->|→)\s*[:：\-–—]?\s*)?(?:\*{1,2})?([A-Fa-f0-9\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ对错√×✓✗TrueFalseĐúngSai]+)(?:\*{1,2})?(?:\s*\([^\)]*\))?(?:[\.\s:：\-–—/]+(.*))?$/i
     );
     if (itemMatch) {
       const qNum = parseInt(itemMatch[1], 10);
       const ansRaw = itemMatch[2].trim();
       const expl = itemMatch[3]
-        ?.replace(/^(?:\*\*)?(?:Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch\s*nghĩa|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*\*)?[:：\s]*(?:\*\*)?\s*/i, '')
+        ?.replace(/^(?:\*\*)?(?:Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch(?:\s*nghĩa)?|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*\*)?[:：\s]*(?:\*\*)?\s*/i, '')
         .replace(/\*\*$/, '')
         .trim();
       const ansIdx = resolveKeyTokenToIdx(ansRaw);
@@ -319,10 +491,10 @@ function extractBottomAnswerKey(text: string): {
       continue;
     }
 
-    // Continuation explanation line (e.g. "Giải thích: ...") for the immediately preceding question number
-    if (lastQuestionNum !== null && /^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch\s*nghĩa|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*{1,2})?[:：\s]/i.test(line)) {
+    // Continuation explanation line (e.g. "Giải thích: ...", "Dịch: ...", or multi-line bullet points) for the immediately preceding question number
+    if (lastQuestionNum !== null && !/^#+\s/.test(line)) {
       const explText = line
-        .replace(/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch\s*nghĩa|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*{1,2})?[:：\s]*(?:\*\*)?\s*/i, '')
+        .replace(/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch(?:\s*nghĩa)?|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*{1,2})?[:：\s]*(?:\*\*)?\s*/i, '')
         .replace(/\*\*$/, '')
         .trim();
       const existing = answerKeyMap.get(lastQuestionNum);
@@ -332,6 +504,10 @@ function extractBottomAnswerKey(text: string): {
           : explText;
       }
     }
+  }
+
+  if (answerKeyMap.size === 0) {
+    return { examText: text, answerKeyMap };
   }
 
   return { examText, answerKeyMap };
@@ -351,7 +527,7 @@ interface SectionSegment {
  * does not bleed into Question 1 stem.
  */
 function segmentMultiPartSections(text: string): SectionSegment[] {
-  const sectionHeaderRegex = /(?:^|\n+|(?<=[。！？\.\!\?\]\)]))\s*(?:#+\s*)?(?:第\s*([一二三四五六七八九十1-6])\s*部分|Phần\s*([1-6I-VI]+)|Part\s*([1-6])|Section\s*([1-6]))(?:\s*[:：\-\s]*(?:(?:第|Câu|Questions?)\s*\d+\s*[-–至到\s]+\d+\s*(?:题|câu)?)?(?:\s*\((?:Phần|Part)[^\)]*\))*)?/gi;
+  const sectionHeaderRegex = /(?:^|\n+|(?<=[。！？\.\!\?\]\)]))\s*(?:[-*•+]\s*)?(?:#+\s*)?(?:\*{1,2})?(?:(?:[IⅠ-ⅫVXL]+\.\s*)?(?:听力|阅读|书写|写作)\s*\/\s*)?(?:第\s*([一二三四五六七八九十1-6])\s*部分(?:\s*[A-Z])?(?:\s*\/\s*PHẦN\s*[1-6I-VI]+(?:\s*[A-Z])?)?|Phần\s*([1-6I-VI]+)(?:\s*[A-Z])?|Part\s*([1-6])(?:\s*[A-Z])?|Section\s*([1-6]))(?:\s*[:：\-\s]*(?:(?:第|Câu|Questions?)\s*\d+\s*[-–至到\s]+\d+\s*(?:题|câu)?)?(?:\s*\((?:Phần|Part)[^\)]*\))*)?/gi;
 
   const matches: Array<{ index: number; matchStr: string; end: number }> = [];
   let m: RegExpExecArray | null;
@@ -368,6 +544,16 @@ function segmentMultiPartSections(text: string): SectionSegment[] {
   }
 
   const sections: SectionSegment[] = [];
+  if (matches[0].index > 0) {
+    const preamble = text.substring(0, matches[0].index).trim();
+    if (/(?:Câu|第|Question|Q|Bài)\s*\d+|[\u4e00-\u9fa5]/i.test(preamble)) {
+      sections.push({
+        header: '',
+        ruleText: '',
+        bodyText: preamble,
+      });
+    }
+  }
   for (let i = 0; i < matches.length; i++) {
     const cur = matches[i];
     const nextIndex = i + 1 < matches.length ? matches[i + 1].index : text.length;
@@ -375,6 +561,14 @@ function segmentMultiPartSections(text: string): SectionSegment[] {
 
     // Strip any lingering parenthesized section label like "(Phần 1: Câu 1 - 5)" or "(Phần 1)"
     fullSectionText = fullSectionText.replace(/^\s*\((?:Phần|Part)\s*[1-6I-VI]+[^\)]*\)\s*/i, '').trim();
+    const leadingTitleMatch = fullSectionText.match(
+      /^([^\n]*(?:\(\s*Câu\s*\d+\s*[-–—]\s*Câu\s*\d+[^\n)]*\)|NGHE\s*HIỂU|ĐỌC\s*HIỂU|THI\s*VIẾT|^[:：\-\s]+[^\n]+))\n+(?=\s*(?:[-*•+]\s*)?(?:###\s*|\*\*)?(?:Câu|第|Question|Q|Bài|\d+[\.\:、\)]|\*))/i
+    );
+    const extraHeaderTitle = leadingTitleMatch ? leadingTitleMatch[1].trim() : '';
+    if (leadingTitleMatch) {
+      fullSectionText = fullSectionText.substring(leadingTitleMatch[0].length).trim();
+    }
+    fullSectionText = fullSectionText.replace(/^\*(?:Lưu ý|Bao gồm|Đan xen)[^\n]*\*\s*\n+/i, '').trim();
 
     let ruleText = '';
     let bodyText = fullSectionText;
@@ -403,7 +597,7 @@ function segmentMultiPartSections(text: string): SectionSegment[] {
     }
 
     sections.push({
-      header: cur.matchStr.trim(),
+      header: `${cur.matchStr.trim()} ${extraHeaderTitle}`.trim(),
       ruleText,
       bodyText,
       sectionLevel,
@@ -417,18 +611,23 @@ function segmentMultiPartSections(text: string): SectionSegment[] {
  * Smart Pinyin Separation: extracts all parenthesized Latin/Pinyin,
  * and strips them from the Chinese text to leave a pristine Hanzi stem.
  */
-function cleanStemAndExtractPinyin(rawPiece: string): { stem: string; pinyin: string | null } {
+function cleanStemAndExtractPinyin(rawPiece: string): { stem: string; pinyin: string | null; illustration_theme: string | null } {
+  let illustrationTheme: string | null = null;
+  const imgExt = extractImageTag(rawPiece);
+  if (imgExt.imagePrompt) {
+    illustrationTheme = imgExt.imagePrompt;
+    rawPiece = imgExt.cleanText;
+  }
+
   // Extract all parenthesized Latin/Pinyin containing at least one Latin or Tone letter:
   // e.g. (píngguǒ), (Zhuōzi shang...), (Wǒ fēicháng ______ chī...), but NOT cloze blanks like (____)
-  const pinyinMatches = Array.from(
-    rawPiece.matchAll(/[\(\uff08\[\u3010](?=[^\)\uff09\]\u3011]*[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-_]+)[\)\uff09\]\u3011]/g)
-  );
+  const pinyinMatches = Array.from(rawPiece.matchAll(STEM_PINYIN_MATCH_RE));
   const pinyinList = pinyinMatches.map((m) => m[1].trim()).filter(Boolean);
   const explicitPinyin = pinyinList.length > 0 ? pinyinList.join(' ') : null;
 
   // Replace parenthesized pinyin with space, clean answer brackets, normalize blanks
   let cleanStem = rawPiece
-    .replace(/[\(\uff08\[\u3010](?=[^\)\uff09\]\u3011]*[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-_]+)[\)\uff09\]\u3011]/g, ' ')
+    .replace(STEM_PINYIN_MATCH_RE, ' ')
     .replace(/(?:→|->)?\s*\[\s*\]|(?:→|->)?\s*\(\s*\)/g, '')
     .replace(/^(?:(?:Câu|第|Question|Q)\s*\d+\s*(?:题|cau|câu)?[\.:\s]*|\d+[\.\)]\s*)/i, '')
     .replace(/^\s*\((?:Phần|Part)\s*[1-6I-VI]+[^\)]*\)\s*/i, '')
@@ -446,6 +645,7 @@ function cleanStemAndExtractPinyin(rawPiece: string): { stem: string; pinyin: st
   return {
     stem: cleanStem,
     pinyin: explicitPinyin,
+    illustration_theme: illustrationTheme,
   };
 }
 
@@ -454,9 +654,49 @@ function cleanStemAndExtractPinyin(rawPiece: string): { stem: string; pinyin: st
  * Uses lookbehind on punctuation and pinyin closing parentheses so options B and D
  * are not skipped in run-on contiguous text.
  */
-function extractContiguousOptionPool(text: string): { options: string[]; optionsPinyin: string[]; remainingText: string } {
+function extractContiguousOptionPool(text: string): {
+  options: string[];
+  optionsPinyin: string[];
+  optionsImages: string[];
+  remainingText: string;
+} {
   const options: string[] = [];
   const optionsPinyin: string[] = [];
+  const optionsImages: string[] = [];
+
+  // 1. Check for shared [IMG: ...] option pool (e.g. A. [IMG: ...] .. F. [IMG: ...])
+  const imgPoolRegex = /(?:^|\n)\s*([A-F])[\.\:、\s]*([^\n]*?(?:\[(?:IMG|IMAGE)[:：\s]+[^\]]+\]|【(?:IMG|IMAGE)[:：\s]+[^】]+】)[^\n]*)/gi;
+  let imgMatch: RegExpExecArray | null;
+  let lastImgEnd = 0;
+  let expectedImgIdx = 0;
+  while ((imgMatch = imgPoolRegex.exec(text)) !== null) {
+    const letter = imgMatch[1].toUpperCase();
+    const ltrIdx = letter.charCodeAt(0) - 65;
+    if (ltrIdx === expectedImgIdx) {
+      const ext = extractImageTag(imgMatch[2]);
+      const optLabel = ext.cleanText.replace(/^[A-F][\.\:、\s]*/i, '').trim() || letter;
+      options.push(optLabel);
+      optionsPinyin.push('');
+      optionsImages.push(ext.imagePrompt || '');
+      lastImgEnd = imgMatch.index + imgMatch[0].length;
+      expectedImgIdx++;
+    } else if (expectedImgIdx > 0) {
+      break;
+    }
+  }
+  if (options.length >= 2 && optionsImages.some(Boolean)) {
+    return {
+      options,
+      optionsPinyin,
+      optionsImages,
+      remainingText: text.substring(lastImgEnd).trim(),
+    };
+  }
+
+  options.length = 0;
+  optionsPinyin.length = 0;
+  optionsImages.length = 0;
+
   const poolRegex = /(?<=^|[\n\s\)）\.。！？]|Ký hiệu|Câu lựa chọn|Câu phản hồi)([A-F])[\.\:、\s]*([\u4e00-\u9fa5\s，,]+[。！？\.\!\?](?:\s*[\(\uff08][^\)\uff09]+[\)\uff09])?)/g;
 
   let m: RegExpExecArray | null;
@@ -469,8 +709,8 @@ function extractContiguousOptionPool(text: string): { options: string[]; options
 
     if (ltrIdx === expectedIndex) {
       const optRaw = m[2].trim();
-      const pinyinMatch = optRaw.match(/[\(\uff08\[\u3010]([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+)[\)\uff09\]\u3011]/);
-      const rawCleanOpt = optRaw.replace(/[\(\uff08\[\u3010][a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+[\)\uff09\]\u3011]/g, '').trim();
+      const pinyinMatch = optRaw.match(INLINE_PINYIN_PAREN_CAPTURE_RE);
+      const rawCleanOpt = optRaw.replace(INLINE_PINYIN_PAREN_STRIP_RE, '').trim();
       const cleanOpt = rawCleanOpt || optRaw.replace(/^[\[\(【]\s*|\s*[\]\)】]$/g, '').trim();
       options.push(cleanOpt);
       const optPinyin = pinyinMatch ? pinyinMatch[1].trim() : (cleanOpt && /[\u4e00-\u9fa5]/.test(cleanOpt) ? getPinyinPro(cleanOpt, { toneType: 'symbol' }) : '');
@@ -484,7 +724,7 @@ function extractContiguousOptionPool(text: string): { options: string[]; options
   }
 
   const remainingText = text.substring(lastEnd).trim();
-  return { options, optionsPinyin, remainingText };
+  return { options, optionsPinyin, optionsImages, remainingText };
 }
 
 /**
@@ -507,7 +747,7 @@ function extractOptionsFromMarkdownTable(text: string): { options: string[]; opt
         const first = cells[0].toUpperCase();
         if (/^[A-F]$/.test(first)) {
           const idx = first.charCodeAt(0) - 65;
-          const pinyinMatch = cells[1].match(/[\(\uff08\[\u3010]([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+)[\)\uff09\]\u3011]/);
+          const pinyinMatch = cells[1].match(INLINE_PINYIN_PAREN_CAPTURE_RE);
           const rawCleanOpt = cells[1].replace(/[\(\uff08\[\u3010][^\)\uff09\]\u3011]+[\)\uff09\]\u3011]/g, '').trim();
           const optText = rawCleanOpt || cells[1].replace(/^[\[\(【]\s*|\s*[\]\)】]$/g, '').trim();
           optionsMap.set(idx, optText);
@@ -592,7 +832,52 @@ function parseMultiPartExamDocument(
     const body = sec.bodyText.trim();
     const rule = sec.ruleText.toLowerCase();
 
-    // Determine section type:
+    // Detect section-level skill (Nghe hiểu / Đọc hiểu / Viết) from section header & intro
+    let sectionSkill: 'listening' | 'reading' | 'writing' = defaultSkill;
+    const firstIntroLine = body.split('\n')[0] || '';
+    const sectionHeaderContext = `${sec.header} ${sec.ruleText} ${firstIntroLine}`;
+    if (/听力|nghe\s*hiểu|phần\s*nghe|kỹ\s*năng\s*nghe|listening/i.test(sectionHeaderContext)) {
+      sectionSkill = 'listening';
+    } else if (/书写|写作|thi\s*viết|phần\s*viết|kỹ\s*năng\s*viết|writing|连词成句|看拼音/i.test(sectionHeaderContext)) {
+      sectionSkill = 'writing';
+    } else if (/阅读|đọc\s*hiểu|phần\s*đọc|kỹ\s*năng\s*đọc|reading/i.test(sectionHeaderContext)) {
+      sectionSkill = 'reading';
+    }
+
+    // Check if questions inside this section already have their own individual A. / B. options
+    // (as opposed to a compact shared option pool A..E at the top of the section before question 1)
+    const questionsHaveOwnOptions =
+      /(?:^|\n)\s*(?:[-*•+]\s*)?(?:###\s*|\*\*)?(?:(?:Câu|第|Question|Q|Bài)\s*\d+|\d+[\.\:、\)])[\s\S]*?\n\s*(?:[-*•+]\s*)?(?:\*\*)?[\(\[（]?A[\)\]）\.\:、\s]/i.test(body);
+
+    if (questionsHaveOwnOptions) {
+      const individualBlocks = splitIntoQuestionBlocks(body);
+      for (const block of individualBlocks) {
+        const hasAbOptions = /(?:^|\n)\s*(?:[-*•+]\s*)?(?:\*\*)?[\(\[（]?[A-B][\)\]）\.\:、\s]/i.test(block);
+        const hasTfMarker = /(?:→|->)\s*\[\s*[√✓×✗对错]?\s*\]|\(\s*[√✓×✗对错]?\s*\)|(?:Đáp\s*án|Answer|答案)\s*[:：]\s*(?:√|✓|×|✗|对|错|Đúng|Sai|True|False)/i.test(block);
+        if (!hasAbOptions && !hasTfMarker) {
+          continue;
+        }
+        const qNumMatch = block.match(/^(?:(?:###\s*|\*\*)?(?:Câu|第|Question|Q|Bài)\s*(\d+)|[\(\[（]?(\d+)[\.\:、\)\]）])/i);
+        const explicitQNum = qNumMatch ? parseInt(qNumMatch[1] || qNumMatch[2], 10) : null;
+        const lookupIdx = explicitQNum && !isNaN(explicitQNum) ? explicitQNum : globalQuestionIndex + 1;
+        const keyItem = answerKeyMap.get(lookupIdx);
+        const q = parseSingleQuestionBlock(
+          block,
+          level,
+          sectionSkill,
+          sectionSkill === 'writing' ? 'write_sentence_from_words' : 'read_fill_blank_4opt',
+          defaultTopic,
+          keyItem
+        );
+        if (q) {
+          globalQuestionIndex = explicitQNum && !isNaN(explicitQNum) ? explicitQNum : globalQuestionIndex + 1;
+          results.push(q);
+        }
+      }
+      continue;
+    }
+
+    // Determine section type for compact shared-table sections (multi_part_20q):
     // 1. True/False: requires contrasting true/false pattern in rule/body, or answer key indicating true/false
     const nextKey = answerKeyMap.get(globalQuestionIndex + 1);
     const isTrueFalse =
@@ -605,6 +890,7 @@ function parseMultiPartExamDocument(
 
     let sectionOptions: string[] = [];
     let sectionOptionsPinyin: string[] = [];
+    let sectionOptionsImages: string[] = [];
     let questionStreamText = body;
     let partType = 'generic_mcq';
 
@@ -678,6 +964,7 @@ function parseMultiPartExamDocument(
           if (contiguous.options.length >= 2) {
             sectionOptions = contiguous.options;
             sectionOptionsPinyin = contiguous.optionsPinyin;
+            sectionOptionsImages = contiguous.optionsImages;
             questionStreamText = contiguous.remainingText;
           }
         }
@@ -687,24 +974,38 @@ function parseMultiPartExamDocument(
         // Not a shared option pool section! The questions inside this section have their own individual options.
         const individualBlocks = splitIntoQuestionBlocks(body);
         for (const block of individualBlocks) {
-          globalQuestionIndex++;
-          const keyItem = answerKeyMap.get(globalQuestionIndex);
+          const qNumMatch = block.match(/^(?:(?:###\s*|\*\*)?(?:Câu|第|Question|Q|Bài)\s*(\d+)|[\(\[（]?(\d+)[\.\:、\)\]）])/i);
+          const explicitQNum = qNumMatch ? parseInt(qNumMatch[1] || qNumMatch[2], 10) : null;
+          const lookupIdx = explicitQNum && !isNaN(explicitQNum) ? explicitQNum : globalQuestionIndex + 1;
+          const keyItem = answerKeyMap.get(lookupIdx);
           const q = parseSingleQuestionBlock(
             block,
             level,
-            defaultSkill,
-            'read_fill_blank_4opt',
+            sectionSkill,
+            sectionSkill === 'writing' ? 'write_sentence_from_words' : 'read_fill_blank_4opt',
             defaultTopic,
             keyItem
           );
           if (q) {
+            globalQuestionIndex = explicitQNum && !isNaN(explicitQNum) ? explicitQNum : globalQuestionIndex + 1;
             results.push(q);
           }
         }
         continue;
       }
 
-      partType = `read_dialogue_matching_${sectionOptions.length}opt`;
+      if (sectionOptionsImages.some(Boolean)) {
+        partType =
+          sectionSkill === 'listening'
+            ? sectionOptions.length === 6
+              ? 'listen_dialogue_picture_match_6opt'
+              : 'listen_picture_match_4opt'
+            : sectionOptions.length === 6
+            ? 'read_sentence_picture_match_6opt'
+            : 'read_sentence_picture_match_4opt';
+      } else {
+        partType = `read_dialogue_matching_${sectionOptions.length}opt`;
+      }
     }
 
     // Split questionStreamText into individual question blocks
@@ -714,13 +1015,14 @@ function parseMultiPartExamDocument(
     const sectionQuestionsData: Array<{
       stem: string;
       pinyin: string | null;
+      illustration_theme: string | null;
     }> = [];
 
     for (const piece of questionPieces) {
       if (!piece.trim()) continue;
-      const { stem, pinyin } = cleanStemAndExtractPinyin(piece);
+      const { stem, pinyin, illustration_theme } = cleanStemAndExtractPinyin(piece);
       if (stem && stem.length >= 2 && /[\u4e00-\u9fa5]/.test(stem)) {
-        sectionQuestionsData.push({ stem, pinyin });
+        sectionQuestionsData.push({ stem, pinyin, illustration_theme });
       }
     }
 
@@ -758,21 +1060,24 @@ function parseMultiPartExamDocument(
         const candidate: any = {
           stem: qData.stem,
           stem_pinyin: pinyin,
+          audio_text: sectionSkill === 'listening' ? qData.stem : undefined,
           options: sectionOptions,
           options_pinyin: sectionOptionsPinyin.length === sectionOptions.length ? sectionOptionsPinyin : undefined,
+          options_images: sectionOptionsImages.some(Boolean) ? sectionOptionsImages : undefined,
           answer_idx: answerIdx,
           explanation_vi: explanationVi,
           explanation_summary_vi: explanationVi,
           answer_rationale_vi: explanationVi,
           distractor_rationales: distractorRationales,
           level,
-          skill: defaultSkill,
-          part_type: partType,
+          skill: sectionSkill,
+          part_type: sectionSkill === 'listening' ? 'listen_true_false_2opt' : partType,
           pinyin,
           topic: defaultTopic,
+          illustration_theme: qData.illustration_theme || null,
         };
 
-        const normalized = normalizeQuestionAliases(candidate, level, defaultSkill, false);
+        const normalized = normalizeQuestionAliases(candidate, level, sectionSkill, false);
         if (normalized) results.push(normalized);
       }
     } else if (isWordBank) {
@@ -829,13 +1134,14 @@ function parseMultiPartExamDocument(
           completed_stem: completedStem,
           canonical_completed_stem: completedStem,
           level,
-          skill: defaultSkill,
+          skill: sectionSkill,
           part_type: partType,
           pinyin,
           topic: defaultTopic,
+          illustration_theme: qData.illustration_theme || null,
         };
 
-        const normalized = normalizeQuestionAliases(candidate, level, defaultSkill, false);
+        const normalized = normalizeQuestionAliases(candidate, level, sectionSkill, false);
         if (normalized) results.push(normalized);
       }
     } else {
@@ -876,21 +1182,24 @@ function parseMultiPartExamDocument(
         const candidate: any = {
           stem: qData.stem,
           stem_pinyin: pinyin,
+          audio_text: sectionSkill === 'listening' ? qData.stem : undefined,
           options: sectionOptions,
           options_pinyin: sectionOptionsPinyin.length === sectionOptions.length ? sectionOptionsPinyin : undefined,
+          options_images: sectionOptionsImages.some(Boolean) ? sectionOptionsImages : undefined,
           answer_idx: answerIdx,
           explanation_vi: explanationVi,
           explanation_summary_vi: explanationVi,
           answer_rationale_vi: explanationVi,
           distractor_rationales: distractorRationales,
           level,
-          skill: defaultSkill,
+          skill: sectionSkill,
           part_type: partType,
           pinyin,
           topic: defaultTopic,
+          illustration_theme: qData.illustration_theme || null,
         };
 
-        const normalized = normalizeQuestionAliases(candidate, level, defaultSkill, false);
+        const normalized = normalizeQuestionAliases(candidate, level, sectionSkill, false);
         if (normalized) results.push(normalized);
       }
     }
@@ -937,14 +1246,32 @@ function parseRawTextQuestions(
   // Fallback: Standard Block Parser for isolated / single questions
   const blocks = splitIntoQuestionBlocks(examText);
   const questions: CandidateQuestion[] = [];
+  let sharedListeningPassage: string | null = null;
 
   for (const block of blocks) {
+    const monoMatch = block.match(/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:独白\/讲话录音内容|录音内容|Nội\s*dung\s*bài\s*nghe|Kịch\s*bản\s*nghe|Monologue)\s*[:：]\s*\n*([\s\S]+)/i);
+    const hasOptionsInBlock = /(?:^|\n)\s*(?:[-*•+]\s*)?(?:\*\*)?[\(\[（]?[A-B][\)\]）\.\:、\s]/i.test(block);
+    if (monoMatch && !hasOptionsInBlock && !/(?:Đáp\s*án|Answer|答案)\s*[:：]/i.test(block)) {
+      sharedListeningPassage = monoMatch[1].trim();
+      continue;
+    }
     const qNumMatch = block.match(/^(?:(?:###\s*|\*\*)?(?:Câu|第|Question|Q|Bài)\s*(\d+)|[\(\[（]?(\d+)[\.\:、\)\]）])/i);
     const explicitQNum = qNumMatch ? parseInt(qNumMatch[1] || qNumMatch[2], 10) : null;
     const lookupIdx = explicitQNum && !isNaN(explicitQNum) ? explicitQNum : questions.length + 1;
     const keyItem = answerKeyMap.get(lookupIdx);
-    const q = parseSingleQuestionBlock(block, defaultLevel, defaultSkill, defaultPartType, defaultTopic, keyItem);
+    const q = parseSingleQuestionBlock(
+      block,
+      defaultLevel,
+      sharedListeningPassage ? 'listening' : defaultSkill,
+      sharedListeningPassage ? 'listen_talks_qa_4opt' : defaultPartType,
+      defaultTopic,
+      keyItem
+    );
     if (q) {
+      if (sharedListeningPassage && !q.passage) {
+        q.passage = sharedListeningPassage;
+        q.audio_text = `${sharedListeningPassage}\n${q.stem}`;
+      }
       questions.push(q);
     }
   }
@@ -956,7 +1283,16 @@ function parseRawTextQuestions(
  * Splits a raw document into individual question text blocks.
  */
 export function splitIntoQuestionBlocks(text: string): string[] {
-  const cleanedText = text.replace(/^[ \t]*>[ \t]?/gm, '');
+  let cleanedText = text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/^[ \t]*>[ \t]?/gm, '')
+    .replace(/^(?:#+\s*)?(?:[-*•+]\s*)?(?:\*{1,2})?(?:(?:Dạng|Loại|Mục|Subpart|Hình\s*thức)\s*\d*|(?:Nghe|Đọc|Viết)\s*\d+[A-Z]?)\s*(?:\([^\)]*\))?[:：\-\s][^\n]*$/gim, '');
+  cleanedText = cleanedText
+    .replace(/【题目】/g, '### Câu hỏi:\n')
+    .replace(/【选项】/g, '\n')
+    .replace(/【答案】/g, '\nĐáp án: ')
+    .replace(/【解析】/g, '\nGiải thích: ')
+    .replace(/【听力文本】/g, '### Bài nghe:\n');
   const delimiterPattern = /(?:^|\n+)(?=(?:(?:###\s*|\*\*)?(?:Câu|第|Question|Q|Bài)\s*\d+\s*(?:题|cau|câu)?[\.:\s、\)\]\*]|(?:[Ⅰ-Ⅻ]|(?:I[XV]|V?I{1,3}|X{1,2}(?:I[XV]|V?I{0,3})?))[\.\:、\)\]）]\s*(?:[\u4e00-\u9fa5A-Za-z]|Passage|问|Đề|Chọn)))|(?:\n\s*\n+|\n(?<=(?:Đáp\s*án|Answer|Ans|Key|Giải\s*thích|Explanation|正确答案|答案|=>|->|[A-Fa-f4-6][\.\:、\)\s][^\n]+)\s*))(?=[\(\[（]?\d+[\.\:、\)\]）]\s*(?:[\u4e00-\u9fa5A-Za-z]|Passage|问|Đề|Chọn))/i;
 
   const rawSplits = cleanedText.split(delimiterPattern).map((s) => s.trim()).filter((s) => s.length > 0);
@@ -965,15 +1301,19 @@ export function splitIntoQuestionBlocks(text: string): string[] {
     return rawSplits;
   }
 
-  const paragraphSplits = text.split(/\n\s*\n+/).map((s) => s.trim()).filter((s) => s.length > 0);
+  const paragraphSplits = cleanedText.split(/\n\s*\n+/).map((s) => s.trim()).filter((s) => s.length > 0);
   const selfContainedParagraphs = paragraphSplits.filter(
-    (p) => /[\u4e00-\u9fa5]/.test(p) && /(?:^|\s)[\(\[]?A[\)\]\.\:、\s]/i.test(p) && /(?:^|\s)[\(\[]?B[\)\]\.\:、\s]/i.test(p)
+    (p) =>
+      !/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Giải\s*thích|Lời\s*giải|Explanation|Rationale|Phân\s*tích|Dịch\s*nghĩa|Tạm\s*dịch|解析|Lý\s*do)/i.test(p) &&
+      /[\u4e00-\u9fa5]/.test(p) &&
+      /(?:^|\s)[\(\[]?A[\)\]\.\:、\s]/i.test(p) &&
+      /(?:^|\s)[\(\[]?B[\)\]\.\:、\s]/i.test(p)
   );
   if (paragraphSplits.length > 1 && selfContainedParagraphs.length > 1) {
     return paragraphSplits;
   }
 
-  return [text];
+  return [cleanedText];
 }
 
 /**
@@ -989,12 +1329,19 @@ export function parseSingleQuestionBlock(
 ): CandidateQuestion | null {
   if (!block || !block.trim()) return null;
 
-  const cleanedBlock = block.replace(/^[ \t]*>[ \t]?/gm, '');
+  let cleanedBlock = block.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[ \t]*>[ \t]?/gm, '');
+  cleanedBlock = cleanedBlock
+    .replace(/【题目】/g, '### Câu hỏi:\n')
+    .replace(/【选项】/g, '\n')
+    .replace(/【答案】/g, '\nĐáp án: ')
+    .replace(/【解析】/g, '\nGiải thích: ')
+    .replace(/【听力文本】/g, '### Bài nghe:\n');
+
   const lines = cleanedBlock.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
   if (lines.length === 0) return null;
 
   let level = defaultLevel;
-  const levelMatch = block.match(/(?:HSK|Cấp|Level)\s*([1-6])/i);
+  const levelMatch = cleanedBlock.match(/(?:HSK|Cấp|Level)\s*([1-6])/i);
   if (levelMatch) {
     const parsedLvl = parseInt(levelMatch[1], 10);
     if (!isNaN(parsedLvl) && parsedLvl >= 1 && parsedLvl <= 6) {
@@ -1003,20 +1350,32 @@ export function parseSingleQuestionBlock(
   }
 
   let skill = defaultSkill;
-  if (/kỹ năng:\s*(?:nghe|listening)|nghe hiểu/i.test(block)) {
+  if (/kỹ năng:\s*(?:nghe|listening)|nghe hiểu/i.test(cleanedBlock)) {
     skill = 'listening';
-  } else if (/kỹ năng:\s*(?:viết|writing)|viết/i.test(block)) {
+  } else if (/kỹ năng:\s*(?:viết|writing)|viết/i.test(cleanedBlock)) {
     skill = 'writing';
-  } else if (/kỹ năng:\s*(?:đọc|reading)|đọc hiểu/i.test(block)) {
+  } else if (/kỹ năng:\s*(?:đọc|reading)|đọc hiểu/i.test(cleanedBlock)) {
     skill = 'reading';
   }
+
+  const isWritingTask =
+    defaultPartType === 'write_sentence_from_words' ||
+    isOpenEndedWritingTask(defaultPartType) ||
+    (skill === 'writing' && !/_\d+opt/i.test(defaultPartType)) ||
+    (defaultPartType.startsWith('write_') && !/_\d+opt/i.test(defaultPartType)) ||
+    /连词成句/i.test(cleanedBlock);
+
+  const isWritingReorder =
+    defaultPartType === 'write_sentence_from_words' ||
+    defaultPartType === 'write_sentence_reorder_4opt' ||
+    /连词成句/i.test(cleanedBlock);
 
   let hasExplicitAnswerKey = Boolean(keyItem && typeof keyItem.answerIdx === 'number');
   let answerIdx = keyItem?.answerIdx ?? 0;
   let rawAnswerText: string | null = keyItem?.letterOrText && keyItem?.answerIdx === undefined ? keyItem.letterOrText : null;
 
-  const answerMatch = block.match(
-    /(?:\[ĐÁP_ÁN:\s*([^\]]+)\]|(?:\*\*)?(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Correct\s*Answer|Answer|Ans|Key|正确答案|答案|=>|->)(?:\*\*)?[:：\s]*(?:\*\*)?[:：\s]*(?:(?:\*\*)?(?:(?:Câu|第|Q)?\s*\d+[\.\:\s、\-]+)?)?(?:\*\*)?([^\n\r]+))/i
+  const answerMatch = cleanedBlock.match(
+    /(?:\[ĐÁP_ÁN:\s*([^\]]+)\]|(?:\*\*)?(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Correct\s*Answer|Answer|Ans|Key|正确答案|参考答案|答案|=>|->)(?:\*\*)?[:：\s]*(?:\*\*)?[:：\s]*(?:(?:\*\*)?(?:(?:Câu|第|Q)?\s*\d+[\.\:\s、\-]+)?)?(?:\*\*)?([^\n\r]+))/i
   );
   if (answerMatch) {
     const rawAns = (answerMatch[1] || answerMatch[2] || '')
@@ -1068,7 +1427,7 @@ export function parseSingleQuestionBlock(
   }
 
   let explicitPinyin: string | null = null;
-  const pinyinMatch = block.match(/(?:(?:\*\*)?(?:Pinyin|Phiên\s*âm)(?:\*\*)?)[:\s]*([a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’]+)/i);
+  const pinyinMatch = block.match(new RegExp(`(?:(?:\\*\\*)?(?:Pinyin|Phiên\\s*âm)(?:\\*\\*)?)[:\\s]*([${PINYIN_INLINE_CHAR_CLASS}\\s,.\\?!'’]+)`, 'i'));
   if (pinyinMatch) {
     explicitPinyin = pinyinMatch[1].trim();
   }
@@ -1087,8 +1446,13 @@ export function parseSingleQuestionBlock(
     }
   }
 
+  const firstAnswerOrExplIdx = lines.findIndex((l) =>
+    /^(?:[-*•+]\s*)?(?:\*{1,2})?(?:\[ĐÁP_ÁN:|(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Correct\s*Answer|Answer|Ans|Key|正确答案|参考答案|答案|=>|->|Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch\s*nghĩa|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*{1,2})?[:：\s])/i.test(l)
+  );
+  const endIdxForOptions = firstAnswerOrExplIdx !== -1 ? firstAnswerOrExplIdx : lines.length;
+
   let lastOptionAIdx = -1;
-  for (let idx = lines.length - 1; idx >= 0; idx--) {
+  for (let idx = endIdxForOptions - 1; idx >= 0; idx--) {
     const l = lines[idx];
     if (
       optionLineRegex.test(l) &&
@@ -1096,6 +1460,16 @@ export function parseSingleQuestionBlock(
     ) {
       lastOptionAIdx = idx;
       break;
+    }
+  }
+
+  // Pre-scan for stem [IMG: ...] tag before option lines
+  let extractedStemImageRequirement: string | null = null;
+  for (let idx = 0; idx < lines.length; idx++) {
+    if (lastOptionAIdx !== -1 && idx >= lastOptionAIdx) break;
+    const ext = extractImageTag(lines[idx]);
+    if (ext.imagePrompt && !extractedStemImageRequirement) {
+      extractedStemImageRequirement = ext.imagePrompt;
     }
   }
 
@@ -1114,11 +1488,25 @@ export function parseSingleQuestionBlock(
     }
   }
 
-  for (let i = 0; i < lines.length; i++) {
+  const hasExplicitMcqLetters = lines
+    .slice(0, endIdxForOptions)
+    .some((l, idx) =>
+      !dialogueLineIndices.has(idx) &&
+      (
+        /^(?:[-*•+]\s*)?(?:(\[xX✓✔\]|[✓✔]|\*(?!\*))\s*)?(?:\*\*)?(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-Da-d\uFF21-\uFF24\uFF41-\uFF44](?:\*\*|[\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s])/.test(l) ||
+        /(?:^|[\s\t]+)[A\uFF21][\)\]）\.\:、\s].+?[\s\t]+[B\uFF22][\)\]）\.\:、\s]/i.test(l)
+      )
+    );
+  const isOpenEndedWriting = isWritingTask && !hasExplicitMcqLetters;
+
+  for (let i = 0; i < endIdxForOptions; i++) {
     if (dialogueLineIndices.has(i)) continue;
+    if (lastOptionAIdx !== -1 && i < lastOptionAIdx) continue;
+    if (isOpenEndedWriting) break;
     const line = lines[i];
+    const lineWithoutImg = line.replace(IMG_TAG_GLOBAL_REGEX, '').replace(CHINESE_BRACKET_IMG_GLOBAL_REGEX, '');
     // Check if single line contains multiple horizontal options (e.g. A. ... B. ... C. ... D. ... or 2x2 grid line 2: C. ... D. ...)
-    if (/(?:^|[\s\t]+|[。！？，；：,.!?;:\)\]）])(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s].+?[\s\t]+(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s]/i.test(line)) {
+    if (/(?:^|[\s\t]+|[。！？，；：,.!?;:\)\]）])(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s].+?[\s\t]+(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s]/i.test(lineWithoutImg)) {
       let m: RegExpExecArray | null;
       inlineOptionRegex.lastIndex = 0;
       while ((m = inlineOptionRegex.exec(line)) !== null) {
@@ -1180,10 +1568,11 @@ export function parseSingleQuestionBlock(
     }
   }
 
-  if (optionsMap.size < 2) {
+  if (!isOpenEndedWriting && optionsMap.size < 2) {
+    const preAnswerBlock = lines.slice(0, endIdxForOptions).join('\n');
     let match: RegExpExecArray | null;
     inlineOptionRegex.lastIndex = 0;
-    while ((match = inlineOptionRegex.exec(block)) !== null) {
+    while ((match = inlineOptionRegex.exec(preAnswerBlock)) !== null) {
       const leadingMark = match[1];
       const rawLabel = match[2];
       const optIdx = parseOptionLabelToIdx(rawLabel);
@@ -1219,16 +1608,29 @@ export function parseSingleQuestionBlock(
 
   const options: string[] = [];
   const optionsPinyin: string[] = [];
+  const optionsImages: string[] = [];
   const maxIdx = Math.max(...Array.from(optionsMap.keys()), 3);
   for (let i = 0; i <= maxIdx; i++) {
     if (optionsMap.has(i)) {
       const rawOpt = optionsMap.get(i)!;
-      const pMatch = rawOpt.match(/[\(\uff08\[\u3010]([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+)[\)\uff09\]\u3011]/);
-      const rawCleanOpt = rawOpt.replace(/[\(\uff08\[\u3010](?:[a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-]+|[√✓✔×✗xX对错ĐúngSaiTrueFalse正确错误])[\)\uff09\]\u3011]/g, '').trim();
-      const cleanOpt = (rawCleanOpt || rawOpt.replace(/^[\[\(【]\s*|\s*[\]\)】]$/g, ''))
+      // Extract [IMG: ...] tag before pinyin regex stripping
+      const imgExt = extractImageTag(rawOpt);
+      if (imgExt.imagePrompt) {
+        optionsImages[i] = imgExt.imagePrompt;
+      }
+      const optWithoutImg = imgExt.cleanText;
+      const pMatch = optWithoutImg.match(INLINE_PINYIN_PAREN_CAPTURE_RE);
+      const rawCleanOpt = optWithoutImg
+        .replace(INLINE_PINYIN_PAREN_STRIP_RE, '')
+        .replace(/[\(\uff08\[\u3010][√✓✔×✗xX对错ĐúngSaiTrueFalse正确错误]+[\)\uff09\]\u3011]/g, '')
+        .trim();
+      let cleanOpt = (rawCleanOpt || optWithoutImg.replace(/^[\[\(【]\s*|\s*[\]\)】]$/g, ''))
         .replace(/^[\-–—\/:：\.\s]+/, '')
         .replace(/[\-–—\/:：\s]+$/, '')
         .trim();
+      if (!cleanOpt && imgExt.imagePrompt) {
+        cleanOpt = String.fromCharCode(65 + i);
+      }
       options.push(cleanOpt);
       const optPinyin = pMatch ? pMatch[1].trim() : (cleanOpt && /[\u4e00-\u9fa5]/.test(cleanOpt) ? getPinyinPro(cleanOpt, { toneType: 'symbol' }) : '');
       optionsPinyin.push(optPinyin);
@@ -1283,26 +1685,31 @@ export function parseSingleQuestionBlock(
 
   // Fallback for True/False single question without A/B options
   if (
+    !isOpenEndedWriting &&
     options.length < 2 &&
-    (/(?:→|->)\s*\[\s*[√✓×✗对错]?\s*\]|\(\s*[√✓×✗对错]\s*\)|(?:Đáp án|Answer|答案)[:\s]*(?:√|✓|×|✗|对|错|Đúng|Sai|True|False)/i.test(block) ||
+    (/(?:→|->)\s*\[\s*[√✓×✗对错]?\s*\]|\(\s*[√✓×✗对错]\s*\)|(?:Đáp án|Answer|答案)[:\s]*(?:√|✓|×|✗|对|错|Đúng|Sai|True|False)/i.test(cleanedBlock) ||
       defaultPartType === 'read_true_false_2opt')
   ) {
     options.length = 0;
     options.push('对', '错');
     optionsPinyin.length = 0;
     optionsPinyin.push('duì', 'cuò');
-    const inlineTfMatch = block.match(/(?:→|->)?\s*[\[\(]\s*([√✓×✗对错])\s*[\]\)]/);
+    const inlineTfMatch = cleanedBlock.match(/(?:→|->)?\s*[\[\(]\s*([√✓×✗对错])\s*[\]\)]/);
     if (!hasExplicitAnswerKey && inlineTfMatch) {
       answerIdx = /^[√✓对]$/.test(inlineTfMatch[1]) ? 0 : 1;
       hasExplicitAnswerKey = true;
     }
   }
 
-  if (options.length < 2) {
+  if (options.length < 2 && !isOpenEndedWriting) {
     return null;
   }
 
-  if (answerIdx >= options.length || answerIdx < 0) {
+  if (options.length > 0) {
+    if (answerIdx >= options.length || answerIdx < 0) {
+      answerIdx = 0;
+    }
+  } else {
     answerIdx = 0;
   }
 
@@ -1323,13 +1730,22 @@ export function parseSingleQuestionBlock(
       }
       continue;
     }
-    const isOptionLine = (i > 0 || !/^(?:[-*•+]\s*)?[\(\[（]?[1-6][\.\:、\)\s]/.test(line)) && optionLineRegex.test(line);
+    const isCircledScrambledChunk = isWritingReorder && /^(?:[-*•+]\s*)?[\(\[（]?[①-⑥❶-❻]/.test(line);
+    const isOptionLine =
+      !isCircledScrambledChunk &&
+      (lastOptionAIdx !== -1 ? i >= lastOptionAIdx : (i > 0 || !/^(?:[-*•+]\s*)?[\(\[（]?[1-6][\.\:、\)\s]/.test(line))) &&
+      optionLineRegex.test(line);
     if (isOptionLine && !/[\u4e00-\u9fa5].+[\s\t]+(?:(?:Option|选项)\s*)?[\(\[（]?[A\uFF21][\)\]）\.\:、\/\uFF0E\uFF1A\s]/i.test(line)) break;
-    if (/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:\[ĐÁP_ÁN:|(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Correct\s*Answer|Answer|Ans|Key|正确答案|答案|=>|->)(?:\*{1,2})?[:：\s])/i.test(line)) break;
+    if (/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:\[ĐÁP_ÁN:|(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Correct\s*Answer|Answer|Ans|Key|正确答案|参考答案|答案|=>|->)(?:\*{1,2})?[:：\s])/i.test(line)) break;
     if (/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Giải\s*thích(?:\s*chi\s*tiết)?|Lời\s*giải|Explanation|Rationale|Phân\s*tích(?:\s*câu)?|Dịch\s*nghĩa|Tạm\s*dịch|Nghĩa(?:\s*của)?\s*câu|解析|Lý\s*do)(?:\*{1,2})?[:：\s]/i.test(line)) break;
     if (/^(?:[-*•+]\s*)?(?:\*{1,2})?(?:Pinyin|Phiên\s*âm)(?:\*{1,2})?[:：\s]/i.test(line)) break;
 
     // Feature 3: Stem & Header Sanitization
+    const imgExt = extractImageTag(line);
+    if (imgExt.imagePrompt && !extractedStemImageRequirement) {
+      extractedStemImageRequirement = imgExt.imagePrompt;
+    }
+
     // Strip inline answer leaks on stem line (e.g. `(Answer: A)`, `(Đáp án: B)`, `[Answer: C]`)
     const inlineAnswerLeakMatch = line.match(/\s*[\(\[]\s*(?:Đáp\s*án(?:\s*chính\s*xác|\s*đúng)?|Correct\s*Answer|Answer|Key|正确答案|答案)\s*[:：\s]*([A-Fa-f0-9\uFF21-\uFF26对错√×✓✗TrueFalseĐúngSai]+)\s*[)\]]/i);
     if (!hasExplicitAnswerKey && inlineAnswerLeakMatch) {
@@ -1344,6 +1760,7 @@ export function parseSingleQuestionBlock(
     let cleanedLine = line
       .replace(/^(?:[-*•+]\s*)?(?:###\s*)?(?:\*\*)?(?:[-*•+]\s*)?(?:(?:Câu|第|Question|Q|Bài)\s*\d+\s*(?:题|cau|câu)?[\.:\s、\)\]\*]*|[\(\[（]?(?:\d+|[Ⅰ-Ⅻ]|(?:I[XV]|V?I{1,3}|X{1,2}(?:I[XV]|V?I{0,3})?))[\.\:、\)\]）]\s*)(?:\*\*)?/i, '')
       .replace(/^(?:[-*•+]\s*)?(?:\*\*)?(?:Đề\s*bài|Câu\s*hỏi|Question|Stem)(?:\*\*)?[:：\s]*/i, '')
+      .replace(/^(?:#+\s*)?(?:[-*•+]\s*)?(?:\*{1,2})?(?:(?:Dạng|Loại|Mục|Subpart|Hình\s*thức)\s*\d*|(?:Nghe|Đọc|Viết)\s*\d+[A-Z]?)\s*(?:\([^\)]*\))?[:：\-\s].*$/i, '')
       .replace(/\s*\[ĐÁP_ÁN:[^\]]+\]/gi, '')
       .replace(/\s*[\(\[]\s*(?:Đáp\s*án(?:\s*chính\s*xác|\s*đúng)?|Correct\s*Answer|Answer|Key|正确答案|答案)\s*[:：\s]*[A-Fa-f0-9\uFF21-\uFF26对错√×✓✗TrueFalseĐúngSai]+\s*[)\]]/gi, '')
       .replace(/^\*\*/, '')
@@ -1359,6 +1776,8 @@ export function parseSingleQuestionBlock(
     }
     cleanedLine = cleanedLine
       .replace(/[\s\t]+(?:Đáp\s*án(?:\s*chính\s*xác\s*là|\s*đúng\s*là|\s*đúng|\s*là)?|Chọn\s*đáp\s*án|Correct\s*Answer|Answer|Ans|Key|Giải\s*thích|Lời\s*giải|Explanation|Dịch\s*nghĩa|Tạm\s*dịch|正确答案|答案|解析)[:：\s][\s\S]*$/i, '')
+      .replace(IMG_TAG_GLOBAL_REGEX, '')
+      .replace(CHINESE_BRACKET_IMG_GLOBAL_REGEX, '')
       .trim();
 
     if (cleanedLine) {
@@ -1375,28 +1794,40 @@ export function parseSingleQuestionBlock(
       .replace(/^(?:[-*•+]\s*)?(?:\*\*)?(?:Đề\s*bài|Câu\s*hỏi|Question|Stem)(?:\*\*)?[:：\s]*/i, '')
       .replace(/\s*\[ĐÁP_ÁN:[^\]]+\]/gi, '')
       .replace(/\s*[\(\[]\s*(?:Đáp\s*án(?:\s*chính\s*xác|\s*đúng)?|Correct\s*Answer|Answer|Key|正确答案|答案)\s*[:：\s]*[A-Fa-f0-9\uFF21-\uFF26对错√×✓✗TrueFalseĐúngSai]+\s*[)\]]/gi, '')
+      .replace(IMG_TAG_GLOBAL_REGEX, '')
+      .replace(CHINESE_BRACKET_IMG_GLOBAL_REGEX, '')
       .replace(/^\*\*/, '')
       .replace(/\*\*$/, '')
       .replace(/^[-*•+]\s*/, '')
       .trim();
   }
 
+  if (!stem && extractedStemImageRequirement) {
+    stem = extractedStemImageRequirement;
+  }
+
   if (!stem) return null;
 
   // Clean inline parenthesized and bracketed pinyin from stem if present (extract all matches containing Latin letters)
-  const stemPinyinMatches = Array.from(
-    stem.matchAll(/[\(\uff08\[\u3010](?=[^\)\uff09\]\u3011]*[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-_]+)[\)\uff09\]\u3011]/g)
-  );
+  const stemPinyinMatches = Array.from(stem.matchAll(STEM_PINYIN_MATCH_RE));
   const stemPinyinList = stemPinyinMatches
     .map((m) => m[1].trim())
     .filter((p) => Boolean(p) && !/^(?:please|select|choose|chọn|điền|note|hint)/i.test(p));
   stem = stem
-    .replace(/\s*[\(\uff08\[\u3010](?=[^\)\uff09\]\u3011]*[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ])([a-zA-Z0-9āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.\?!'’\-_]+)[\)\uff09\]\u3011]\s*/g, '')
+    .replace(IMG_TAG_GLOBAL_REGEX, '')
+    .replace(CHINESE_BRACKET_IMG_GLOBAL_REGEX, '')
+    .replace(STEM_PINYIN_STRIP_RE, '')
     .replace(/(?:→|->)\s*[\[\(]\s*[√✓×✗对错]?\s*[\]\)]|[\[\(]\s*[√✓×✗对错]\s*[\]\)]/g, '')
     .replace(/\s*[\(\[]\s*(?:Đáp\s*án(?:\s*chính\s*xác|\s*đúng)?|Correct\s*Answer|Answer|Key|正确答案|答案)\s*[:：\s]*[A-Fa-f0-9\uFF21-\uFF26对错√×✓✗TrueFalseĐúngSai]+\s*[)\]]/gi, '')
     .replace(/\s+([，。！？,.!?；;:])/g, '$1')
     .replace(/[ \t]+/g, ' ')
     .trim();
+
+  if (!stem && extractedStemImageRequirement) {
+    stem = extractedStemImageRequirement;
+  }
+
+  if (!stem) return null;
 
   if (/（[\s\u3000]*）|\([\s\u3000]*\)|\[[\s\u3000\.]*\]|【[\s\u3000\.]*】|[\(（]\s*_{1,}\s*[\)）]|\[\s*_{1,}\s*\]|_{2,}/.test(stem)) {
     stem = stem
@@ -1405,7 +1836,7 @@ export function parseSingleQuestionBlock(
   }
 
   // Auto-solve if no explicit answer key was provided
-  if (!hasExplicitAnswerKey) {
+  if (!hasExplicitAnswerKey && !isOpenEndedWriting) {
     if (options.length === 2 && options[0] === '对' && options[1] === '错') {
       const solvedTf = solveTrueFalseQuestion(stem, options);
       answerIdx = solvedTf.answer_idx;
@@ -1423,9 +1854,13 @@ export function parseSingleQuestionBlock(
 
   const correctOptionText = options[answerIdx] || '';
   if (!explanationVi) {
-    explanationVi = `Đáp án đúng là ${correctOptionText}, phù hợp ngữ pháp và ngữ cảnh HSK ${level}.`;
+    explanationVi = isOpenEndedWriting
+      ? `Đáp án đúng câu hỏi HSK ${level}.`
+      : `Đáp án đúng là ${correctOptionText}, phù hợp ngữ pháp và ngữ cảnh HSK ${level}.`;
   } else if (explanationVi.length < 10) {
-    explanationVi = `${explanationVi} — Đáp án đúng là ${correctOptionText} (HSK ${level}).`;
+    explanationVi = isOpenEndedWriting
+      ? `${explanationVi} (HSK ${level}).`
+      : `${explanationVi} — Đáp án đúng là ${correctOptionText} (HSK ${level}).`;
   }
 
   let pinyin = explicitPinyin;
@@ -1441,35 +1876,62 @@ export function parseSingleQuestionBlock(
     }
   }
 
-  let partType = defaultPartType;
+  let partType = isOpenEndedWriting
+    ? 'write_sentence_from_words'
+    : (skill === 'writing' && options.length === 4 ? 'write_sentence_reorder_4opt' : (isWritingReorder ? 'write_sentence_reorder_4opt' : defaultPartType));
   const hasDialogueSpeakerMarkers =
     stem.includes('男:') || stem.includes('女:') || stem.includes('男：') || stem.includes('女：') ||
-    stem.includes('问:') || stem.includes('问：') ||
-    /(?:^|\n)\s*(?:[A-B][:：]|男[:：]|女[:：]|问[:：])/.test(stem) ||
+    /(?:^|\n)\s*(?:[A-B][:：]|男[:：]|女[:：])/.test(stem) ||
     dialogueLineIndices.size > 0 ||
-    /(?:^|\n)\s*(?:男|女|问)[:：]/.test(block);
+    /(?:^|\n)\s*(?:男|女)[:：]/.test(cleanedBlock);
 
-  if (hasDialogueSpeakerMarkers) {
+  const hasExplicitChineseListeningMarkers =
+    stem.includes('男:') || stem.includes('女:') || stem.includes('男：') || stem.includes('女：') ||
+    /(?:^|\n)\s*(?:男|女)[:：]/.test(cleanedBlock) ||
+    /独白\/讲话录音内容[:：]/.test(cleanedBlock);
+
+  const hasExplicitReadingSkillInBlock = /kỹ năng:\s*(?:đọc|reading)|đọc hiểu|阅读/i.test(cleanedBlock);
+  const hasAbDialogueTurns =
+    dialogueLineIndices.size >= 2 ||
+    (dialogueLineIndices.size >= 1 && questionPromptIdx !== -1);
+
+  if (
+    ((hasExplicitChineseListeningMarkers || (hasAbDialogueTurns && !hasExplicitReadingSkillInBlock)) &&
+      !stem.includes('____') &&
+      skill !== 'writing' &&
+      !partType.startsWith('write_')) ||
+    (hasDialogueSpeakerMarkers && skill !== 'reading' && skill !== 'writing' && !partType.startsWith('read_') && !partType.startsWith('write_'))
+  ) {
     skill = 'listening';
   }
 
+  const hasOptionImages = optionsImages.filter(Boolean).length > 0;
+
   if (options.length === 2 && options[0] === '对' && options[1] === '错') {
     partType = skill === 'listening' ? 'listen_true_false_2opt' : 'read_true_false_2opt';
+  } else if (hasOptionImages && skill === 'listening') {
+    partType = options.length === 6 ? 'listen_dialogue_picture_match_6opt' : 'listen_picture_match_4opt';
+  } else if (hasOptionImages && skill === 'reading') {
+    partType = options.length === 6 ? 'read_sentence_picture_match_6opt' : 'read_sentence_picture_match_4opt';
   } else if (stem.includes('____')) {
     if (options.length === 4) {
       partType = 'read_fill_blank_4opt';
     } else if (options.length >= 3 && options.length <= 6) {
       partType = `read_fill_blank_word_bank_${options.length}opt`;
     }
+  } else if (skill === 'writing' && options.length === 4 && !isOpenEndedWriting) {
+    partType = 'write_sentence_reorder_4opt';
   } else {
     // Question does NOT have a blank placeholder (____)
-    if (stem.includes('★') && options.length === 3) {
-      partType = 'read_comprehension_short_3opt';
-    } else if (stem.includes('★') && options.length === 4) {
+    if ((stem.includes('★') || /(?:^|\n)\s*问[:：]/.test(stem)) && skill === 'reading') {
       partType = 'read_comprehension_4opt';
-    } else if (hasDialogueSpeakerMarkers && options.length === 3) {
-      partType = 'listen_dialogue_qa_3opt';
-    } else if (hasDialogueSpeakerMarkers && options.length === 4) {
+    } else if (stem.includes('★') && options.length >= 3) {
+      partType = 'read_comprehension_4opt';
+    } else if (extractedStemImageRequirement && skill === 'listening' && options.length === 4) {
+      partType = 'listen_short_dialogue_4opt';
+    } else if (hasDialogueSpeakerMarkers && options.length >= 3) {
+      partType = 'listen_dialogue_qa_4opt';
+    } else if (skill === 'listening' && options.length === 4) {
       partType = 'listen_dialogue_qa_4opt';
     } else if (/fill_blank|cloze/i.test(partType) && options.length >= 2 && options.length <= 6) {
       partType = `read_dialogue_matching_${options.length}opt`;
@@ -1478,7 +1940,7 @@ export function parseSingleQuestionBlock(
 
   let completedStem: string | undefined = undefined;
   if (stem.includes('____')) {
-    completedStem = stem.replace(/\s*____\s*/g, correctOptionText);
+    completedStem = substituteBlankPlaceholders(stem, correctOptionText);
   }
 
   const rawQuestion: any = {
@@ -1487,6 +1949,8 @@ export function parseSingleQuestionBlock(
     audio_text: skill === 'listening' ? stem : undefined,
     options,
     options_pinyin: optionsPinyin.length === options.length ? optionsPinyin : undefined,
+    illustration_theme: extractedStemImageRequirement || null,
+    options_images: optionsImages.filter(Boolean).length > 0 ? optionsImages : undefined,
     answer_idx: answerIdx,
     explanation_vi: explanationVi,
     explanation_summary_vi: explanationVi,
@@ -1501,5 +1965,18 @@ export function parseSingleQuestionBlock(
     is_imported: true,
   };
 
-  return normalizeQuestionAliases(rawQuestion, level, skill, false);
+  const normalized = normalizeQuestionAliases(rawQuestion, level, skill, false);
+  if (normalized) {
+    if (isOpenEndedWriting) {
+      normalized.options = [];
+    }
+    if (Array.isArray(normalized.options) && Array.isArray(options) && options.length === normalized.options.length) {
+      for (let i = 0; i < options.length; i++) {
+        if (/^[A-Za-z](?:\s*[-–—]\s*[A-Za-z])+$/.test(options[i])) {
+          normalized.options[i] = options[i];
+        }
+      }
+    }
+  }
+  return normalized;
 }

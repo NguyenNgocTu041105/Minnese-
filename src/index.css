@@ -67,12 +67,23 @@ body {
 }
 
 .font-chinese {
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', Roboto, system-ui, -apple-system, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Plus Jakarta Sans', 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.06em;
+  line-height: 1.85;
 }
 
 .font-serif-chinese,
 .font-serif {
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', Roboto, system-ui, -apple-system, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Plus Jakarta Sans', 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.05em;
+}
+
+/* Comfortable, airy Chinese reading typography for HSK stems, passages, and options */
+.hanzi-readable {
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Plus Jakarta Sans', system-ui, sans-serif;
+  letter-spacing: 0.085em;
+  line-height: 1.9;
+  word-spacing: 0.14em;
 }
 
 /* Custom silky modern scrollbars */

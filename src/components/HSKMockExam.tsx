@@ -3625,7 +3625,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-sm sm:text-base leading-relaxed text-slate-800 dark:text-slate-100 font-serif whitespace-pre-line select-text">
+                    <div className="hanzi-readable text-[15px] sm:text-[17px] text-slate-800 dark:text-slate-100 whitespace-pre-line select-text">
                       {passageContent}
                     </div>
                   </div>
@@ -3665,7 +3665,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                     )}
                     <div
                       data-testid="stem-hanzi"
-                      className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] leading-relaxed"
+                      className="hanzi-readable text-base sm:text-[19px] font-semibold text-[var(--color-text-primary)] whitespace-pre-line pt-0.5"
                     >
                       {displayStem}
                     </div>
@@ -3691,7 +3691,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
                         {(!isExamMode && (showAudioScript || checkedInfo)) && currentQuestion.audio_text ? (
                           <div className="p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-blue-200 dark:border-blue-800 space-y-0.5 animate-in fade-in">
-                            <div className="font-bold text-sm text-slate-800 dark:text-slate-100 font-serif">
+                            <div className="hanzi-readable font-medium text-[15px] text-slate-800 dark:text-slate-100 whitespace-pre-line">
                               {currentQuestion.audio_text}
                             </div>
                             {isQuestionPinyinAllowed && (
@@ -3791,7 +3791,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                                         {displayWordPinyin}
                                       </span>
                                     )}
-                                    <span className="text-sm sm:text-base font-bold font-serif leading-tight">
+                                    <span className="hanzi-readable text-base font-semibold leading-snug">
                                       {displayWord}
                                     </span>
                                   </>
@@ -4202,7 +4202,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                             handleSelectOption(currentQuestion.id, val);
                           }}
                           placeholder={`Nhập bài viết tự luận tiếng Hán chuẩn CTI của bạn tại đây (tối thiểu ${targetLength} chữ)...`}
-                          className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-[var(--color-surface)] text-[var(--color-text-primary)] text-sm leading-relaxed focus:outline-hidden focus:border-teal-500 font-serif shadow-xs"
+                          className="hanzi-readable w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-[var(--color-surface)] text-[var(--color-text-primary)] text-[15px] focus:outline-hidden focus:border-teal-500 shadow-xs"
                           data-testid="essay-draft-textarea"
                         />
                       </div>
@@ -4260,7 +4260,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                                   >
                                     {letter}
                                   </span>
-                                  <span className="text-xs sm:text-sm leading-relaxed flex-1">{optText}</span>
+                                  <span className="hanzi-readable text-sm flex-1">{optText}</span>
                                 </button>
                               );
                             })}
@@ -4404,7 +4404,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   currentQuestion.part_type &&
                   (currentQuestion.part_type.includes('word_bank') || currentQuestion.part_type.startsWith('read_fill_blank_word_bank'))
                 ) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2.5">
                     {(currentQuestion.options || []).map((optText, optIdx) => {
                       const letter = String.fromCharCode(65 + optIdx); // A, B, C, D
                       const isSelected = userAnswers[currentQuestion.id] === optIdx;
@@ -4433,10 +4433,10 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                           data-option-index={optIdx}
                           aria-label={`Phương án ${letter}: ${optText}`}
                           onClick={() => handleSelectOption(currentQuestion.id, optIdx)}
-                          className={`relative p-3.5 sm:p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${optionColor}`}
+                          className={`relative p-4 sm:p-4.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${optionColor}`}
                         >
                           <span
-                            className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                            className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 mt-1 ${
                               isSelected
                                 ? 'bg-teal-600 text-white'
                                 : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -4445,7 +4445,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                             {letter}
                           </span>
 
-                          <div className="space-y-0.5 flex-1 min-w-0">
+                          <div className="space-y-1 flex-1 min-w-0">
                             {(() => {
                               const { hanzi: cleanOpt, pinyin: inlineOptPinyin } = splitHanziAndPinyin(optText);
                               const displayOptPinyin = currentQuestion.options_pinyin?.[optIdx] || inlineOptPinyin || getSentencePinyin(cleanOpt.replace(/^[A-Z]\.\s*/, ''));
@@ -4456,14 +4456,14 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                                   {isQuestionPinyinAllowed && (
                                     <div
                                       data-testid={`option-pinyin-${letter.toLowerCase()}`}
-                                      className="font-mono text-[11px] text-teal-600 dark:text-teal-400 select-none"
+                                      className="font-mono text-[11px] text-teal-600 dark:text-teal-400 tracking-wide select-none"
                                     >
                                       {displayOptPinyin}
                                     </div>
                                   )}
                                   <span
                                     data-testid={`option-hanzi-${letter.toLowerCase()}`}
-                                    className="text-sm sm:text-base font-medium break-words block"
+                                    className="hanzi-readable text-[15px] sm:text-base font-normal break-words block"
                                   >
                                     {displayOptText}
                                   </span>
@@ -5313,7 +5313,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                                   {getSentencePinyin(trimmed)}
                                 </div>
                               )}
-                              <div className="text-sm sm:text-base font-semibold font-serif leading-relaxed">
+                              <div className="hanzi-readable text-[15px] sm:text-base font-medium">
                                 {trimmed}
                               </div>
                             </div>

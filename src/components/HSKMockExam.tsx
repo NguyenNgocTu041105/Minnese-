@@ -38,6 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   Lightbulb,
+  Target,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -571,6 +572,7 @@ export interface LoadExamSessionOptions {
   level: number;
   mode: 'mock' | 'practice';
   skill?: string;
+  difficulty?: 'all' | 'easy' | 'medium' | 'hard';
   count?: number;
   strict?: boolean;
   strictQbankOnly?: boolean;
@@ -624,6 +626,7 @@ export async function fetchExamSessionFromBackend(
       ? {
           level,
           mode: 'mock',
+          ...(options.difficulty && options.difficulty !== 'all' ? { difficulty: options.difficulty } : {}),
           ...(options.strict !== undefined ? { strictBlueprint: options.strict } : {}),
           ...(options.allowFixtures !== undefined ? { allowFixtures: isExplicitFixtureRequest } : {}),
         }
@@ -810,6 +813,52 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   const effectiveInitialLevel = customExamData?.level ?? directUrlLevel ?? initialLevel;
 
   const [selectedLevel, setSelectedLevel] = useState<number>(effectiveInitialLevel);
+
+  // Tiered Official Exam Catalog (Easy → Medium → Hard) for Student Hall View
+  interface OfficialCatalogItem {
+    id: string;
+    title: string;
+    level: number;
+    sourceLabel: string;
+    timeLimitMinutes: number;
+    questionCount: number;
+    difficultyTier: 'easy' | 'medium' | 'hard';
+    difficultyScore: number;
+    difficultyLabelVi: string;
+    difficultyMetrics?: {
+      avgStemHanzi?: number;
+      avgOptionHanzi?: number;
+      uniqueHanziCount?: number;
+      longPassageCount?: number;
+    } | null;
+  }
+  const [examCatalog, setExamCatalog] = useState<OfficialCatalogItem[]>([]);
+  const [catalogSummary, setCatalogSummary] = useState<
+    Record<number, { total: number; easy: number; medium: number; hard: number }>
+  >({});
+  const [catalogLoading, setCatalogLoading] = useState<boolean>(false);
+  const [catalogLevel, setCatalogLevel] = useState<number>(effectiveInitialLevel || 4);
+  const [catalogDifficulty, setCatalogDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+  const [mockDifficulty, setMockDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
+    fetch('/api/exam/catalog')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.success) return;
+        setExamCatalog(Array.isArray(data.sets) ? data.sets : []);
+        setCatalogSummary(data.summaryByLevel || {});
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (customExamData?.level) {
@@ -1198,7 +1247,15 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
       level: number,
       mode: 'mock' | 'practice',
       skill?: string,
-      options?: { count?: number; force?: boolean; strict?: boolean; strictQbankOnly?: boolean; allowFixtures?: boolean; isFixtureDemo?: boolean }
+      options?: {
+        count?: number;
+        difficulty?: 'all' | 'easy' | 'medium' | 'hard';
+        force?: boolean;
+        strict?: boolean;
+        strictQbankOnly?: boolean;
+        allowFixtures?: boolean;
+        isFixtureDemo?: boolean;
+      }
     ) => {
       // 1. Debounce duplicate clicks on exact same session while in flight
       const requestKey = `${mode}_${level}_${skill || 'all'}`;
@@ -1279,6 +1336,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
           level,
           mode,
           skill,
+          difficulty: options?.difficulty,
           count: options?.count || 15,
           strict: options?.strict,
           strictQbankOnly: options?.strictQbankOnly,
@@ -1368,12 +1426,93 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
     };
   }, [initialMode, effectiveInitialLevel, initialSkill, loadExamSession, customExamData]);
 
-  // Mode 1: 1-Click Mock Exam Assembly
+  // Mode 1: 1-Click Mock Exam Assembly (respects chosen difficulty tier)
   const handleStartMockExam = useCallback(
-    (level: number) => {
-      return loadExamSession(level, 'mock');
+    (level: number, difficultyOverride?: 'all' | 'easy' | 'medium' | 'hard') => {
+      const diff = difficultyOverride ?? mockDifficulty;
+      return loadExamSession(level, 'mock', undefined, { difficulty: diff });
     },
-    [loadExamSession]
+    [loadExamSession, mockDifficulty]
+  );
+
+  // Launch a specific curated Official Exam Set from the Tiered Catalog
+  const handleStartOfficialSet = useCallback(
+    async (
+      examSet: {
+        id: string;
+        title: string;
+        level: number;
+        timeLimitMinutes: number;
+        difficultyLabelVi?: string;
+      },
+      mode: 'mock' | 'practice' = 'mock'
+    ) => {
+      try {
+        stopChineseAudio();
+      } catch {}
+      setIsPlayingAudio(false);
+      setIsLoadingSession(true);
+      setSubmitError(null);
+      setSelectedLevel(examSet.level);
+      setSelectedSkill('all');
+      setQuestions([]);
+      setCurrentIndex(0);
+      setUserAnswers({});
+      setFlaggedQuestions({});
+      setAudioPlayCounts({});
+      setPracticeChecked({});
+      setShowAudioScript(false);
+      setEssayDrafts({});
+      setSentenceOrderSlots({});
+      setIsSubmitting(false);
+      setScoreResult(null);
+      setIsShortage(false);
+
+      const durationMins = examSet.timeLimitMinutes || getExamDurationMinutes(examSet.level);
+      if (mode === 'mock') {
+        setExamDurationSeconds(durationMins * 60);
+        setTimeLeftSeconds(durationMins * 60);
+      } else {
+        setExamDurationSeconds(0);
+        setTimeLeftSeconds(0);
+      }
+
+      if (examSet.level >= 3) {
+        setShowPinyin(false);
+      } else {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY_PINYIN_TOGGLE);
+          setShowPinyin(saved !== null ? saved === 'true' : true);
+        } catch {
+          setShowPinyin(true);
+        }
+      }
+
+      setCurrentView(mode === 'mock' ? 'exam' : 'practice');
+
+      try {
+        const res = await fetch('/api/exam/start-set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ examSetId: examSet.id, mode }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.success || !Array.isArray(data.questions)) {
+          throw new Error(data?.error || 'Không thể mở bộ đề thi này.');
+        }
+        setQuestions(data.questions);
+        setActiveSessionId(data.sessionId);
+        setDataSource('api');
+        setFallbackNotice(
+          `${examSet.title}${examSet.difficultyLabelVi ? ` • Mức độ: ${examSet.difficultyLabelVi}` : ''}`
+        );
+      } catch (err: any) {
+        setSubmitError(err?.message || 'Không thể tải bộ đề thi.');
+      } finally {
+        setIsLoadingSession(false);
+      }
+    },
+    []
   );
 
   // Mode 2: Practice Mode Assembly
@@ -2416,7 +2555,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
 
         {/* 1-Click Mock Exam Selection Deck */}
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center">
@@ -2425,15 +2564,43 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                 <span>Chế độ 1: Thi Thử HSK Chuẩn 1-Click (Full Mock Exam)</span>
               </h3>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                Chọn cấp độ để vào ngay phòng thi mô phỏng đề thi thật — Tự động tính số câu, thời gian, không cần nhập thủ công.
+                Chọn mức độ phù hợp trước khi bấm vào thi để không bị "ngợp" ngay từ đề đầu tiên.
               </p>
+            </div>
+
+            {/* Difficulty Preference Selector for 1-Click Mock */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-[var(--color-text-secondary)] mr-1">
+                Mức độ ưu tiên:
+              </span>
+              {[
+                { key: 'all', label: 'Ngẫu nhiên', active: 'bg-slate-700 text-white' },
+                { key: 'easy', label: '🟢 Khởi động', active: 'bg-emerald-600 text-white' },
+                { key: 'medium', label: '🟡 Chuẩn thi', active: 'bg-amber-600 text-white' },
+                { key: 'hard', label: '🔴 Thử thách', active: 'bg-rose-600 text-white' },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  data-testid={`mock-difficulty-${opt.key}`}
+                  onClick={() => setMockDifficulty(opt.key as any)}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer transition-all ${
+                    mockDifficulty === opt.key
+                      ? `${opt.active} shadow-xs`
+                      : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-teal-400'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 pt-2">
-            {[1, 2, 3, 4, 5].map((lvl) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-2">
+            {[1, 2, 3, 4, 5, 6].map((lvl) => {
               const bp = blueprints[lvl] || HSK_BLUEPRINT_SUMMARIES[lvl];
               const isRecommended = lvl === 1;
+              const sum = catalogSummary[lvl];
 
               return (
                 <div
@@ -2467,12 +2634,19 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Award className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Điểm đạt: {bp.pass_score}/{bp.max_score} (60%)</span>
+                        <span>Đạt: {bp.pass_score}/{bp.max_score}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-[11px]">
                         <Volume2 className="w-3.5 h-3.5 text-blue-500" />
-                        <span>Audio: {bp.audio_playback} lượt nghe</span>
+                        <span>Audio: {bp.audio_playback} lượt</span>
                       </div>
+                      {sum && sum.total > 0 && (
+                        <div className="pt-1 flex items-center gap-1 text-[10px] font-semibold">
+                          <span className="text-emerald-600 dark:text-emerald-400">🟢{sum.easy}</span>
+                          <span className="text-amber-600 dark:text-amber-400">🟡{sum.medium}</span>
+                          <span className="text-rose-600 dark:text-rose-400">🔴{sum.hard}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2488,6 +2662,190 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
               );
             })}
           </div>
+        </div>
+
+        {/* Tiered Official Exam Library (Easy → Medium → Hard) */}
+        <div
+          className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-6 shadow-sm space-y-4"
+          data-testid="tiered-official-exam-catalog"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <Target className="w-4 h-4" />
+                </div>
+                <span>Thư Viện Bộ Đề HSK 3.0 Theo Lộ Trình Độ Khó (Dễ → Khó)</span>
+              </h3>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                Mỗi đề được chấm chỉ số độ khó thực tế (độ dài bài đọc, mật độ chữ Hán, câu hỏi nâng cao) và xếp từ <strong>Khởi động</strong> đến <strong>Thử thách</strong> để bạn tăng trình dần không bị nản.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 text-xs font-bold self-start sm:self-auto">
+              {examCatalog.length} bộ đề chuẩn
+            </span>
+          </div>
+
+          {/* Level Tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[1, 2, 3, 4, 5, 6].map((lvl) => {
+              const cnt = catalogSummary[lvl]?.total ?? examCatalog.filter((s) => s.level === lvl).length;
+              return (
+                <button
+                  key={lvl}
+                  type="button"
+                  data-testid={`catalog-level-tab-${lvl}`}
+                  onClick={() => setCatalogLevel(lvl)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    catalogLevel === lvl
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-teal-400'
+                  }`}
+                >
+                  <span>HSK {lvl}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-md text-[10px] ${
+                      catalogLevel === lvl ? 'bg-white/20 text-white' : 'bg-[var(--color-surface)]'
+                    }`}
+                  >
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Difficulty Filter Bar + Progression Tip */}
+          {(() => {
+            const levelSets = examCatalog.filter((s) => s.level === catalogLevel);
+            const easyCnt = levelSets.filter((s) => s.difficultyTier === 'easy').length;
+            const medCnt = levelSets.filter((s) => s.difficultyTier === 'medium').length;
+            const hardCnt = levelSets.filter((s) => s.difficultyTier === 'hard').length;
+            const visibleCatalog = levelSets.filter(
+              (s) => catalogDifficulty === 'all' || s.difficultyTier === catalogDifficulty
+            );
+
+            return (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { key: 'all', label: `Tất cả (${levelSets.length})`, active: 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' },
+                    { key: 'easy', label: `🟢 Khởi động / Vừa sức (${easyCnt})`, active: 'bg-emerald-600 text-white' },
+                    { key: 'medium', label: `🟡 Chuẩn thi thật (${medCnt})`, active: 'bg-amber-600 text-white' },
+                    { key: 'hard', label: `🔴 Thử thách / Khó (${hardCnt})`, active: 'bg-rose-600 text-white' },
+                  ].map((pill) => (
+                    <button
+                      key={pill.key}
+                      type="button"
+                      data-testid={`catalog-diff-${pill.key}`}
+                      onClick={() => setCatalogDifficulty(pill.key as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        catalogDifficulty === pill.key
+                          ? `${pill.active} shadow-xs`
+                          : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-slate-400'
+                      }`}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="px-3.5 py-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/50 text-xs text-emerald-900 dark:text-emerald-200">
+                  💡 <strong>Gợi ý lộ trình HSK {catalogLevel}:</strong> Mới bắt đầu nên làm các đề <strong>🟢 Khởi động</strong> ở đầu danh sách để nắm chắc nền và giữ tinh thần thoải mái, sau đó chuyển sang <strong>🟡 Chuẩn thi</strong> và chinh phục <strong>🔴 Thử thách</strong>.
+                </div>
+
+                {catalogLoading ? (
+                  <div className="p-8 text-center text-xs text-[var(--color-text-secondary)]">
+                    Đang tải danh sách bộ đề chuẩn HSK {catalogLevel}...
+                  </div>
+                ) : visibleCatalog.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-[var(--color-text-secondary)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                    Chưa có bộ đề ở bộ lọc này. Hãy chọn "Tất cả".
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[520px] overflow-y-auto pr-1">
+                    {visibleCatalog.map((item, idx) => {
+                      const tierUi =
+                        item.difficultyTier === 'easy'
+                          ? {
+                              badge: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                              bar: 'bg-emerald-500',
+                              label: '🟢 Khởi động',
+                            }
+                          : item.difficultyTier === 'hard'
+                          ? {
+                              badge: 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30',
+                              bar: 'bg-rose-500',
+                              label: '🔴 Thử thách',
+                            }
+                          : {
+                              badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30',
+                              bar: 'bg-amber-500',
+                              label: '🟡 Chuẩn thi',
+                            };
+
+                      return (
+                        <div
+                          key={item.id}
+                          data-testid={`catalog-card-${item.id}`}
+                          className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] hover:border-teal-400/70 transition-all flex flex-col justify-between gap-3"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${tierUi.badge}`}>
+                                {tierUi.label} • {item.difficultyScore}/100
+                              </span>
+                              <span className="text-[11px] font-mono text-[var(--color-text-secondary)]">
+                                #{idx + 1} • {item.questionCount} câu • {item.timeLimitMinutes}p
+                              </span>
+                            </div>
+
+                            <h4 className="text-xs sm:text-sm font-bold text-[var(--color-text-primary)] line-clamp-2" title={item.title}>
+                              {item.title}
+                            </h4>
+
+                            <div className="space-y-1">
+                              <div className="w-full h-1.5 rounded-full bg-[var(--color-surface)] overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${tierUi.bar}`}
+                                  style={{ width: `${Math.max(12, Math.min(100, item.difficultyScore))}%` }}
+                                />
+                              </div>
+                              {item.difficultyMetrics?.uniqueHanziCount && (
+                                <div className="flex items-center justify-between text-[10px] text-[var(--color-text-secondary)]">
+                                  <span>Phạm vi: ~{item.difficultyMetrics.uniqueHanziCount} chữ Hán</span>
+                                  <span>TB {item.difficultyMetrics.avgStemHanzi} chữ/câu</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border)]">
+                            <button
+                              type="button"
+                              onClick={() => handleStartOfficialSet(item, 'mock')}
+                              className="flex-1 py-1.5 px-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <Zap className="w-3.5 h-3.5" />
+                              <span>Thi bấm giờ</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStartOfficialSet(item, 'practice')}
+                              className="py-1.5 px-2.5 rounded-xl bg-[var(--color-surface)] hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs font-bold cursor-pointer transition-colors"
+                              title="Làm từng câu không giới hạn thời gian, xem đáp án & giải thích ngay"
+                            >
+                              Luyện tự do
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Practice Mode Selection Deck */}

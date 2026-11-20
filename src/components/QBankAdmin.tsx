@@ -821,6 +821,9 @@ export const QBankAdmin: React.FC = () => {
 
   // Milestone M5: Custom Exam Sets ("Kho Đề Của Tôi") & Instant CBT Mode state
   const [customExamSets, setCustomExamSets] = useState<CustomExamSet[]>(() => loadCustomExamSets());
+  const [customExamFilterLevel, setCustomExamFilterLevel] = useState<string>('all');
+  const [customExamFilterDifficulty, setCustomExamFilterDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+  const [customExamSortMode, setCustomExamSortMode] = useState<'easiest' | 'hardest' | 'newest'>('easiest');
   const [customExamTitleInput, setCustomExamTitleInput] = useState<string>('');
   const [activeCbtExamSet, setActiveCbtExamSet] = useState<CustomExamSet | null>(null);
   const [showExtractedRawText, setShowExtractedRawText] = useState<boolean>(false);
@@ -7511,44 +7514,177 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
               className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-4"
               data-testid="custom-exam-sets-panel"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-[var(--color-primary)]" />
-                    <span>Kho Đề Của Tôi ({customExamSets.length} bộ đề đã lưu)</span>
-                  </h3>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    Các bộ đề bạn nhập từ AI, Excel, Word hoặc PDF và lưu lại để thi thử trên máy (Instant CBT) hoặc tải về bất cứ lúc nào.
-                  </p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[var(--color-primary)]" />
+                      <span>Kho Đề Của Tôi ({customExamSets.length} bộ đề đã lưu • Đã phân bậc độ khó)</span>
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      Tự động đánh giá & sắp xếp từ <strong>Khởi động (Dễ)</strong> → <strong>Chuẩn thi (Vừa phải)</strong> → <strong>Thử thách (Khó)</strong> theo độ dài đoạn văn & mật độ từ vựng.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-[var(--color-text-secondary)] font-semibold">Sắp xếp:</span>
+                    <select
+                      value={customExamSortMode}
+                      onChange={(e) => setCustomExamSortMode(e.target.value as any)}
+                      className="px-2.5 py-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs font-semibold cursor-pointer"
+                    >
+                      <option value="easiest">Dễ → Khó (Khuyên dùng)</option>
+                      <option value="hardest">Khó → Dễ</option>
+                      <option value="newest">Mới tạo nhất</option>
+                    </select>
+                  </div>
                 </div>
+
+                {/* Level & Difficulty Filter Bar */}
+                {customExamSets.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[var(--color-border)]/60">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {['all', '1', '2', '3', '4', '5', '6'].map((lvl) => {
+                        const cnt =
+                          lvl === 'all'
+                            ? customExamSets.length
+                            : customExamSets.filter((s) => String(s.level) === lvl).length;
+                        if (lvl !== 'all' && cnt === 0) return null;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => setCustomExamFilterLevel(lvl)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                              customExamFilterLevel === lvl
+                                ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                                : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/50'
+                            }`}
+                          >
+                            {lvl === 'all' ? `Tất cả (${cnt})` : `HSK ${lvl} (${cnt})`}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        { key: 'all', label: 'Mọi độ khó', activeCls: 'bg-slate-700 text-white' },
+                        { key: 'easy', label: '🟢 Khởi động', activeCls: 'bg-emerald-600 text-white' },
+                        { key: 'medium', label: '🟡 Chuẩn thi', activeCls: 'bg-amber-600 text-white' },
+                        { key: 'hard', label: '🔴 Thử thách', activeCls: 'bg-rose-600 text-white' },
+                      ].map((tier) => {
+                        const basePool =
+                          customExamFilterLevel === 'all'
+                            ? customExamSets
+                            : customExamSets.filter((s) => String(s.level) === customExamFilterLevel);
+                        const cnt =
+                          tier.key === 'all'
+                            ? basePool.length
+                            : basePool.filter((s) => (s.difficultyTier || 'medium') === tier.key).length;
+                        return (
+                          <button
+                            key={tier.key}
+                            type="button"
+                            onClick={() => setCustomExamFilterDifficulty(tier.key as any)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                              customExamFilterDifficulty === tier.key
+                                ? `${tier.activeCls} shadow-xs`
+                                : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-slate-400'
+                            }`}
+                          >
+                            {tier.label} ({cnt})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {customExamSets.length === 0 ? (
                 <div className="p-6 rounded-2xl bg-[var(--color-background)] border border-dashed border-[var(--color-border)] text-center text-xs text-[var(--color-text-secondary)]">
                   Chưa có bộ đề nào trong Kho Đề Của Tôi. Hãy dán đề hoặc tải file lên phía trên, sau đó bấm <strong>"💾 Lưu vào Kho Đề Của Tôi"</strong> hoặc <strong>"🖥️ Thi thử ngay trên máy"</strong>.
                 </div>
-              ) : (
+              ) : (() => {
+                const tierRank = (t?: string) => (t === 'easy' ? 1 : t === 'hard' ? 3 : 2);
+                const visibleSets = customExamSets
+                  .filter((s) => customExamFilterLevel === 'all' || String(s.level) === customExamFilterLevel)
+                  .filter((s) => customExamFilterDifficulty === 'all' || (s.difficultyTier || 'medium') === customExamFilterDifficulty)
+                  .sort((a, b) => {
+                    if (customExamSortMode === 'newest') {
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    }
+                    if (a.level !== b.level) return a.level - b.level;
+                    const rankDiff = tierRank(a.difficultyTier) - tierRank(b.difficultyTier);
+                    const scoreDiff = (a.difficultyScore ?? 50) - (b.difficultyScore ?? 50);
+                    return customExamSortMode === 'hardest'
+                      ? -(rankDiff !== 0 ? rankDiff : scoreDiff)
+                      : rankDiff !== 0
+                      ? rankDiff
+                      : scoreDiff;
+                  });
+
+                if (visibleSets.length === 0) {
+                  return (
+                    <div className="p-5 rounded-2xl bg-[var(--color-background)] border border-dashed border-[var(--color-border)] text-center text-xs text-[var(--color-text-secondary)]">
+                      Không có bộ đề nào khớp bộ lọc hiện tại. Hãy chọn "Mọi độ khó" hoặc cấp độ khác.
+                    </div>
+                  );
+                }
+
+                return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {customExamSets.map((examSet) => (
+                  {visibleSets.map((examSet) => {
+                    const tier = examSet.difficultyTier || 'medium';
+                    const score = examSet.difficultyScore ?? 50;
+                    const tierStyle =
+                      tier === 'easy'
+                        ? {
+                            badge: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                            bar: 'bg-emerald-500',
+                            label: '🟢 Khởi động',
+                          }
+                        : tier === 'hard'
+                        ? {
+                            badge: 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30',
+                            bar: 'bg-rose-500',
+                            label: '🔴 Thử thách',
+                          }
+                        : {
+                            badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30',
+                            bar: 'bg-amber-500',
+                            label: '🟡 Chuẩn thi',
+                          };
+                    return (
                     <div
                       key={examSet.id}
                       data-testid={`custom-exam-card-${examSet.id}`}
                       className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex flex-col justify-between gap-3 hover:border-[var(--color-primary)]/40 transition-all"
                     >
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-                            HSK {examSet.level}
-                          </span>
+                        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                              HSK {examSet.level}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${tierStyle.badge}`}>
+                              {tierStyle.label} • {score}/100
+                            </span>
+                          </div>
                           <span className="text-[11px] text-[var(--color-text-secondary)]">
                             {examSet.questions.length} câu • {examSet.timeLimitMinutes} phút
                           </span>
                         </div>
-                        <h4 className="text-sm font-bold text-[var(--color-text-primary)] line-clamp-1">
+                        <h4 className="text-sm font-bold text-[var(--color-text-primary)] line-clamp-2" title={examSet.title}>
                           {examSet.title}
                         </h4>
+                        <div className="w-full h-1.5 rounded-full bg-[var(--color-surface)] overflow-hidden">
+                          <div className={`h-full rounded-full ${tierStyle.bar}`} style={{ width: `${Math.max(10, Math.min(100, score))}%` }} />
+                        </div>
                         <p className="text-[11px] text-[var(--color-text-secondary)]">
-                          Nguồn: {examSet.sourceLabel} • {new Date(examSet.createdAt).toLocaleDateString('vi-VN')}
+                          {examSet.difficultyMetrics?.uniqueHanziCount
+                            ? `~${examSet.difficultyMetrics.uniqueHanziCount} chữ Hán • TB ${examSet.difficultyMetrics.avgStemHanzi} chữ/câu`
+                            : `Nguồn: ${examSet.sourceLabel}`}
                         </p>
                       </div>
 
@@ -7602,9 +7738,11 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         </button>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
-              )}
+                );
+              })()}
             </div>
           </section>
         )}

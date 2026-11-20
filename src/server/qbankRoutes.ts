@@ -33,6 +33,13 @@ import { describeValidationIssue, summarizeCandidateIssues } from './llm/validat
 import { writeValidationDiagnosticArtifact } from './llm/validationArtifact.js';
 import { isFirebaseAdminConfigured, verifyFirebaseAdminIdToken } from './firebaseAdminAuth.js';
 import {
+  DIFFICULTY_LABELS_VI,
+  DIFFICULTY_TIER_ORDER,
+  ExamDifficultyTier,
+  evaluateLevelCohortDifficulty,
+  evaluateSingleExamDifficulty,
+} from './utils/examDifficultyEvaluator.js';
+import {
   syncApprovedQuestion,
   syncApprovedQuestionToPool,
   ensureEligiblePoolSchema,
@@ -601,9 +608,25 @@ export function ensurePendingSchema(db?: DatabaseSync): void {
       time_limit_minutes INTEGER NOT NULL DEFAULT 40,
       question_count INTEGER NOT NULL DEFAULT 0,
       questions_json TEXT NOT NULL,
+      difficulty_tier TEXT,
+      difficulty_score REAL,
+      difficulty_metrics TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    const cesCols = (targetDb.prepare('PRAGMA table_info(custom_exam_sets)').all() as any[]).map((c) => c.name);
+    if (!cesCols.includes('difficulty_tier')) {
+      targetDb.exec('ALTER TABLE custom_exam_sets ADD COLUMN difficulty_tier TEXT;');
+    }
+    if (!cesCols.includes('difficulty_score')) {
+      targetDb.exec('ALTER TABLE custom_exam_sets ADD COLUMN difficulty_score REAL;');
+    }
+    if (!cesCols.includes('difficulty_metrics')) {
+      targetDb.exec('ALTER TABLE custom_exam_sets ADD COLUMN difficulty_metrics TEXT;');
+    }
+  } catch {}
 
   try {
     const runCols = (targetDb.prepare('PRAGMA table_info(generation_runs)').all() as any[]).map((c) => c.name);
@@ -770,8 +793,11 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
     const existingApprovedCount = Number(
       (db.prepare("SELECT COUNT(*) as c FROM questions WHERE status = 'approved'").get() as any)?.c || 0
     );
-    // Fast skip when local DB already holds the full bundled bank
-    if (existingSetCount >= 92 && existingApprovedCount >= 6400) return;
+    const untieredCount = Number(
+      (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets WHERE difficulty_tier IS NULL OR difficulty_score IS NULL').get() as any)?.c || 0
+    );
+    // Fast skip when local DB already holds the full bundled bank AND all sets are tiered
+    if (existingSetCount >= 102 && existingApprovedCount >= 7100 && untieredCount === 0) return;
 
     const raw = zlib.gunzipSync(fs.readFileSync(seedPath)).toString('utf-8');
     const parsed = JSON.parse(raw) as { sets?: any[]; qs?: any[] };
@@ -781,8 +807,16 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
 
     const insertSet = db.prepare(`
       INSERT OR IGNORE INTO custom_exam_sets (
-        id, title, level, source, source_label, time_limit_minutes, question_count, questions_json, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, title, level, source, source_label, time_limit_minutes, question_count, questions_json,
+        difficulty_tier, difficulty_score, difficulty_metrics, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const updateSetTier = db.prepare(`
+      UPDATE custom_exam_sets
+      SET difficulty_tier = COALESCE(difficulty_tier, ?),
+          difficulty_score = COALESCE(difficulty_score, ?),
+          difficulty_metrics = COALESCE(difficulty_metrics, ?)
+      WHERE id = ?
     `);
     const insertApproved = db.prepare(`
       INSERT OR IGNORE INTO questions (
@@ -812,8 +846,14 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
           s.time_limit_minutes || 60,
           s.question_count || 0,
           s.questions_json || '[]',
+          s.difficulty_tier || null,
+          typeof s.difficulty_score === 'number' ? s.difficulty_score : null,
+          s.difficulty_metrics || null,
           s.created_at || new Date().toISOString()
         );
+        if (s.difficulty_tier && typeof s.difficulty_score === 'number') {
+          updateSetTier.run(s.difficulty_tier, s.difficulty_score, s.difficulty_metrics || null, s.id);
+        }
       }
       for (const q of qs) {
         const cHash =
@@ -1936,27 +1976,106 @@ function saveDirectApprovedImportQuestion(
   } catch {}
 }
 
+export function recalculateAllExamSetDifficulties(db: DatabaseSync): void {
+  ensurePendingSchema(db);
+  const rows = db.prepare('SELECT id, level, questions_json FROM custom_exam_sets').all() as any[];
+  if (rows.length === 0) return;
+
+  const byLevel = new Map<number, Array<{ id: string; level: number; questions: any[] }>>();
+  for (const r of rows) {
+    const level = Math.min(6, Math.max(1, Number(r.level) || 1));
+    let questions: any[] = [];
+    try {
+      questions = JSON.parse(r.questions_json || '[]');
+    } catch {}
+    if (!byLevel.has(level)) byLevel.set(level, []);
+    byLevel.get(level)!.push({ id: r.id, level, questions });
+  }
+
+  const updateStmt = db.prepare(`
+    UPDATE custom_exam_sets
+    SET difficulty_tier = ?, difficulty_score = ?, difficulty_metrics = ?
+    WHERE id = ?
+  `);
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    for (const [, setsInLevel] of byLevel.entries()) {
+      const evaluated = evaluateLevelCohortDifficulty(setsInLevel);
+      for (const [setId, ev] of evaluated.entries()) {
+        updateStmt.run(ev.difficultyTier, ev.difficultyScore, JSON.stringify(ev.difficultyMetrics), setId);
+      }
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {}
+    throw err;
+  }
+}
+
 export function listCustomExamSetRecords(db: DatabaseSync): any[] {
   try {
     ensurePendingSchema(db);
-    const rows = db.prepare('SELECT * FROM custom_exam_sets ORDER BY created_at DESC, rowid DESC').all() as any[];
-    return rows.map((r) => {
+    const untiered = Number(
+      (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets WHERE difficulty_tier IS NULL OR difficulty_score IS NULL').get() as any)?.c || 0
+    );
+    if (untiered > 0) {
+      try {
+        recalculateAllExamSetDifficulties(db);
+      } catch {}
+    }
+
+    const rows = db.prepare('SELECT * FROM custom_exam_sets ORDER BY level ASC, COALESCE(difficulty_score, 50) ASC, id ASC').all() as any[];
+    const mapped = rows.map((r) => {
       let questions: any[] = [];
       try {
         questions = JSON.parse(r.questions_json || '[]');
       } catch {}
+      const level = Number(r.level) || 1;
+      let difficultyTier: ExamDifficultyTier =
+        r.difficulty_tier === 'easy' || r.difficulty_tier === 'medium' || r.difficulty_tier === 'hard'
+          ? r.difficulty_tier
+          : 'medium';
+      let difficultyScore = Number.isFinite(Number(r.difficulty_score)) ? Number(r.difficulty_score) : 50;
+      let difficultyMetrics: any = null;
+      try {
+        difficultyMetrics = r.difficulty_metrics ? JSON.parse(r.difficulty_metrics) : null;
+      } catch {}
+
+      if (!r.difficulty_tier || !difficultyMetrics) {
+        const ev = evaluateSingleExamDifficulty(level, questions);
+        difficultyTier = ev.difficultyTier;
+        difficultyScore = ev.difficultyScore;
+        difficultyMetrics = ev.difficultyMetrics;
+      }
+
       return {
         id: r.id,
         title: r.title,
-        level: Number(r.level) || 1,
+        level,
         source: r.source || 'Nhập đề đa nguồn',
         sourceLabel: r.source_label || r.source || 'Nhập đề đa nguồn',
         timeLimitMinutes: Number(r.time_limit_minutes) || 40,
         questionCount: Number(r.question_count) || questions.length,
+        difficultyTier,
+        difficultyScore,
+        difficultyLabelVi: DIFFICULTY_LABELS_VI[difficultyTier],
+        difficultyMetrics,
         createdAt: r.created_at || new Date().toISOString(),
         questions,
       };
     });
+
+    // Sort cleanly: Level ASC -> Easy → Medium → Hard -> Difficulty Score ASC
+    mapped.sort((a, b) => {
+      if (a.level !== b.level) return a.level - b.level;
+      const tierDiff = (DIFFICULTY_TIER_ORDER[a.difficultyTier] || 2) - (DIFFICULTY_TIER_ORDER[b.difficultyTier] || 2);
+      if (tierDiff !== 0) return tierDiff;
+      return a.difficultyScore - b.difficultyScore;
+    });
+    return mapped;
   } catch {
     return [];
   }
@@ -1973,10 +2092,22 @@ export function saveCustomExamSetRecord(db: DatabaseSync, examSet: any): any {
   const sourceLabel = String(examSet.sourceLabel || examSet.source || 'Nhập đề đa nguồn').trim();
   const createdAt = examSet.createdAt || new Date().toISOString();
 
+  const evaluated = evaluateSingleExamDifficulty(level, questions);
+  const difficultyTier: ExamDifficultyTier =
+    examSet.difficultyTier === 'easy' || examSet.difficultyTier === 'medium' || examSet.difficultyTier === 'hard'
+      ? examSet.difficultyTier
+      : evaluated.difficultyTier;
+  const difficultyScore =
+    typeof examSet.difficultyScore === 'number' && Number.isFinite(examSet.difficultyScore)
+      ? examSet.difficultyScore
+      : evaluated.difficultyScore;
+  const difficultyMetrics = examSet.difficultyMetrics || evaluated.difficultyMetrics;
+
   db.prepare(`
     INSERT OR REPLACE INTO custom_exam_sets (
-      id, title, level, source, source_label, time_limit_minutes, question_count, questions_json, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, title, level, source, source_label, time_limit_minutes, question_count, questions_json,
+      difficulty_tier, difficulty_score, difficulty_metrics, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     title,
@@ -1986,6 +2117,9 @@ export function saveCustomExamSetRecord(db: DatabaseSync, examSet: any): any {
     timeLimitMinutes,
     questions.length,
     JSON.stringify(questions),
+    difficultyTier,
+    difficultyScore,
+    JSON.stringify(difficultyMetrics),
     createdAt
   );
 
@@ -1997,6 +2131,10 @@ export function saveCustomExamSetRecord(db: DatabaseSync, examSet: any): any {
     sourceLabel,
     timeLimitMinutes,
     questionCount: questions.length,
+    difficultyTier,
+    difficultyScore,
+    difficultyLabelVi: DIFFICULTY_LABELS_VI[difficultyTier],
+    difficultyMetrics,
     createdAt,
     questions,
   };

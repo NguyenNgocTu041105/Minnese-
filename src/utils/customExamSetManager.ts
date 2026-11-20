@@ -28,6 +28,17 @@ export interface CustomExamSet {
   sourceLabel: string;
   timeLimitMinutes: number;
   questionCount: number;
+  difficultyTier?: 'easy' | 'medium' | 'hard';
+  difficultyScore?: number;
+  difficultyLabelVi?: string;
+  difficultyMetrics?: {
+    avgStemHanzi?: number;
+    avgOptionHanzi?: number;
+    uniqueHanziCount?: number;
+    longPassageCount?: number;
+    multiTurnCount?: number;
+    rawScore?: number;
+  } | null;
   createdAt: string;
   questions: HSKExamQuestion[];
 }

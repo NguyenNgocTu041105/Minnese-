@@ -16,6 +16,12 @@ import {
   canShuffle,
   shuffleQuestionAnswers,
 } from './utils/answerShuffle.js';
+import {
+  DIFFICULTY_LABELS_VI,
+  DIFFICULTY_TIER_ORDER,
+  ExamDifficultyTier,
+  evaluateSingleExamDifficulty,
+} from './utils/examDifficultyEvaluator.js';
 
 export const examRouter = Router();
 
@@ -1088,6 +1094,258 @@ export function isTruthy(val: unknown): boolean {
 }
 
 // =========================================================================
+// 2b. GET /api/exam/catalog — Public Tiered Official Exam Catalog (Easy → Medium → Hard)
+// =========================================================================
+examRouter.get('/catalog', (req: Request, res: Response) => {
+  try {
+    const db = getQBankDb();
+    if (!db) {
+      return res.json({ success: true, sets: [], summaryByLevel: {} });
+    }
+
+    const levelFilter = req.query.level ? parseInt(String(req.query.level), 10) : NaN;
+    const diffFilter = typeof req.query.difficulty === 'string' ? req.query.difficulty.trim().toLowerCase() : 'all';
+
+    // Read lightweight rows (parse questions_json only if difficulty columns are missing)
+    const rows = db
+      .prepare(
+        `SELECT id, title, level, source, source_label, time_limit_minutes, question_count,
+                difficulty_tier, difficulty_score, difficulty_metrics, created_at
+         FROM custom_exam_sets
+         ORDER BY level ASC, COALESCE(difficulty_score, 50) ASC, id ASC`
+      )
+      .all() as any[];
+
+    const summaryByLevel: Record<number, { total: number; easy: number; medium: number; hard: number }> = {
+      1: { total: 0, easy: 0, medium: 0, hard: 0 },
+      2: { total: 0, easy: 0, medium: 0, hard: 0 },
+      3: { total: 0, easy: 0, medium: 0, hard: 0 },
+      4: { total: 0, easy: 0, medium: 0, hard: 0 },
+      5: { total: 0, easy: 0, medium: 0, hard: 0 },
+      6: { total: 0, easy: 0, medium: 0, hard: 0 },
+    };
+
+    const allSets = rows.map((r) => {
+      const level = Math.min(6, Math.max(1, Number(r.level) || 1));
+      const tier: ExamDifficultyTier =
+        r.difficulty_tier === 'easy' || r.difficulty_tier === 'medium' || r.difficulty_tier === 'hard'
+          ? r.difficulty_tier
+          : 'medium';
+      const score = Number.isFinite(Number(r.difficulty_score)) ? Number(r.difficulty_score) : 50;
+      let metrics: any = null;
+      try {
+        metrics = r.difficulty_metrics ? JSON.parse(r.difficulty_metrics) : null;
+      } catch {}
+
+      if (summaryByLevel[level]) {
+        summaryByLevel[level].total += 1;
+        summaryByLevel[level][tier] += 1;
+      }
+
+      return {
+        id: r.id,
+        title: r.title,
+        level,
+        sourceLabel: r.source_label || r.source || 'Đề chuẩn HSK 3.0',
+        timeLimitMinutes: Number(r.time_limit_minutes) || 60,
+        questionCount: Number(r.question_count) || 0,
+        difficultyTier: tier,
+        difficultyScore: score,
+        difficultyLabelVi: DIFFICULTY_LABELS_VI[tier],
+        difficultyMetrics: metrics,
+        createdAt: r.created_at,
+      };
+    });
+
+    allSets.sort((a, b) => {
+      if (a.level !== b.level) return a.level - b.level;
+      const tDiff = (DIFFICULTY_TIER_ORDER[a.difficultyTier] || 2) - (DIFFICULTY_TIER_ORDER[b.difficultyTier] || 2);
+      if (tDiff !== 0) return tDiff;
+      return a.difficultyScore - b.difficultyScore;
+    });
+
+    const filtered = allSets.filter((s) => {
+      if (Number.isFinite(levelFilter) && levelFilter >= 1 && levelFilter <= 6 && s.level !== levelFilter) {
+        return false;
+      }
+      if ((diffFilter === 'easy' || diffFilter === 'medium' || diffFilter === 'hard') && s.difficultyTier !== diffFilter) {
+        return false;
+      }
+      return true;
+    });
+
+    return res.json({
+      success: true,
+      total: filtered.length,
+      sets: filtered,
+      summaryByLevel,
+    });
+  } catch (err: any) {
+    console.error('[ExamRouter] Error loading exam catalog:', err);
+    return res.status(500).json({ success: false, error: 'Không thể tải danh mục đề thi HSK.' });
+  }
+});
+
+// =========================================================================
+// 2c. POST /api/exam/start-set — Launch a Specific Curated Official Exam Set
+// =========================================================================
+examRouter.post('/start-set', (req: Request, res: Response) => {
+  try {
+    pruneExpiredSessions();
+    const db = getQBankDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: 'Cơ sở dữ liệu đề thi chưa sẵn sàng.' });
+    }
+
+    const body = req.body || {};
+    const examSetId = typeof body.examSetId === 'string' ? body.examSetId.trim() : '';
+    const mode: 'mock' | 'practice' =
+      typeof body.mode === 'string' && body.mode.trim().toLowerCase() === 'practice' ? 'practice' : 'mock';
+
+    if (!examSetId) {
+      return res.status(400).json({ success: false, error: 'Thiếu mã bộ đề (examSetId).' });
+    }
+
+    const row = db.prepare('SELECT * FROM custom_exam_sets WHERE id = ?').get(examSetId) as any;
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy bộ đề thi yêu cầu.' });
+    }
+
+    let rawQuestions: any[] = [];
+    try {
+      rawQuestions = JSON.parse(row.questions_json || '[]');
+    } catch {}
+
+    if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
+      return res.status(422).json({ success: false, error: 'Bộ đề thi này chưa có câu hỏi.' });
+    }
+
+    const level = Math.min(6, Math.max(1, Number(row.level) || 1));
+    const loadedBp = loadBlueprintData(level);
+    const bp: HSKBlueprintSummary = loadedBp
+      ? {
+          level: loadedBp.level || level,
+          name: loadedBp.name || `HSK ${level} 考试大纲与试卷结构`,
+          total_questions: loadedBp.total_questions || rawQuestions.length,
+          time_limit_minutes: Number(row.time_limit_minutes) || loadedBp.total_time_min || 60,
+          max_score: loadedBp.max_score || (level === 1 ? 200 : 300),
+          pass_score: loadedBp.passing_score || (level === 1 ? 120 : 180),
+          has_pinyin: Boolean(loadedBp.has_pinyin),
+          audio_playback: loadedBp.audio_playback || (level <= 3 ? 2 : 1),
+          sections: loadedBp.sections || {},
+          verification: loadedBp.verification,
+        }
+      : (HSK_BLUEPRINT_SUMMARIES[level] || HSK_BLUEPRINT_SUMMARIES[1]);
+
+    const normalizedQuestions: ExamQuestionItem[] = rawQuestions.map((q: any, idx: number) => {
+      const ansIdx =
+        typeof q.answer_index === 'number'
+          ? q.answer_index
+          : typeof q.answer_idx === 'number'
+          ? q.answer_idx
+          : 0;
+      const section = (q.section || q.skill || 'reading') as 'listening' | 'reading' | 'writing';
+      return {
+        id: String(q.id || `${examSetId}_q${idx + 1}`),
+        level,
+        section,
+        part_type: String(q.part_type || 'read_comprehension_4opt'),
+        item_number: Number(q.item_number) || idx + 1,
+        stem: String(q.stem || ''),
+        pinyin_stem: q.pinyin_stem || q.pinyin || '',
+        passage: q.passage || undefined,
+        options: Array.isArray(q.options) ? q.options : [],
+        options_pinyin: Array.isArray(q.options_pinyin) ? q.options_pinyin : undefined,
+        options_images: Array.isArray(q.options_images) ? q.options_images : undefined,
+        image_url: q.image_url || undefined,
+        illustration: q.illustration || q.illustration_theme || undefined,
+        audio_text: q.audio_text || undefined,
+        audio_url: q.audio_url || undefined,
+        answer_index: ansIdx,
+        answer_idx: ansIdx,
+        explanation_vi: String(q.explanation_vi || ''),
+        group_id: q.group_id || undefined,
+      };
+    });
+
+    const now = Date.now();
+    const sessionId = `exam_set_${level}_${now}_${crypto.randomBytes(4).toString('hex')}`;
+    const tier: ExamDifficultyTier =
+      row.difficulty_tier === 'easy' || row.difficulty_tier === 'medium' || row.difficulty_tier === 'hard'
+        ? row.difficulty_tier
+        : evaluateSingleExamDifficulty(level, normalizedQuestions).difficultyTier;
+
+    const session: ActiveExamSession = {
+      sessionId,
+      level,
+      mode,
+      skill: 'all',
+      totalQuestions: normalizedQuestions.length,
+      requestedCount: normalizedQuestions.length,
+      actualCount: normalizedQuestions.length,
+      isShortage: false,
+      usingFixtureFallback: false,
+      isFixtureDemo: false,
+      dataSource: 'qbank',
+      fallbackNotice: null,
+      timeLimitMinutes: mode === 'mock' ? (Number(row.time_limit_minutes) || bp.time_limit_minutes) : 0,
+      maxScore: bp.max_score,
+      passScore: bp.pass_score,
+      hasPinyin: bp.has_pinyin,
+      audioPlayback: bp.audio_playback,
+      createdAt: now,
+      expiresAt: now + SESSION_TTL_MS,
+      questions: normalizedQuestions,
+    };
+
+    activeExamSessions.set(sessionId, session);
+    saveSessionSnapshotToDb(session);
+
+    const clientQuestions = normalizedQuestions.map(stripAnswerFromQuestion);
+
+    return res.json({
+      success: true,
+      sessionId,
+      examSet: {
+        id: row.id,
+        title: row.title,
+        level,
+        difficultyTier: tier,
+        difficultyScore: Number(row.difficulty_score) || 50,
+        difficultyLabelVi: DIFFICULTY_LABELS_VI[tier],
+      },
+      questions: clientQuestions,
+      totalQuestions: session.totalQuestions,
+      dataSource: 'qbank',
+      llmCallsMade: 0,
+      session: {
+        sessionId: session.sessionId,
+        level: session.level,
+        mode: session.mode,
+        dataSource: 'qbank',
+        skill: 'all',
+        totalQuestions: session.totalQuestions,
+        requestedCount: session.requestedCount,
+        actualCount: session.actualCount,
+        isShortage: false,
+        fallbackNotice: null,
+        timeLimitMinutes: session.timeLimitMinutes,
+        maxScore: session.maxScore,
+        passScore: session.passScore,
+        hasPinyin: session.hasPinyin,
+        audioPlayback: session.audioPlayback,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        questions: clientQuestions,
+      },
+    });
+  } catch (err: any) {
+    console.error('[ExamRouter] Error starting official exam set:', err);
+    return res.status(500).json({ success: false, error: 'Không thể khởi tạo bộ đề thi này.' });
+  }
+});
+
+// =========================================================================
 // 3. POST /api/exam/generate-mock
 // Assembles mock exam or practice session according to official blueprint (0 LLM calls)
 // =========================================================================
@@ -1241,11 +1499,90 @@ examRouter.post('/generate-mock', (req: Request, res: Response) => {
       }
     } else {
       // Mock Exam Mode: Full Official Blueprint Exam
+      const requestedDifficulty =
+        typeof body.difficulty === 'string' && ['easy', 'medium', 'hard'].includes(body.difficulty.trim().toLowerCase())
+          ? (body.difficulty.trim().toLowerCase() as ExamDifficultyTier)
+          : null;
+
       if (isExplicitFixtureRequest) {
         // Fixture Demo Mode: Allowed ONLY when explicitly requested by client
         usingFixtureFallback = true;
         isFixtureDemo = true;
         questions = getMockExamQuestions(level);
+      } else if (requestedDifficulty) {
+        // Difficulty-Tiered Official Mock Mode: pick a random curated official set matching (level, difficulty)
+        const db = qbankDbInstance || getQBankDbReadOnly();
+        if (db) {
+          try {
+            const tierRows = db
+              .prepare(
+                `SELECT id, title, level, time_limit_minutes, questions_json, difficulty_tier, difficulty_score
+                 FROM custom_exam_sets
+                 WHERE level = ? AND difficulty_tier = ?`
+              )
+              .all(level, requestedDifficulty) as any[];
+            if (tierRows.length > 0) {
+              const picked = tierRows[Math.floor(Math.random() * tierRows.length)];
+              const parsedQs = JSON.parse(picked.questions_json || '[]');
+              if (Array.isArray(parsedQs) && parsedQs.length > 0) {
+                questions = parsedQs.map((q: any, idx: number) => {
+                  const ansIdx =
+                    typeof q.answer_index === 'number'
+                      ? q.answer_index
+                      : typeof q.answer_idx === 'number'
+                      ? q.answer_idx
+                      : 0;
+                  return {
+                    id: String(q.id || `${picked.id}_q${idx + 1}`),
+                    level,
+                    section: (q.section || q.skill || 'reading') as 'listening' | 'reading' | 'writing',
+                    part_type: String(q.part_type || 'read_comprehension_4opt'),
+                    item_number: Number(q.item_number) || idx + 1,
+                    stem: String(q.stem || ''),
+                    pinyin_stem: q.pinyin_stem || q.pinyin || '',
+                    passage: q.passage || undefined,
+                    options: Array.isArray(q.options) ? q.options : [],
+                    options_pinyin: Array.isArray(q.options_pinyin) ? q.options_pinyin : undefined,
+                    options_images: Array.isArray(q.options_images) ? q.options_images : undefined,
+                    image_url: q.image_url || undefined,
+                    illustration: q.illustration || q.illustration_theme || undefined,
+                    audio_text: q.audio_text || undefined,
+                    audio_url: q.audio_url || undefined,
+                    answer_index: ansIdx,
+                    answer_idx: ansIdx,
+                    explanation_vi: String(q.explanation_vi || ''),
+                    group_id: q.group_id || undefined,
+                  };
+                });
+              }
+            }
+          } catch {}
+        }
+
+        // If no matching tiered set found, fall back cleanly to standard official pool assembly
+        if (questions.length === 0) {
+          const dbFallback = qbankDbInstance || getQBankDbReadOnly();
+          if (!dbFallback) {
+            return res.status(503).json({
+              success: false,
+              error: 'Không thể kết nối cơ sở dữ liệu ngân hàng câu hỏi.',
+            });
+          }
+          const inspection = inspectExamPoolBySections(dbFallback, level, excludeQuestionIds);
+          if (!inspection.isFullyEligible) {
+            return res.status(400).json({
+              success: false,
+              mode: 'mock',
+              level,
+              is_fully_eligible: false,
+              total_required: inspection.totalRequired,
+              total_available: inspection.totalAvailable,
+              total_missing: inspection.totalMissing,
+              error: `Kho câu hỏi HSK ${level} chưa đủ cho chế độ Thi Thử Chuẩn.`,
+            });
+          }
+          questions = assembleStrictBlueprintMockExam(dbFallback, level, excludeQuestionIds);
+        }
       } else {
         // Official Mock Exam Mode: Strict Blueprint Enforcement (NO silent fallback, NO fixture mixing)
         const db = qbankDbInstance || getQBankDbReadOnly();

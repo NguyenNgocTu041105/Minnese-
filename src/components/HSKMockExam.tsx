@@ -1172,7 +1172,13 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   }, [selectedLevel]);
 
   // Check for unfinished saved session on mount (sessionStorage first, fallback to localStorage)
+  // NEVER hijack when the user explicitly opened a specific exam (Instant CBT customExamData,
+  // a chosen Official/Custom Exam Set, or a numbered Skill Set).
   useEffect(() => {
+    if (customExamData || initialOfficialSet || initialSkillSet) {
+      setPendingSavedSession(null);
+      return;
+    }
     try {
       let raw: string | null = null;
       if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -1192,7 +1198,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
     } catch {
       // ignore
     }
-  }, []);
+  }, [customExamData, initialOfficialSet, initialSkillSet]);
 
   // Helper to persist wrong answers notebook
   const persistWrongAnswers = useCallback((updater: (prev: WrongAnswerItem[]) => WrongAnswerItem[]) => {
@@ -1207,9 +1213,9 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
     });
   }, []);
 
-  // Auto-save active session to BOTH sessionStorage and localStorage
+  // Auto-save active session to BOTH sessionStorage and localStorage (skip Instant CBT admin preview so it never pollutes student exam resume)
   useEffect(() => {
-    if (currentView === 'exam' && activeSessionId && questions.length > 0 && timeLeftSeconds > 0) {
+    if (!customExamData && currentView === 'exam' && activeSessionId && questions.length > 0 && timeLeftSeconds > 0) {
       const sessionToSave: SavedActiveSession = {
         sessionId: activeSessionId,
         level: selectedLevel,
@@ -1428,6 +1434,14 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   // Mount/Sync Effect: API-First session loading for initialMode === 'mock' | 'practice' (deep link & 1-click)
   useEffect(() => {
     if (customExamData && customExamData.questions.length > 0) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      inFlightRef.current = false;
+      currentLoadingModeRef.current = null;
+      currentLoadingKeyRef.current = null;
+      setPendingSavedSession(null);
+      setActiveSkillSetMeta(null);
       setCurrentView('exam');
       setSelectedLevel(customExamData.level);
       setQuestions(customExamData.questions);
@@ -1496,6 +1510,11 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
       try {
         stopChineseAudio();
       } catch {}
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      inFlightRef.current = false;
+      setPendingSavedSession(null);
       setIsPlayingAudio(false);
       setIsLoadingSession(true);
       setSubmitError(null);
@@ -1568,6 +1587,11 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
       try {
         stopChineseAudio();
       } catch {}
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      inFlightRef.current = false;
+      setPendingSavedSession(null);
       setIsPlayingAudio(false);
       setIsLoadingSession(true);
       setSubmitError(null);
@@ -1666,14 +1690,40 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
     setPendingSavedSession(null);
   }, [pendingSavedSession]);
 
-  // Discard saved session
+  // Discard saved session — NEVER overwrite an explicitly chosen custom/official/skill exam with a random mock exam!
   const handleDiscardSavedSession = useCallback(() => {
     clearActiveSessionStorage();
     setPendingSavedSession(null);
+    if (customExamData && customExamData.questions.length > 0) {
+      setCurrentView('exam');
+      setSelectedLevel(customExamData.level);
+      setQuestions(customExamData.questions);
+      setActiveSessionId(`custom-cbt-${customExamData.id}`);
+      return;
+    }
+    if (initialOfficialSet) {
+      handleStartOfficialSet(initialOfficialSet, initialOfficialSet.mode);
+      return;
+    }
+    if (initialSkillSet) {
+      handleStartSkillSet(initialSkillSet.level, initialSkillSet.skill, initialSkillSet.setIndex);
+      return;
+    }
     if (initialMode === 'mock' || initialMode === 'practice') {
       loadExamSession(effectiveInitialLevel, initialMode, initialSkill);
     }
-  }, [clearActiveSessionStorage, initialMode, effectiveInitialLevel, initialSkill, loadExamSession]);
+  }, [
+    clearActiveSessionStorage,
+    customExamData,
+    initialOfficialSet,
+    initialSkillSet,
+    handleStartOfficialSet,
+    handleStartSkillSet,
+    initialMode,
+    effectiveInitialLevel,
+    initialSkill,
+    loadExamSession,
+  ]);
 
   // =========================================================================
   // Countdown Timer Engine

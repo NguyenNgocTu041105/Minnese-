@@ -3203,6 +3203,7 @@ export const QBankAdmin: React.FC = () => {
           </button>
         </div>
         <HSKMockExam
+          key={activeCbtExamSet.id}
           initialMode="mock"
           initialLevel={activeCbtExamSet.level}
           customExamData={activeCbtExamSet}

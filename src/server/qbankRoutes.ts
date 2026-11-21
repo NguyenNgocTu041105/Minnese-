@@ -2222,6 +2222,33 @@ qbankRouter.patch('/custom-exams/:id/difficulty', (req: Request, res: Response) 
   }
 });
 
+qbankRouter.patch('/custom-exams/:id/title', (req: Request, res: Response) => {
+  try {
+    const db = getDbSync();
+    ensurePendingSchema(db);
+    const title = String(req.body?.title || '').trim();
+    if (!title || title.length > 240) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tên bộ đề không hợp lệ (1–240 ký tự).',
+      });
+    }
+    const existing = db.prepare('SELECT id FROM custom_exam_sets WHERE id = ?').get(req.params.id) as any;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy bộ đề cần đổi tên.' });
+    }
+    db.prepare('UPDATE custom_exam_sets SET title = ? WHERE id = ?').run(title, req.params.id);
+    return res.json({
+      success: true,
+      id: req.params.id,
+      title,
+      exam_sets: listCustomExamSetRecords(db),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: sanitizeError(err.message) });
+  }
+});
+
 qbankRouter.delete('/custom-exams/:id', (req: Request, res: Response) => {
   try {
     const db = getDbSync();

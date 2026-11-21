@@ -160,9 +160,104 @@ export function convertImportedToCbtQuestion(
 }
 
 /**
+ * Detects top 2-3 Vietnamese topic labels from Chinese question stems/options (0-API).
+ */
+const TOPIC_KEYWORD_BUCKETS: Array<{ label: string; regex: RegExp }> = [
+  { label: 'Học tập & Trường học', regex: /学校|老师|学生|考试|作业|大学|图书馆|课|专业|毕业|学习|汉语|书/g },
+  { label: 'Công việc & Văn phòng', regex: /公司|经理|同事|会议|工作|上班|加班|老板|面试|项目|职业|办公室|客户/g },
+  { label: 'Du lịch & Giao thông', regex: /旅游|飞机|机场|火车|地铁|公交|出租车|酒店|机票|风景|景点|护照|城市|海边|爬山/g },
+  { label: 'Ẩm thực & Mua sắm', regex: /餐厅|饭馆|菜单|咖啡|水果|超市|买|打折|价格|衣服|外套|牛奶|做饭|美食|商场/g },
+  { label: 'Sức khỏe & Thể thao', regex: /医院|医生|感冒|发烧|吃药|锻炼|跑步|运动|健身|游泳|身体|健康|睡觉|休息/g },
+  { label: 'Gia đình & Bạn bè', regex: /爸爸|妈妈|父母|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|朋友|邻居|结婚|生日|聚会|孩子/g },
+  { label: 'Công nghệ & Đời sống', regex: /电脑|手机|网络|软件|网上|快递|视频|微信|信息|环保|科技|科学|环境/g },
+  { label: 'Văn hóa & Giải trí', regex: /电影|音乐会|演出|博物馆|历史|文化|画|照片|吉他|京剧|书法|茶|节日|艺术/g },
+];
+
+export function detectExamThemesVi(questions: any[]): string {
+  const qs = Array.isArray(questions) ? questions : [];
+  if (qs.length === 0) return 'Giao tiếp & Đời sống';
+  const combined = qs
+    .map((q) => `${q?.stem || ''} ${q?.passage || ''} ${Array.isArray(q?.options) ? q.options.join(' ') : ''}`)
+    .join(' ');
+  const scored = TOPIC_KEYWORD_BUCKETS.map((b) => ({
+    label: b.label,
+    hits: (combined.match(b.regex) || []).length,
+  }))
+    .filter((x) => x.hits >= 2)
+    .sort((a, b) => b.hits - a.hits);
+
+  if (scored.length === 0) return 'Giao tiếp & Đời sống';
+  const top = scored.slice(0, 2).map((x) => x.label.split(' & ')[0]);
+  if (scored.length >= 3) {
+    return `${top[0]}, ${top[1]} & ${scored[2].label.split(' & ')[0]}`;
+  }
+  if (scored.length === 2) {
+    return `${top[0]} & ${top[1]}`;
+  }
+  return scored[0].label;
+}
+
+/**
+ * Generates an official catalog-matching title such as:
+ * "Đề Thi Thử HSK 3 (3.0) — Đề số 25 (Công việc, Học tập & Du lịch - 80 câu)"
+ */
+export function suggestOfficialExamTitle(params: {
+  level: number;
+  questions: any[];
+  existingSets?: Array<{ level: number; title?: string }>;
+  topic?: string;
+  difficultyTier?: 'auto' | 'easy' | 'medium' | 'hard';
+}): string {
+  const level = Math.min(6, Math.max(1, Number(params.level) || 1));
+  const qs = Array.isArray(params.questions) ? params.questions : [];
+  const sameLevelSets = (params.existingSets || []).filter((s) => Number(s.level) === level);
+
+  let maxNum = 0;
+  for (const s of sameLevelSets) {
+    const m = String(s.title || '').match(/Đề\s*số\s*(\d+)/i);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (Number.isFinite(n) && n > maxNum) maxNum = n;
+    }
+  }
+  const nextNum = Math.max(maxNum + 1, sameLevelSets.length + 1);
+  const numStr = String(nextNum).padStart(2, '0');
+
+  // Detect if single-skill exam vs full mixed mock exam
+  const skillSet = new Set(
+    qs.map((q) => {
+      const sk = String(q?.section || q?.skill || '').toLowerCase();
+      if (sk === 'listening' || String(q?.part_type || '').startsWith('listen_')) return 'listening';
+      if (sk === 'writing' || String(q?.part_type || '').startsWith('write_')) return 'writing';
+      return 'reading';
+    })
+  );
+  const prefix =
+    skillSet.size === 1 && skillSet.has('listening')
+      ? `Đề Luyện Nghe HSK ${level} (3.0)`
+      : skillSet.size === 1 && skillSet.has('reading')
+      ? `Đề Luyện Đọc HSK ${level} (3.0)`
+      : skillSet.size === 1 && skillSet.has('writing')
+      ? `Đề Luyện Viết HSK ${level} (3.0)`
+      : `Đề Thi Thử HSK ${level} (3.0)`;
+
+  const cleanTopic = (params.topic || '').trim();
+  const theme = cleanTopic || detectExamThemesVi(qs);
+  const tierPrefix =
+    params.difficultyTier === 'easy'
+      ? 'Khởi động: '
+      : params.difficultyTier === 'hard'
+      ? 'Thử thách: '
+      : '';
+
+  return `${prefix} — Đề số ${numStr} (${tierPrefix}${theme} - ${qs.length} câu)`;
+}
+
+/**
  * Converts an array of imported items or candidate questions into a CustomExamSet.
  */
 export function createCustomExamSet(params: {
+  id?: string;
   title: string;
   level: number;
   source?: string;
@@ -192,7 +287,7 @@ export function createCustomExamSet(params: {
     explicitTier === 'easy' ? 28 : explicitTier === 'medium' ? 58 : explicitTier === 'hard' ? 84 : undefined;
 
   return {
-    id: `custom_exam_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: params.id || `custom_exam_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     title: params.title?.trim() || `Đề thi HSK ${level} (${questions.length} câu)`,
     level,
     source: resolvedSource,
@@ -273,6 +368,30 @@ export function updateCustomExamSetDifficultyInStorage(
               : fallbackScore,
         }
       : item
+  );
+  if (store) {
+    try {
+      store.setItem(STORAGE_KEY_CUSTOM_EXAM_SETS, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  }
+  return updated;
+}
+
+/**
+ * Updates the title of a saved Custom Exam Set in localStorage.
+ */
+export function updateCustomExamSetTitleInStorage(
+  examId: string,
+  title: string,
+  customStorage?: StorageLike
+): CustomExamSet[] {
+  const store = resolveStorage(customStorage);
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return loadCustomExamSets(customStorage);
+  const updated = loadCustomExamSets(customStorage).map((item) =>
+    item.id === examId ? { ...item, title: cleanTitle } : item
   );
   if (store) {
     try {

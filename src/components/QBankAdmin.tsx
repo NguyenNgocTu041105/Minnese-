@@ -64,9 +64,11 @@ import {
 import {
   type CustomExamSet,
   createCustomExamSet,
+  suggestOfficialExamTitle,
   loadCustomExamSets,
   saveCustomExamSetToStorage,
   updateCustomExamSetDifficultyInStorage,
+  updateCustomExamSetTitleInStorage,
   deleteCustomExamSetFromStorage,
 } from '../utils/customExamSetManager';
 
@@ -828,6 +830,9 @@ export const QBankAdmin: React.FC = () => {
   const [customExamFilterDifficulty, setCustomExamFilterDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [customExamSortMode, setCustomExamSortMode] = useState<'easiest' | 'hardest' | 'newest'>('easiest');
   const [customExamTitleInput, setCustomExamTitleInput] = useState<string>('');
+  const [lastAutoSavedExamId, setLastAutoSavedExamId] = useState<string | null>(null);
+  const [editingExamTitleId, setEditingExamTitleId] = useState<string | null>(null);
+  const [editingExamTitleValue, setEditingExamTitleValue] = useState<string>('');
   const [activeCbtExamSet, setActiveCbtExamSet] = useState<CustomExamSet | null>(null);
   const [showExtractedRawText, setShowExtractedRawText] = useState<boolean>(false);
 
@@ -2322,6 +2327,30 @@ export const QBankAdmin: React.FC = () => {
     } catch {}
   };
 
+  const handleRenameCustomExam = async (examId: string, rawNewTitle: string) => {
+    const cleanTitle = rawNewTitle.trim();
+    if (!cleanTitle) return;
+    const updatedLocal = updateCustomExamSetTitleInStorage(examId, cleanTitle);
+    setCustomExamSets(updatedLocal);
+    setEditingExamTitleId(null);
+    setEditingExamTitleValue('');
+    try {
+      const apiRes = await safeApiCall<{ success: boolean; exam_sets?: CustomExamSet[] }>(
+        `/api/qbank/custom-exams/${encodeURIComponent(examId)}/title`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: cleanTitle }),
+        }
+      );
+      if (apiRes.success && Array.isArray(apiRes.data?.exam_sets)) {
+        setCustomExamSets(apiRes.data.exam_sets);
+      }
+      setActionSuccessMsg(`Đã đổi tên thành "${cleanTitle}"!`);
+      setTimeout(() => setActionSuccessMsg(null), 3500);
+    } catch {}
+  };
+
   /**
    * Handle Universal Question Import & 6 Quality Gates Evaluation
    */
@@ -2359,17 +2388,23 @@ export const QBankAdmin: React.FC = () => {
       setImportResult(res.data);
       if (Array.isArray(res.data.results) && res.data.results.length > 0) {
         const rawQuestions = res.data.results.map((r: any) => r.question);
+        const autoSuggestedTitle = suggestOfficialExamTitle({
+          level: importLevel,
+          questions: rawQuestions,
+          existingSets: customExamSets,
+          topic: importTopic,
+          difficultyTier: importDifficulty,
+        });
+        const resolvedTitle = customExamTitleInput.trim() || autoSuggestedTitle;
         const examSet = createCustomExamSet({
-          title:
-            customExamTitleInput.trim() ||
-            (importTopic.trim()
-              ? `Đề HSK ${importLevel} - ${importTopic.trim()} (${rawQuestions.length} câu)`
-              : `Đề HSK ${importLevel} - Nhập đa nguồn (${rawQuestions.length} câu)`),
+          title: resolvedTitle,
           level: importLevel,
           sourceLabel: 'Nhập đề đa nguồn AI',
           difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
           rawQuestions,
         });
+        setCustomExamTitleInput(resolvedTitle);
+        setLastAutoSavedExamId(examSet.id);
         await persistExamSetBothSides(examSet);
       }
       if (res.data.accepted_count > 0 || (Array.isArray(res.data.results) && res.data.results.length > 0)) {
@@ -7240,20 +7275,45 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         <input
                           type="text"
                           data-testid="input-custom-exam-title"
-                          placeholder={`Đề HSK ${importLevel} (${importResult.results.length} câu)...`}
+                          placeholder={`Đề Thi Thử HSK ${importLevel} (3.0) — Đề số ...`}
                           value={customExamTitleInput}
                           onChange={(e) => setCustomExamTitleInput(e.target.value)}
-                          className="px-3 py-1.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)] w-48"
+                          className="px-3 py-1.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)] w-72 max-w-full"
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const rawQuestions = importResult.results.map((r: any) => r.question);
+                            setCustomExamTitleInput(
+                              suggestOfficialExamTitle({
+                                level: importLevel,
+                                questions: rawQuestions,
+                                existingSets: customExamSets.filter((s) => s.id !== lastAutoSavedExamId),
+                                topic: importTopic,
+                                difficultyTier: importDifficulty,
+                              })
+                            );
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[11px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] cursor-pointer transition-colors"
+                          title="Tự động đặt tên theo chuẩn danh mục HSK 3.0 (đánh số nối tiếp + tự nhận diện chủ đề)"
+                        >
+                          ✨ Đặt tên chuẩn
+                        </button>
                         <button
                           type="button"
                           data-testid="btn-instant-cbt-exam"
                           onClick={() => {
                             const rawQuestions = importResult.results.map((r: any) => r.question);
+                            const autoTitle = suggestOfficialExamTitle({
+                              level: importLevel,
+                              questions: rawQuestions,
+                              existingSets: customExamSets.filter((s) => s.id !== lastAutoSavedExamId),
+                              topic: importTopic,
+                              difficultyTier: importDifficulty,
+                            });
                             const examSet = createCustomExamSet({
-                              title:
-                                customExamTitleInput.trim() ||
-                                `Đề thi HSK ${importLevel} (${rawQuestions.length} câu)`,
+                              id: lastAutoSavedExamId || undefined,
+                              title: customExamTitleInput.trim() || autoTitle,
                               level: importLevel,
                               sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn',
                               difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
@@ -7272,24 +7332,30 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                           data-testid="btn-save-custom-exam-set"
                           onClick={async () => {
                             const rawQuestions = importResult.results.map((r: any) => r.question);
+                            const autoTitle = suggestOfficialExamTitle({
+                              level: importLevel,
+                              questions: rawQuestions,
+                              existingSets: customExamSets.filter((s) => s.id !== lastAutoSavedExamId),
+                              topic: importTopic,
+                              difficultyTier: importDifficulty,
+                            });
                             const examSet = createCustomExamSet({
-                              title:
-                                customExamTitleInput.trim() ||
-                                `Đề HSK ${importLevel} - ${new Date().toLocaleDateString('vi-VN')} (${rawQuestions.length} câu)`,
+                              id: lastAutoSavedExamId || undefined,
+                              title: customExamTitleInput.trim() || autoTitle,
                               level: importLevel,
                               sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn AI',
                               difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
                               rawQuestions,
                             });
                             await persistExamSetBothSides(examSet);
-                            setCustomExamTitleInput('');
+                            setLastAutoSavedExamId(examSet.id);
                             setActionSuccessMsg(`Đã lưu "${examSet.title}" vào Kho Đề Của Tôi!`);
                             setTimeout(() => setActionSuccessMsg(null), 4000);
                           }}
                           className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
                         >
                           <Layers className="w-3.5 h-3.5" />
-                          <span>💾 Lưu vào Kho Đề Của Tôi</span>
+                          <span>💾 Lưu / Cập nhật tên đề</span>
                         </button>
                       </div>
                     )}
@@ -7754,9 +7820,77 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                             {examSet.questions.length} câu • {examSet.timeLimitMinutes} phút
                           </span>
                         </div>
-                        <h4 className="text-sm font-bold text-[var(--color-text-primary)] line-clamp-2" title={examSet.title}>
-                          {examSet.title}
-                        </h4>
+                        {editingExamTitleId === examSet.id ? (
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              value={editingExamTitleValue}
+                              onChange={(e) => setEditingExamTitleValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameCustomExam(examSet.id, editingExamTitleValue);
+                                if (e.key === 'Escape') {
+                                  setEditingExamTitleId(null);
+                                  setEditingExamTitleValue('');
+                                }
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-primary)] text-xs font-semibold text-[var(--color-text-primary)] focus:outline-hidden"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleRenameCustomExam(examSet.id, editingExamTitleValue)}
+                                className="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold cursor-pointer"
+                              >
+                                Lưu tên
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingExamTitleValue(
+                                    suggestOfficialExamTitle({
+                                      level: examSet.level,
+                                      questions: examSet.questions,
+                                      existingSets: customExamSets.filter((s) => s.id !== examSet.id),
+                                      difficultyTier: examSet.difficultyTier || 'medium',
+                                    })
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[10px] font-semibold text-[var(--color-primary)] cursor-pointer"
+                                title="Tự sinh tên khớp chuẩn danh mục HSK 3.0"
+                              >
+                                ✨ Tên chuẩn
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingExamTitleId(null);
+                                  setEditingExamTitleValue('');
+                                }}
+                                className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] text-[var(--color-text-secondary)] cursor-pointer"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between gap-1.5">
+                            <h4 className="text-sm font-bold text-[var(--color-text-primary)] line-clamp-2 flex-1" title={examSet.title}>
+                              {examSet.title}
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingExamTitleId(examSet.id);
+                                setEditingExamTitleValue(examSet.title);
+                              }}
+                              className="p-1 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] shrink-0 cursor-pointer transition-colors"
+                              title="Đổi tên bộ đề (hoặc tự đặt tên chuẩn HSK 3.0)"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                         <div className="w-full h-1.5 rounded-full bg-[var(--color-surface)] overflow-hidden">
                           <div className={`h-full rounded-full ${tierStyle.bar}`} style={{ width: `${Math.max(10, Math.min(100, score))}%` }} />
                         </div>

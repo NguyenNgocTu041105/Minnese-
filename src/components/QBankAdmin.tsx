@@ -6736,12 +6736,12 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                       onClick={handleAiAutoFormat}
                       disabled={isAutoFormatting || isImporting || !importInputText.trim()}
                       className="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Dùng Ollama AI (qwen2.5:7b) tự động phân tích và chuyển đổi văn bản thô thành danh sách JSON CandidateQuestion chuẩn"
+                      title="Tự động tách dòng dính, chuẩn hóa đề thi từ Gemini/ChatGPT/Claude thành danh sách JSON chuẩn (hỗ trợ tối đa 500,000 ký tự, không tốn API)"
                     >
                       {isAutoFormatting ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Đang định dạng bằng AI (Ollama)...</span>
+                          <span>Đang tự động định dạng...</span>
                         </>
                       ) : (
                         <>

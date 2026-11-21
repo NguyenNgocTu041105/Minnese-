@@ -638,9 +638,9 @@ async function startServer() {
     }
   });
 
-  // Global body parsing lowered to 2MB to protect against payload memory exhaustion DoS
-  app.use(express.json({ limit: '2mb' }));
-  app.use(express.urlencoded({ limit: '2mb', extended: true }));
+  // Global body parsing capped at 5MB (supports full 80-82 question HSK exams up to 500k UTF-8 chars while preventing DoS)
+  app.use(express.json({ limit: '5mb' }));
+  app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
   // Ensure public/audio directory exists and mount static audio serving for Edge-TTS
   const audioDir = path.join(process.cwd(), 'public', 'audio');

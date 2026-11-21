@@ -2194,10 +2194,10 @@ qbankRouter.post('/import', async (req: Request, res: Response) => {
         ? req.body
         : JSON.stringify(req.body);
 
-    if (typeof rawInput === 'string' && rawInput.length > 50000) {
+    if (typeof rawInput === 'string' && rawInput.length > 500000) {
       return res.status(400).json({
         success: false,
-        error: 'Nội dung văn bản quá dài (vượt quá 50,000 ký tự).',
+        error: 'Nội dung văn bản quá dài (vượt quá 500,000 ký tự).',
       });
     }
 
@@ -3178,15 +3178,47 @@ qbankRouter.post('/ai-format', async (req: Request, res: Response) => {
         ? req.body.input
         : '';
 
-    if (!rawInput || typeof rawInput !== 'string' || !rawInput.trim() || rawInput.length > 50000) {
+    if (!rawInput || typeof rawInput !== 'string' || !rawInput.trim()) {
       return res.status(400).json({
         success: false,
         error: 'Vui lòng cung cấp nội dung văn bản hợp lệ.',
       });
     }
 
+    if (rawInput.length > 500000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nội dung văn bản quá dài (vượt quá 500,000 ký tự).',
+      });
+    }
+
     const defaultLevel = Math.max(1, Math.min(6, Number(req.body?.default_level || req.body?.level) || 1));
-    const defaultSkill = String(req.body?.default_skill || req.body?.skill || 'reading').toLowerCase();
+    const rawDefaultSkill = String(req.body?.default_skill || req.body?.skill || 'reading').toLowerCase();
+    const defaultSkill = rawDefaultSkill === 'auto' || rawDefaultSkill === 'all' ? 'reading' : rawDefaultSkill;
+    const rawPartType = String(req.body?.default_part_type || req.body?.part_type || 'read_fill_blank_4opt');
+    const defaultPartType = rawPartType === 'auto' ? 'read_fill_blank_4opt' : rawPartType;
+
+    // Fast zero-API deterministic formatting first (handles full 80-82 question HSK exams,
+    // glued clipboard lines from Gemini/ChatGPT/Claude, and works on Render without local Ollama).
+    try {
+      const deterministicParsed = parseUniversalQuestions(rawInput, {
+        default_level: defaultLevel,
+        default_skill: defaultSkill,
+        default_part_type: defaultPartType,
+      }).filter((q) => q && typeof q.stem === 'string' && q.stem.trim().length > 0);
+
+      if (deterministicParsed.length > 0) {
+        return res.json({
+          success: true,
+          engine: 'universal-parser',
+          formatted_json: JSON.stringify(deterministicParsed, null, 2),
+          questions: deterministicParsed,
+          count: deterministicParsed.length,
+        });
+      }
+    } catch {
+      // Fall through to Ollama formatter for completely unstructured free-form input
+    }
 
     const rawOllamaBase = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
     const ollamaBase = rawOllamaBase.replace(/\/v1\/?$/, '').replace('localhost', '127.0.0.1');

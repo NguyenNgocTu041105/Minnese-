@@ -66,6 +66,7 @@ import {
   createCustomExamSet,
   loadCustomExamSets,
   saveCustomExamSetToStorage,
+  updateCustomExamSetDifficultyInStorage,
   deleteCustomExamSetFromStorage,
 } from '../utils/customExamSetManager';
 
@@ -748,6 +749,7 @@ export const QBankAdmin: React.FC = () => {
   const [importLevel, setImportLevel] = useState<number>(1);
   const [importSkill, setImportSkill] = useState<'auto' | 'listening' | 'reading' | 'writing'>('auto');
   const [importPartType, setImportPartType] = useState<string>('auto');
+  const [importDifficulty, setImportDifficulty] = useState<'auto' | 'easy' | 'medium' | 'hard'>('auto');
   const [importTopic, setImportTopic] = useState<string>('');
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [importResult, setImportResult] = useState<any | null>(null);
@@ -812,11 +814,12 @@ export const QBankAdmin: React.FC = () => {
         level: importLevel,
         formatType: promptFormatType,
         modelTarget: promptTargetModel,
+        difficultyTier: importDifficulty,
         questionCount: promptQuestionCount,
         topic: importTopic,
         includePinyin: promptIncludePinyin,
       }),
-    [importLevel, promptFormatType, promptTargetModel, promptQuestionCount, importTopic, promptIncludePinyin]
+    [importLevel, promptFormatType, promptTargetModel, importDifficulty, promptQuestionCount, importTopic, promptIncludePinyin]
   );
 
   // Milestone M5: Custom Exam Sets ("Kho Đề Của Tôi") & Instant CBT Mode state
@@ -2298,6 +2301,27 @@ export const QBankAdmin: React.FC = () => {
     } catch {}
   };
 
+  const handleChangeCustomExamDifficulty = async (
+    examId: string,
+    nextTier: 'easy' | 'medium' | 'hard'
+  ) => {
+    const updatedLocal = updateCustomExamSetDifficultyInStorage(examId, nextTier);
+    setCustomExamSets(updatedLocal);
+    try {
+      const apiRes = await safeApiCall<{ success: boolean; exam_sets?: CustomExamSet[] }>(
+        `/api/qbank/custom-exams/${encodeURIComponent(examId)}/difficulty`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ difficultyTier: nextTier }),
+        }
+      );
+      if (apiRes.success && Array.isArray(apiRes.data?.exam_sets)) {
+        setCustomExamSets(apiRes.data.exam_sets);
+      }
+    } catch {}
+  };
+
   /**
    * Handle Universal Question Import & 6 Quality Gates Evaluation
    */
@@ -2343,6 +2367,7 @@ export const QBankAdmin: React.FC = () => {
               : `Đề HSK ${importLevel} - Nhập đa nguồn (${rawQuestions.length} câu)`),
           level: importLevel,
           sourceLabel: 'Nhập đề đa nguồn AI',
+          difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
           rawQuestions,
         });
         await persistExamSetBothSides(examSet);
@@ -6451,7 +6476,7 @@ export const QBankAdmin: React.FC = () => {
 
               {/* Import Configuration Controls (only shown for file / text / ocr modes; unified inside prompt mode) */}
               {importMode !== 'prompt' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]">
                   {/* Level selector */}
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Cấp độ mặc định:</label>
@@ -6501,6 +6526,22 @@ export const QBankAdmin: React.FC = () => {
                           {pt.label}
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  {/* Difficulty selector */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Độ khó bộ đề:</label>
+                    <select
+                      data-testid="select-import-difficulty"
+                      value={importDifficulty}
+                      onChange={(e) => setImportDifficulty(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                    >
+                      <option value="auto">🔄 Tự động chấm</option>
+                      <option value="easy">🟢 Khởi động (Vừa sức)</option>
+                      <option value="medium">🟡 Chuẩn thi thật</option>
+                      <option value="hard">🔴 Thử thách (Khó)</option>
                     </select>
                   </div>
 
@@ -6920,10 +6961,28 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                       </select>
                     </div>
 
-                    {/* 6. Topic & Pinyin Toggle */}
+                    {/* 6. Target Difficulty Tier (synced with Import Difficulty) */}
                     <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                        6. Mức độ khó mục tiêu:
+                      </label>
+                      <select
+                        data-testid="select-prompt-difficulty"
+                        value={importDifficulty}
+                        onChange={(e) => setImportDifficulty(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      >
+                        <option value="auto">🔄 Tự động / Mặc định</option>
+                        <option value="easy">🟢 Khởi động (Vừa sức)</option>
+                        <option value="medium">🟡 Chuẩn thi thật (CLEC/CTI)</option>
+                        <option value="hard">🔴 Thử thách (Khó / Bẫy sâu)</option>
+                      </select>
+                    </div>
+
+                    {/* 7. Topic & Pinyin Toggle */}
+                    <div className="space-y-1 sm:col-span-2 lg:col-span-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">6. Chủ đề (Tùy chọn):</label>
+                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">7. Chủ đề (Tùy chọn):</label>
                         <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] cursor-pointer">
                           <input
                             type="checkbox"
@@ -7196,6 +7255,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 `Đề thi HSK ${importLevel} (${rawQuestions.length} câu)`,
                               level: importLevel,
                               sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn',
+                              difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
                               rawQuestions,
                             });
                             setActiveCbtExamSet(examSet);
@@ -7217,6 +7277,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 `Đề HSK ${importLevel} - ${new Date().toLocaleDateString('vi-VN')} (${rawQuestions.length} câu)`,
                               level: importLevel,
                               sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn AI',
+                              difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
                               rawQuestions,
                             });
                             await persistExamSetBothSides(examSet);
@@ -7703,6 +7764,30 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                             ? `~${examSet.difficultyMetrics.uniqueHanziCount} chữ Hán • TB ${examSet.difficultyMetrics.avgStemHanzi} chữ/câu`
                             : `Nguồn: ${examSet.sourceLabel}`}
                         </p>
+                        {/* Quick 1-click Difficulty Tier Switcher */}
+                        <div className="flex items-center gap-1 pt-1">
+                          {(
+                            [
+                              { key: 'easy', label: 'Khởi động', active: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' },
+                              { key: 'medium', label: 'Chuẩn thi', active: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40' },
+                              { key: 'hard', label: 'Thử thách', active: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40' },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              onClick={() => handleChangeCustomExamDifficulty(examSet.id, opt.key)}
+                              className={`flex-1 py-0.5 px-1.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                                tier === opt.key
+                                  ? opt.active
+                                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
+                              }`}
+                              title={`Chuyển bộ đề sang bậc ${opt.label}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]">

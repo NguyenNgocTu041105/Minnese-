@@ -46,6 +46,7 @@ export interface ExternalPromptConfig {
   formatType: ExternalPromptFormatType;
   targetModel?: ExternalAiModelTarget;
   modelTarget?: ExternalAiModelTarget;
+  difficultyTier?: 'auto' | 'easy' | 'medium' | 'hard';
   topic?: string;
   questionCount?: number;
   includePinyinInPrompt?: boolean;
@@ -610,6 +611,15 @@ export function buildExternalAiPrompt(config: ExternalPromptConfig): string {
     ? `\n- Hướng dẫn riêng cho mô hình ${modelMeta.name}: ${EXTERNAL_MODEL_DIRECTIVES[targetModel]}`
     : '';
 
+  const difficultyDirectiveLine =
+    config.difficultyTier === 'easy'
+      ? `\n- Mức độ khó mục tiêu (**Khởi động / Vừa sức — HSK ${level}**): Dùng câu văn ngắn gọn, ngữ cảnh đời sống trực diện, ưu tiên từ vựng cốt lõi tần suất cao nhất của HSK ${level}, ít bẫy đánh lạc hướng phức tạp.`
+      : config.difficultyTier === 'medium'
+      ? `\n- Mức độ khó mục tiêu (**Chuẩn thi thật CLEC/CTI — HSK ${level}**): Độ dài câu, hội thoại và mật độ từ vựng ngang chuẩn đề thi thật HSK ${level}; có bẫy suy luận vừa phải (paraphrase nhẹ, đổi ý một lần, bẫy thời gian/địa điểm).`
+      : config.difficultyTier === 'hard'
+      ? `\n- Mức độ khó mục tiêu (**Thử thách / Khó — HSK ${level}**): Tăng độ dài hội thoại nhiều lượt và đoạn đọc hiểu (vẫn giữ đúng phạm vi từ vựng HSK ${level}, KHÔNG vượt cấp), khai thác tối đa cấu trúc ngữ pháp khó của HSK ${level} và tăng cường bẫy tư duy (tự sửa lời / Self-Correction, phủ định kép, suy luận hàm ý/thái độ, phương án nhiễu sát nghĩa).`
+      : '';
+
   const cleanVisualImgRule =
     'Mỗi mục có hình ảnh bắt buộc dùng thẻ `[IMG: <english scene description without Chinese characters or answer words>]` viết hoàn toàn bằng tiếng Anh tự nhiên mô tả bối cảnh/sự vật, TUYỆT ĐỐI KHÔNG chứa chữ Hán, Pinyin hay từ khóa đáp án.';
 
@@ -627,7 +637,7 @@ ${topicText}
 - Phạm vi từ vựng & ngữ pháp: Bám sát khung HSK ${level} (${spec.grammarSummary}).${forbiddenLine}
 ${pinyinInstruction}
 - Tính đơn nhất đáp án: Mỗi câu hỏi chỉ có DUY NHẤT 1 đáp án đúng hoàn toàn về cả ngữ pháp lẫn ngữ nghĩa; các phương án nhiễu phải cùng từ loại (POS) nhưng sai rõ ràng về ngữ cảnh hoặc logic.
-- Mọi lời giải thích đều phải viết bằng **tiếng Việt** chi tiết, dịch nghĩa câu và giải thích vì sao đáp án đó đúng.${modelDirectiveLine}${copySafeDirective}`;
+- Mọi lời giải thích đều phải viết bằng **tiếng Việt** chi tiết, dịch nghĩa câu và giải thích vì sao đáp án đó đúng.${difficultyDirectiveLine}${modelDirectiveLine}${copySafeDirective}`;
 
   if (formatType === 'full_cbt_mock_exam') {
     const total = Math.max(4, count);

@@ -168,6 +168,8 @@ export function createCustomExamSet(params: {
   source?: string;
   sourceLabel?: string;
   timeLimitMinutes?: number;
+  difficultyTier?: 'easy' | 'medium' | 'hard';
+  difficultyScore?: number;
   rawQuestions: any[];
 }): CustomExamSet {
   const level = Math.min(6, Math.max(1, Number(params.level) || 1));
@@ -182,6 +184,12 @@ export function createCustomExamSet(params: {
       : getExamDurationMinutes(level);
 
   const resolvedSource = (params.sourceLabel || params.source || 'Multi-Source Import').trim();
+  const explicitTier =
+    params.difficultyTier === 'easy' || params.difficultyTier === 'medium' || params.difficultyTier === 'hard'
+      ? params.difficultyTier
+      : undefined;
+  const defaultTierScore =
+    explicitTier === 'easy' ? 28 : explicitTier === 'medium' ? 58 : explicitTier === 'hard' ? 84 : undefined;
 
   return {
     id: `custom_exam_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -191,6 +199,11 @@ export function createCustomExamSet(params: {
     sourceLabel: resolvedSource,
     timeLimitMinutes,
     questionCount: questions.length,
+    difficultyTier: explicitTier,
+    difficultyScore:
+      typeof params.difficultyScore === 'number' && Number.isFinite(params.difficultyScore)
+        ? params.difficultyScore
+        : defaultTierScore,
     createdAt: new Date().toISOString(),
     questions,
   };
@@ -233,6 +246,39 @@ export function saveCustomExamSetToStorage(
       store.setItem(STORAGE_KEY_CUSTOM_EXAM_SETS, JSON.stringify(updated));
     } catch {
       // ignore storage quota errors
+    }
+  }
+  return updated;
+}
+
+/**
+ * Updates the difficulty tier/score of a saved Custom Exam Set in localStorage.
+ */
+export function updateCustomExamSetDifficultyInStorage(
+  examId: string,
+  difficultyTier: 'easy' | 'medium' | 'hard',
+  difficultyScore?: number,
+  customStorage?: StorageLike
+): CustomExamSet[] {
+  const store = resolveStorage(customStorage);
+  const fallbackScore = difficultyTier === 'easy' ? 28 : difficultyTier === 'hard' ? 84 : 58;
+  const updated = loadCustomExamSets(customStorage).map((item) =>
+    item.id === examId
+      ? {
+          ...item,
+          difficultyTier,
+          difficultyScore:
+            typeof difficultyScore === 'number' && Number.isFinite(difficultyScore)
+              ? difficultyScore
+              : fallbackScore,
+        }
+      : item
+  );
+  if (store) {
+    try {
+      store.setItem(STORAGE_KEY_CUSTOM_EXAM_SETS, JSON.stringify(updated));
+    } catch {
+      // ignore
     }
   }
   return updated;

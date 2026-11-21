@@ -2099,13 +2099,24 @@ export function saveCustomExamSetRecord(db: DatabaseSync, examSet: any): any {
   const createdAt = examSet.createdAt || new Date().toISOString();
 
   const evaluated = evaluateSingleExamDifficulty(level, questions);
-  const difficultyTier: ExamDifficultyTier =
-    examSet.difficultyTier === 'easy' || examSet.difficultyTier === 'medium' || examSet.difficultyTier === 'hard'
-      ? examSet.difficultyTier
-      : evaluated.difficultyTier;
+  const hasExplicitTier =
+    examSet.difficultyTier === 'easy' || examSet.difficultyTier === 'medium' || examSet.difficultyTier === 'hard';
+  const difficultyTier: ExamDifficultyTier = hasExplicitTier
+    ? examSet.difficultyTier
+    : evaluated.difficultyTier;
+  const clampScoreToTier = (tier: ExamDifficultyTier, baseScore: number): number => {
+    const pct = Math.max(0, Math.min(1, (baseScore - 10) / 88));
+    if (tier === 'easy') return Math.round(18 + pct * 20); // 18..38
+    if (tier === 'hard') return Math.round(76 + pct * 19); // 76..95
+    return Math.round(46 + pct * 24); // 46..70
+  };
   const difficultyScore =
     typeof examSet.difficultyScore === 'number' && Number.isFinite(examSet.difficultyScore)
-      ? examSet.difficultyScore
+      ? hasExplicitTier
+        ? clampScoreToTier(difficultyTier, examSet.difficultyScore)
+        : examSet.difficultyScore
+      : hasExplicitTier
+      ? clampScoreToTier(difficultyTier, evaluated.difficultyScore)
       : evaluated.difficultyScore;
   const difficultyMetrics = examSet.difficultyMetrics || evaluated.difficultyMetrics;
 
@@ -2160,6 +2171,52 @@ qbankRouter.post('/custom-exams', (req: Request, res: Response) => {
     const db = getDbSync();
     const saved = saveCustomExamSetRecord(db, req.body || {});
     return res.json({ success: true, exam_set: saved, exam_sets: listCustomExamSetRecords(db) });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: sanitizeError(err.message) });
+  }
+});
+
+qbankRouter.patch('/custom-exams/:id/difficulty', (req: Request, res: Response) => {
+  try {
+    const db = getDbSync();
+    ensurePendingSchema(db);
+    const tier = String(req.body?.difficultyTier || req.body?.difficulty_tier || '').toLowerCase();
+    if (tier !== 'easy' && tier !== 'medium' && tier !== 'hard') {
+      return res.status(400).json({
+        success: false,
+        error: 'Mức độ khó không hợp lệ (chỉ nhận easy, medium hoặc hard).',
+      });
+    }
+    const existing = db
+      .prepare('SELECT id, level, questions_json, difficulty_score FROM custom_exam_sets WHERE id = ?')
+      .get(req.params.id) as any;
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy bộ đề cần cập nhật.' });
+    }
+    let questions: any[] = [];
+    try {
+      questions = JSON.parse(existing.questions_json || '[]');
+    } catch {}
+    const evaluated = evaluateSingleExamDifficulty(Number(existing.level) || 1, questions);
+    const pct = Math.max(0, Math.min(1, (evaluated.difficultyScore - 10) / 88));
+    const calibratedScore =
+      tier === 'easy'
+        ? Math.round(18 + pct * 20)
+        : tier === 'hard'
+        ? Math.round(76 + pct * 19)
+        : Math.round(46 + pct * 24);
+
+    db.prepare(
+      'UPDATE custom_exam_sets SET difficulty_tier = ?, difficulty_score = ?, difficulty_metrics = ? WHERE id = ?'
+    ).run(tier, calibratedScore, JSON.stringify(evaluated.difficultyMetrics), req.params.id);
+
+    return res.json({
+      success: true,
+      id: req.params.id,
+      difficultyTier: tier,
+      difficultyScore: calibratedScore,
+      exam_sets: listCustomExamSetRecords(db),
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: sanitizeError(err.message) });
   }

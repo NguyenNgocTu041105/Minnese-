@@ -663,7 +663,7 @@ ${pinyinInstruction}
           level === 2
             ? 'Nhìn Pinyin gõ chữ Hán chuẩn (看拼音写字/词) hoặc Sắp xếp từ thành câu (连词成句).'
             : level <= 5
-            ? 'Sắp xếp các cụm từ xáo trộn thành câu hoàn chỉnh (连词成句, 4 lựa chọn thứ tự A, B, C, D) kết hợp viết câu theo từ khóa.'
+            ? 'Sắp xếp các cụm từ xáo trộn thành câu hoàn chỉnh (连词成句, 4 lựa chọn thứ tự A, B, C, D). TUYỆT ĐỐI KHÔNG viết lời dẫn tiếng Việt ở dòng đề bài — chỉ dùng các cụm chữ Hán cách nhau bằng dấu `/` (hoặc nếu đặt câu theo từ khóa thì viết lời dẫn 100% tiếng Trung: `请用“【Từ khóa】”选择正确的句子：`).'
             : 'Tóm tắt rút gọn văn bản (缩写 ~400 chữ) hoặc Sắp xếp câu phức học thuật.'
         }
 - Định dạng mỗi câu (HSK ${level}):

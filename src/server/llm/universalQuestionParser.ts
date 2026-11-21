@@ -1867,6 +1867,14 @@ export function parseSingleQuestionBlock(
     stem = extractedStemImageRequirement;
   }
 
+  // Convert Vietnamese keyword-sentence instructions into clean Chinese CBT stem (e.g. "Hãy chọn câu hoàn chỉnh đúng ngữ pháp sử dụng từ khóa: 坚持" -> "请用“坚持”选择正确的句子：")
+  const viKeywordStemMatch = stem.match(
+    /^(?:Hãy\s+)?(?:chọn|viết|đặt)\s+câu[^:：\n]*(?:từ\s*khóa|từ)\s*[:：]?\s*[“"「『\[]?([\u4e00-\u9fa5]{1,12})[”"」』\]]?[。.\s]*$/i
+  );
+  if (viKeywordStemMatch && viKeywordStemMatch[1]) {
+    stem = `请用“${viKeywordStemMatch[1].trim()}”选择正确的句子：`;
+  }
+
   if (!stem) return null;
 
   if (/（[\s\u3000]*）|\([\s\u3000]*\)|\[[\s\u3000\.]*\]|【[\s\u3000\.]*】|[\(（]\s*_{1,}\s*[\)）]|\[\s*_{1,}\s*\]|_{2,}/.test(stem)) {

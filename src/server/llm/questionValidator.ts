@@ -1521,7 +1521,11 @@ export function validateCandidate(
   }
 
   if (q.part_type === 'write_sentence_reorder_4opt' && typeof q.stem === 'string') {
-    const hasReorderCue = q.stem.includes('/') || /(?:排列|连词成句|顺序)/.test(q.stem);
+    const hasReorderCue =
+      q.stem.includes('/') ||
+      /(?:排列|连词成句|顺序|请用[“"「『]?[\u4e00-\u9fa5]+[”"」』]?(?:造句|选择正确的句子)|用[“"「『]?[\u4e00-\u9fa5]+[”"」』]?.*(?:造句|句子))/.test(
+        q.stem
+      );
     if (!hasReorderCue) {
       errors.push(
         `Writing sentence reorder ('write_sentence_reorder_4opt') stem must present scrambled words separated by '/'`
@@ -1951,6 +1955,16 @@ export function validateCandidate(
   // (Exempts pinyin prompts in writing tasks and single-letter option labels A-F in picture matching.
   // Strips inline Latin/pinyin in parentheses so parenthesized pinyin annotations are properly handled)
   const latinVietnameseRegex = /[a-zA-ZàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/;
+  // Exempt authentic modern Chinese loan-letter terms (C盘, U盘, T恤, X光, B超, K歌, A座...) and uppercase acronyms (WiFi, APP, KTV, AI, VIP, PDF, HSK...) when embedded in Chinese text
+  const stripAuthenticChineseLoanLatin = (text: string): string => {
+    if (!/[\u4e00-\u9fa5]/.test(text)) return text;
+    return text
+      .replace(/(?<![a-zA-Z])[A-Z](?=[盘恤光座区栋号楼型级类超歌站线])/g, '')
+      .replace(
+        /(?<![a-zA-Z])(?:AA|AI|APP|ATM|BBC|CBD|CEO|CFO|CPU|CT|DIY|DNA|DVD|GDP|GPS|HSK|ID|IP|IT|KFC|KTV|MBA|MP3|MP4|NBA|NGO|PDF|PM|PPT|QQ|QR|RMB|SIM|SMS|SOS|SUV|TV|UFO|UN|USB|VIP|VR|WC|WIFI|Wi-Fi|WiFi|WTO|3D|4G|5G)(?![a-zA-Z])/g,
+        ''
+      );
+  };
   const isPinyinPrompt = Boolean(q.part_type && /pinyin/i.test(q.part_type));
   const hasOrderingOptions = Boolean(
     Array.isArray(q.options) &&
@@ -1962,7 +1976,7 @@ export function validateCandidate(
     (q.part_type && /^(?:read_paragraph_sentence_ordering|read_sentence_order_[3456]opt)$/i.test(q.part_type.trim()))
   );
   let stemForLatinCheck = typeof q.stem === 'string'
-    ? stripParenthesizedPinyin(q.stem)
+    ? stripAuthenticChineseLoanLatin(stripParenthesizedPinyin(q.stem))
     : q.stem;
   if (isSentenceOrdering && typeof stemForLatinCheck === 'string') {
     stemForLatinCheck = stemForLatinCheck.replace(/(^|\n|[\u4e00-\u9fa5。！？?!）\)])\s*[A-F]\s*[.．、:：]\s*/g, '$1');
@@ -1976,7 +1990,7 @@ export function validateCandidate(
         const trimmedOpt = opt.trim();
         const isLetterOrTfLabel = /^(?:[A-Fa-f]|对|错|√|×|✓|✗|Đúng|Sai|True|False|✓\s*Đúng|✗\s*Sai)$/i.test(trimmedOpt);
         const isOrderingSequence = isSentenceOrdering && /^[A-F](?:\s*(?:[-–—→,]|->)\s*[A-F]){2,5}$/i.test(trimmedOpt);
-        const optForLatinCheck = stripParenthesizedPinyin(opt);
+        const optForLatinCheck = stripAuthenticChineseLoanLatin(stripParenthesizedPinyin(opt));
         if (latinVietnameseRegex.test(optForLatinCheck) && !isLetterOrTfLabel && !isOrderingSequence) {
           errors.push(`option '${opt}' contains invalid Latin or Vietnamese characters`);
         }

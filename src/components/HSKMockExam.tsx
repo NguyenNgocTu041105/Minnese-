@@ -360,6 +360,15 @@ export interface HSKMockExamProps {
   initialMode?: 'hall' | 'mock' | 'practice' | 'notebook';
   initialLevel?: number;
   initialSkill?: string;
+  initialDifficulty?: 'all' | 'easy' | 'medium' | 'hard';
+  initialOfficialSet?: {
+    id: string;
+    title: string;
+    level: number;
+    timeLimitMinutes: number;
+    difficultyLabelVi?: string;
+    mode: 'mock' | 'practice';
+  } | null;
   onExit?: () => void;
   onRewardXp?: (amount: number) => void;
   /** Instant CBT Mode: load an imported or custom exam set directly into the CBT room */
@@ -780,6 +789,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   initialMode = 'hall',
   initialLevel = 1,
   initialSkill,
+  initialDifficulty = 'all',
+  initialOfficialSet = null,
   onExit,
   onRewardXp,
   customExamData,
@@ -787,6 +798,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   // Navigation View State: 'hall' | 'exam' | 'practice' | 'result' | 'notebook'
   const [currentView, setCurrentView] = useState<'hall' | 'exam' | 'practice' | 'result' | 'notebook'>(() => {
     if (customExamData && customExamData.questions.length > 0) return 'exam';
+    if (initialOfficialSet) return initialOfficialSet.mode === 'practice' ? 'practice' : 'exam';
     if (initialMode === 'mock') return 'exam';
     if (initialMode === 'practice') return 'practice';
     if (initialMode === 'notebook') return 'notebook';
@@ -885,6 +897,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   const [requestedPracticeCount, setRequestedPracticeCount] = useState<number>(15);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(() => {
     if (customExamData && customExamData.questions.length > 0) return false;
+    if (initialOfficialSet) return true;
     return initialMode === 'mock' || initialMode === 'practice';
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -1415,8 +1428,15 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
       return;
     }
 
+    if (initialOfficialSet) {
+      handleStartOfficialSet(initialOfficialSet, initialOfficialSet.mode);
+      return;
+    }
+
     if (initialMode === 'mock' || initialMode === 'practice') {
-      loadExamSession(effectiveInitialLevel, initialMode, initialSkill);
+      loadExamSession(effectiveInitialLevel, initialMode, initialSkill, {
+        difficulty: initialMode === 'mock' ? initialDifficulty : undefined,
+      });
     }
 
     return () => {
@@ -1424,7 +1444,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
         abortControllerRef.current.abort();
       }
     };
-  }, [initialMode, effectiveInitialLevel, initialSkill, loadExamSession, customExamData]);
+  }, [initialMode, effectiveInitialLevel, initialSkill, initialDifficulty, initialOfficialSet, loadExamSession, customExamData]);
 
   // Mode 1: 1-Click Mock Exam Assembly (respects chosen difficulty tier)
   const handleStartMockExam = useCallback(

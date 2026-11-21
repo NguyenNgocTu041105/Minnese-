@@ -743,7 +743,7 @@ const SchedulerCountdown = React.memo(
 
 export const QBankAdmin: React.FC = () => {
   // Navigation / sub-view state: 'duyet_de' is the first sub-tab
-  const [activeSubTab, setActiveSubTab] = useState<'duyet_de' | 'review' | 'generate' | 'import' | 'studio' | 'sync' | 'coverage'>('duyet_de');
+  const [activeSubTab, setActiveSubTab] = useState<'duyet_de' | 'review' | 'import' | 'custom_exams' | 'generate' | 'studio' | 'sync' | 'coverage'>('duyet_de');
   const [hasUserSwitchedTab, setHasUserSwitchedTab] = useState(false);
 
   // Universal Question Import state
@@ -3374,24 +3374,6 @@ export const QBankAdmin: React.FC = () => {
 
             <button
               type="button"
-              data-testid="subtab-generate"
-              data-active={activeSubTab === 'generate'}
-              onClick={() => {
-                setHasUserSwitchedTab(true);
-                setActiveSubTab('generate');
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
-                activeSubTab === 'generate'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Tạo câu hỏi AI</span>
-            </button>
-
-            <button
-              type="button"
               data-testid="subtab-import"
               data-active={activeSubTab === 'import'}
               onClick={() => {
@@ -3410,38 +3392,21 @@ export const QBankAdmin: React.FC = () => {
 
             <button
               type="button"
-              data-testid="subtab-studio"
-              data-active={activeSubTab === 'studio'}
+              data-testid="subtab-custom-exams"
+              data-active={activeSubTab === 'custom_exams'}
               onClick={() => {
                 setHasUserSwitchedTab(true);
-                setActiveSubTab('studio');
+                setActiveSubTab('custom_exams');
+                loadBackendCustomExamSets();
               }}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
-                activeSubTab === 'studio'
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm ring-2 ring-purple-500/20'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>Soạn đề thi mẫu (Studio 8 bước)</span>
-            </button>
-
-            <button
-              type="button"
-              data-testid="subtab-sync"
-              data-active={activeSubTab === 'sync'}
-              onClick={() => {
-                setHasUserSwitchedTab(true);
-                setActiveSubTab('sync');
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
-                activeSubTab === 'sync'
+                activeSubTab === 'custom_exams'
                   ? 'bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Trạng thái đồng bộ & Khôi phục</span>
+              <Layers className="w-4 h-4" />
+              <span>Kho Đề Của Tôi ({customExamSets.length})</span>
             </button>
           </div>
         </div>
@@ -3480,9 +3445,9 @@ export const QBankAdmin: React.FC = () => {
                   1
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[var(--color-text-primary)]">AI Tự Động Sinh Đề</p>
+                  <p className="text-xs font-bold text-[var(--color-text-primary)]">Nhập Đề Đa Nguồn & Kiểm Duyệt</p>
                   <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5 leading-relaxed">
-                    Robot chạy ngầm mỗi 2h hoặc bạn bấm vào tab <strong>"Tạo câu hỏi AI"</strong> để sinh câu hỏi theo chủ đề mong muốn.
+                    Mở tab <strong>"Nhập đề đa nguồn"</strong> để tạo prompt 1-Click, dán đề từ Gemini/ChatGPT/Claude và tự động kiểm duyệt 6 Cổng.
                   </p>
                 </div>
               </div>
@@ -4834,8 +4799,8 @@ export const QBankAdmin: React.FC = () => {
                   </p>
                   <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                     {totalPendingCount > 0
-                      ? 'Bấm Làm mới, hoặc nới bộ lọc Cấp độ / Kỹ năng / Trạng thái. Nếu vẫn trống, mở tab Tạo câu hỏi AI rồi quay lại.'
-                      : 'Không có câu nào khớp bộ lọc, hoặc tất cả đã được duyệt. Sinh thêm câu mới khi cần:'}
+                      ? 'Bấm Làm mới, hoặc nới bộ lọc Cấp độ / Kỹ năng / Trạng thái. Nếu vẫn trống, mở tab Nhập đề đa nguồn để bổ sung thêm câu hỏi.'
+                      : 'Không có câu nào khớp bộ lọc, hoặc tất cả đã được duyệt. Nhập thêm đề mới khi cần:'}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -4843,12 +4808,12 @@ export const QBankAdmin: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setHasUserSwitchedTab(true);
-                      setActiveSubTab('generate');
+                      setActiveSubTab('import');
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-xs hover:bg-[var(--color-primary-dark)] shadow-sm transition-all cursor-pointer"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Tạo câu hỏi mới theo chủ đề</span>
+                    <Upload className="w-4 h-4" />
+                    <span>Mở Nhập đề đa nguồn</span>
                   </button>
                   <button
                     type="button"
@@ -7357,6 +7322,17 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                           <Layers className="w-3.5 h-3.5" />
                           <span>💾 Lưu / Cập nhật tên đề</span>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHasUserSwitchedTab(true);
+                            setActiveSubTab('custom_exams');
+                            loadBackendCustomExamSets();
+                          }}
+                          className="px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-text-primary)] text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <span>📂 Mở Kho Đề Của Tôi</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -7653,8 +7629,12 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                 </div>
               </div>
             )}
+          </section>
+        )}
 
-            {/* M5: KHO ĐỀ CỦA TÔI (CUSTOM EXAM SETS) */}
+        {/* VIEW 1D: KHO ĐỀ CỦA TÔI (CUSTOM EXAM SETS — DEDICATED TAB) */}
+        {activeSubTab === 'custom_exams' && (
+          <section aria-label="My Custom Exam Sets" className="space-y-4">
             <div
               className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-4"
               data-testid="custom-exam-sets-panel"
@@ -7747,8 +7727,21 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
               </div>
 
               {customExamSets.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[var(--color-background)] border border-dashed border-[var(--color-border)] text-center text-xs text-[var(--color-text-secondary)]">
-                  Chưa có bộ đề nào trong Kho Đề Của Tôi. Hãy dán đề hoặc tải file lên phía trên, sau đó bấm <strong>"💾 Lưu vào Kho Đề Của Tôi"</strong> hoặc <strong>"🖥️ Thi thử ngay trên máy"</strong>.
+                <div className="p-6 rounded-2xl bg-[var(--color-background)] border border-dashed border-[var(--color-border)] text-center text-xs text-[var(--color-text-secondary)] space-y-3">
+                  <p>
+                    Chưa có bộ đề nào trong Kho Đề Của Tôi. Hãy vào tab <strong>"Nhập đề đa nguồn"</strong> để dán đề hoặc tải file lên, hệ thống sẽ tự lưu bộ đề tại đây.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasUserSwitchedTab(true);
+                      setActiveSubTab('import');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-bold cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Mở tab Nhập đề đa nguồn</span>
+                  </button>
                 </div>
               ) : (() => {
                 const tierRank = (t?: string) => (t === 'easy' ? 1 : t === 'hard' ? 3 : 2);

@@ -369,6 +369,13 @@ export interface HSKMockExamProps {
     difficultyLabelVi?: string;
     mode: 'mock' | 'practice';
   } | null;
+  initialSkillSet?: {
+    level: number;
+    skill: 'listening' | 'reading' | 'writing';
+    setIndex: number;
+    totalSets?: number;
+    title?: string;
+  } | null;
   onExit?: () => void;
   onRewardXp?: (amount: number) => void;
   /** Instant CBT Mode: load an imported or custom exam set directly into the CBT room */
@@ -791,6 +798,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   initialSkill,
   initialDifficulty = 'all',
   initialOfficialSet = null,
+  initialSkillSet = null,
   onExit,
   onRewardXp,
   customExamData,
@@ -799,6 +807,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   const [currentView, setCurrentView] = useState<'hall' | 'exam' | 'practice' | 'result' | 'notebook'>(() => {
     if (customExamData && customExamData.questions.length > 0) return 'exam';
     if (initialOfficialSet) return initialOfficialSet.mode === 'practice' ? 'practice' : 'exam';
+    if (initialSkillSet) return 'practice';
     if (initialMode === 'mock') return 'exam';
     if (initialMode === 'practice') return 'practice';
     if (initialMode === 'notebook') return 'notebook';
@@ -897,9 +906,18 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
   const [requestedPracticeCount, setRequestedPracticeCount] = useState<number>(15);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(() => {
     if (customExamData && customExamData.questions.length > 0) return false;
-    if (initialOfficialSet) return true;
+    if (initialOfficialSet || initialSkillSet) return true;
     return initialMode === 'mock' || initialMode === 'practice';
   });
+  const [activeSkillSetMeta, setActiveSkillSetMeta] = useState<{
+    level: number;
+    skill: 'listening' | 'reading' | 'writing';
+    setIndex: number;
+    totalSets: number;
+    title: string;
+    rangeLabel?: string;
+    difficultyLabelVi?: string;
+  } | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef<boolean>(false);
@@ -1429,12 +1447,20 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
     }
 
     if (initialOfficialSet) {
+      setActiveSkillSetMeta(null);
       handleStartOfficialSet(initialOfficialSet, initialOfficialSet.mode);
       return;
     }
 
+    if (initialSkillSet) {
+      handleStartSkillSet(initialSkillSet.level, initialSkillSet.skill, initialSkillSet.setIndex);
+      return;
+    }
+
     if (initialMode === 'mock' || initialMode === 'practice') {
-      loadExamSession(effectiveInitialLevel, initialMode, initialSkill, {
+      setActiveSkillSetMeta(null);
+      const safeInitSkill = effectiveInitialLevel === 1 && initialSkill === 'writing' ? 'all' : initialSkill;
+      loadExamSession(effectiveInitialLevel, initialMode, safeInitSkill, {
         difficulty: initialMode === 'mock' ? initialDifficulty : undefined,
       });
     }
@@ -1444,7 +1470,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
         abortControllerRef.current.abort();
       }
     };
-  }, [initialMode, effectiveInitialLevel, initialSkill, initialDifficulty, initialOfficialSet, loadExamSession, customExamData]);
+  }, [initialMode, effectiveInitialLevel, initialSkill, initialDifficulty, initialOfficialSet, initialSkillSet, loadExamSession, customExamData]);
 
   // Mode 1: 1-Click Mock Exam Assembly (respects chosen difficulty tier)
   const handleStartMockExam = useCallback(
@@ -1528,6 +1554,74 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
         );
       } catch (err: any) {
         setSubmitError(err?.message || 'Không thể tải bộ đề thi.');
+      } finally {
+        setIsLoadingSession(false);
+      }
+    },
+    []
+  );
+
+  // Launch a numbered Skill Practice Set (e.g. Đề Nghe 1, Đề Nghe 2, Đề Đọc 1, Đề Viết 1)
+  const handleStartSkillSet = useCallback(
+    async (level: number, skill: 'listening' | 'reading' | 'writing', setIndex: number) => {
+      const safeSkill = level === 1 && skill === 'writing' ? 'listening' : skill;
+      try {
+        stopChineseAudio();
+      } catch {}
+      setIsPlayingAudio(false);
+      setIsLoadingSession(true);
+      setSubmitError(null);
+      setSelectedLevel(level);
+      setSelectedSkill(safeSkill);
+      setQuestions([]);
+      setCurrentIndex(0);
+      setUserAnswers({});
+      setFlaggedQuestions({});
+      setAudioPlayCounts({});
+      setPracticeChecked({});
+      setShowAudioScript(false);
+      setEssayDrafts({});
+      setSentenceOrderSlots({});
+      setIsSubmitting(false);
+      setScoreResult(null);
+      setIsShortage(false);
+      setExamDurationSeconds(0);
+      setTimeLeftSeconds(0);
+
+      if (level >= 3) {
+        setShowPinyin(false);
+      } else {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY_PINYIN_TOGGLE);
+          setShowPinyin(saved !== null ? saved === 'true' : true);
+        } catch {
+          setShowPinyin(true);
+        }
+      }
+
+      setCurrentView('practice');
+
+      try {
+        const res = await fetch('/api/exam/start-skill-set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level, skill: safeSkill, setIndex }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.success || !Array.isArray(data.questions)) {
+          throw new Error(data?.error || 'Không thể tải đề luyện kỹ năng này.');
+        }
+        setQuestions(data.questions);
+        setActiveSessionId(data.sessionId);
+        setDataSource('api');
+        if (data.skillSetMeta) {
+          setActiveSkillSetMeta(data.skillSetMeta);
+          setFallbackNotice(
+            `${data.skillSetMeta.title} (${data.skillSetMeta.rangeLabel} • ${data.skillSetMeta.difficultyLabelVi || ''})`
+          );
+        }
+      } catch (err: any) {
+        setSubmitError(err?.message || 'Không thể tải đề luyện kỹ năng.');
       } finally {
         setIsLoadingSession(false);
       }
@@ -2916,7 +3010,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+          <div className={`grid grid-cols-1 ${selectedLevel >= 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 pt-1`}>
             <div className="rounded-2xl p-4 border border-[var(--color-border)] bg-[var(--color-background)] space-y-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
@@ -2963,28 +3057,30 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
               </button>
             </div>
 
-            <div className="rounded-2xl p-4 border border-[var(--color-border)] bg-[var(--color-background)] space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5" />
+            {selectedLevel >= 2 && (
+              <div className="rounded-2xl p-4 border border-[var(--color-border)] bg-[var(--color-background)] space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-[var(--color-text-primary)]">Viết & Điền Từ (书写)</h4>
+                    <p className="text-xs text-[var(--color-text-secondary)]">Sắp xếp câu, điền chữ Hán & ngữ pháp</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-sm text-[var(--color-text-primary)]">Viết & Điền Từ (书写)</h4>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Sắp xếp câu, điền chữ Hán & ngữ pháp</p>
-                </div>
+                <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                  Nắm chắc các cấu trúc câu trọng điểm, lượng từ và từ loại thường gặp trong đề thi HSK.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleStartPractice(selectedLevel, 'writing')}
+                  className="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Luyện Viết HSK {selectedLevel}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Nắm chắc các cấu trúc câu trọng điểm, lượng từ và từ loại thường gặp trong đề thi HSK.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleStartPractice(selectedLevel, 'writing')}
-                className="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span>Luyện Viết HSK {selectedLevel}</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
@@ -3081,7 +3177,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   { key: 'all', label: 'Tất cả kỹ năng' },
                   { key: 'listening', label: 'Nghe hiểu' },
                   { key: 'reading', label: 'Đọc hiểu' },
-                  { key: 'writing', label: 'Viết & Điền từ' },
+                  ...(selectedLevel >= 2 ? [{ key: 'writing', label: 'Viết & Điền từ' }] : []),
                 ].map((sk) => (
                   <button
                     key={sk.key}
@@ -3310,7 +3406,13 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                     data-testid={`practice-room-level-tab-${lvl}`}
                     onClick={() => {
                       if (lvl !== selectedLevel) {
-                        loadExamSession(lvl, 'practice', selectedSkill);
+                        const nextSkill = lvl === 1 && selectedSkill === 'writing' ? 'all' : selectedSkill;
+                        if (activeSkillSetMeta && nextSkill !== 'all') {
+                          handleStartSkillSet(lvl, nextSkill as 'listening' | 'reading' | 'writing', 1);
+                        } else {
+                          setActiveSkillSetMeta(null);
+                          loadExamSession(lvl, 'practice', nextSkill);
+                        }
                       }
                     }}
                     className={`px-3 py-1 rounded-xl text-xs font-bold cursor-pointer transition-all ${
@@ -3330,7 +3432,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   { key: 'all', label: 'Tất cả' },
                   { key: 'listening', label: 'Nghe hiểu' },
                   { key: 'reading', label: 'Đọc hiểu' },
-                  { key: 'writing', label: 'Viết' },
+                  ...(selectedLevel >= 2 ? [{ key: 'writing', label: 'Viết' }] : []),
                 ].map((sk) => (
                   <button
                     key={sk.key}
@@ -3338,7 +3440,12 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                     data-testid={`practice-room-skill-tab-${sk.key}`}
                     onClick={() => {
                       if (sk.key !== selectedSkill) {
-                        loadExamSession(selectedLevel, 'practice', sk.key);
+                        if (sk.key === 'listening' || sk.key === 'reading' || sk.key === 'writing') {
+                          handleStartSkillSet(selectedLevel, sk.key, 1);
+                        } else {
+                          setActiveSkillSetMeta(null);
+                          loadExamSession(selectedLevel, 'practice', sk.key);
+                        }
                       }
                     }}
                     className={`px-3 py-1 rounded-xl text-xs font-bold cursor-pointer transition-all ${
@@ -3352,6 +3459,50 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Numbered Skill Set Pager (Đề Nghe 1 / 43, Đề Đọc 1 / 49...) */}
+            {activeSkillSetMeta && activeSkillSetMeta.totalSets > 1 && (
+              <div className="mt-2.5 pt-2.5 border-t border-[var(--color-border)]/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-lg bg-teal-500/15 text-teal-700 dark:text-teal-300 font-bold">
+                    {activeSkillSetMeta.title}
+                  </span>
+                  <span className="text-[var(--color-text-secondary)] font-medium">
+                    Đề {activeSkillSetMeta.setIndex}/{activeSkillSetMeta.totalSets} • {activeSkillSetMeta.rangeLabel}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={activeSkillSetMeta.setIndex <= 1}
+                    onClick={() =>
+                      handleStartSkillSet(
+                        activeSkillSetMeta.level,
+                        activeSkillSetMeta.skill,
+                        activeSkillSetMeta.setIndex - 1
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] hover:border-teal-400 disabled:opacity-40 font-semibold cursor-pointer"
+                  >
+                    ← Đề trước
+                  </button>
+                  <button
+                    type="button"
+                    disabled={activeSkillSetMeta.setIndex >= activeSkillSetMeta.totalSets}
+                    onClick={() =>
+                      handleStartSkillSet(
+                        activeSkillSetMeta.level,
+                        activeSkillSetMeta.skill,
+                        activeSkillSetMeta.setIndex + 1
+                      )
+                    }
+                    className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white font-bold cursor-pointer"
+                  >
+                    Đề tiếp theo ({activeSkillSetMeta.setIndex + 1}/{activeSkillSetMeta.totalSets}) →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

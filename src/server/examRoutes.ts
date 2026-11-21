@@ -1377,6 +1377,278 @@ examRouter.post('/start-set', (req: Request, res: Response) => {
 });
 
 // =========================================================================
+// 2d. GET /api/exam/skill-sets & POST /api/exam/start-skill-set
+// Partitions approved questions for (level, skill) into clean numbered sets
+// (Đề Nghe 1, Đề Nghe 2..., Đề Đọc 1..., Đề Viết 1...) sorted Easy → Hard!
+// =========================================================================
+function getSkillSetPageSize(level: number, skill: string): number {
+  if (skill === 'writing') {
+    return level === 6 ? 4 : 10;
+  }
+  return 20;
+}
+
+function getSkillLabelVi(skill: string): string {
+  if (skill === 'listening') return 'Nghe';
+  if (skill === 'writing') return 'Viết';
+  return 'Đọc';
+}
+
+function loadOrderedSkillBankRows(db: DatabaseSync, level: number, skill: string): any[] {
+  const rows = db
+    .prepare(
+      `SELECT id, stem, options, answer_idx, pinyin, explanation_vi, level, skill, part_type,
+              illustration_theme, image_url, options_images, topic, passage, audio_url, audio_text
+       FROM questions
+       WHERE status = 'approved' AND is_active = 1 AND level = ? AND LOWER(skill) = ?`
+    )
+    .all(level, skill) as any[];
+
+  const scored = rows.map((r) => {
+    const stemLen = ((String(r.stem || '') + String(r.passage || '')).match(/[\u4e00-\u9fff]/g) || []).length;
+    const optLen = (String(r.options || '').match(/[\u4e00-\u9fff]/g) || []).length;
+    return { row: r, complexity: stemLen + optLen * 0.5 };
+  });
+
+  scored.sort((a, b) => a.complexity - b.complexity || String(a.row.id).localeCompare(String(b.row.id)));
+  return scored.map((s) => s.row);
+}
+
+function partitionSkillBankIntoSets(rows: any[], level: number, skill: string): Array<{
+  setIndex: number;
+  title: string;
+  questionCount: number;
+  rangeLabel: string;
+  difficultyTier: ExamDifficultyTier;
+  rows: any[];
+}> {
+  if (rows.length === 0) return [];
+  const pageSize = getSkillSetPageSize(level, skill);
+  const minTail = skill === 'writing' ? (level === 6 ? 2 : 4) : 8;
+  const chunks: any[][] = [];
+
+  for (let i = 0; i < rows.length; i += pageSize) {
+    chunks.push(rows.slice(i, i + pageSize));
+  }
+  if (chunks.length > 1 && chunks[chunks.length - 1].length < minTail) {
+    const tail = chunks.pop()!;
+    chunks[chunks.length - 1].push(...tail);
+  }
+
+  const totalSets = chunks.length;
+  const label = getSkillLabelVi(skill);
+  const easyEnd = totalSets <= 2 ? 1 : Math.max(1, Math.round(totalSets * 0.34));
+  const hardStart = totalSets <= 2 ? (totalSets === 2 ? 1 : totalSets) : Math.max(easyEnd, totalSets - Math.max(1, Math.round(totalSets * 0.30)));
+
+  let offset = 0;
+  return chunks.map((chunk, idx) => {
+    const startNum = offset + 1;
+    const endNum = offset + chunk.length;
+    offset = endNum;
+    let tier: ExamDifficultyTier = 'medium';
+    if (idx < easyEnd) tier = 'easy';
+    else if (idx >= hardStart) tier = 'hard';
+    return {
+      setIndex: idx + 1,
+      title: `Đề ${label} ${idx + 1} (HSK ${level})`,
+      questionCount: chunk.length,
+      rangeLabel: `Câu ${startNum}–${endNum}`,
+      difficultyTier: tier,
+      rows: chunk,
+    };
+  });
+}
+
+examRouter.get('/skill-sets', (req: Request, res: Response) => {
+  try {
+    const db = getQBankDb();
+    if (!db) {
+      return res.json({ success: true, totalQuestions: 0, totalSets: 0, sets: [] });
+    }
+    const level = parseInt(String(req.query.level || '1'), 10);
+    const skill = String(req.query.skill || 'listening').trim().toLowerCase();
+    if (!Number.isInteger(level) || level < 1 || level > 6) {
+      return res.status(400).json({ success: false, error: 'Cấp độ HSK không hợp lệ (1-6).' });
+    }
+    if (!['listening', 'reading', 'writing'].includes(skill)) {
+      return res.status(400).json({ success: false, error: 'Kỹ năng không hợp lệ (listening, reading, writing).' });
+    }
+    // HSK 1 does not have Writing
+    if (level === 1 && skill === 'writing') {
+      return res.json({
+        success: true,
+        level,
+        skill,
+        skillLabelVi: getSkillLabelVi(skill),
+        totalQuestions: 0,
+        pageSize: getSkillSetPageSize(level, skill),
+        totalSets: 0,
+        sets: [],
+      });
+    }
+
+    const orderedRows = loadOrderedSkillBankRows(db, level, skill);
+    const partitioned = partitionSkillBankIntoSets(orderedRows, level, skill);
+    return res.json({
+      success: true,
+      level,
+      skill,
+      skillLabelVi: getSkillLabelVi(skill),
+      totalQuestions: orderedRows.length,
+      pageSize: getSkillSetPageSize(level, skill),
+      totalSets: partitioned.length,
+      sets: partitioned.map((s) => ({
+        setIndex: s.setIndex,
+        title: s.title,
+        questionCount: s.questionCount,
+        rangeLabel: s.rangeLabel,
+        difficultyTier: s.difficultyTier,
+        difficultyLabelVi: DIFFICULTY_LABELS_VI[s.difficultyTier],
+      })),
+    });
+  } catch (err: any) {
+    console.error('[ExamRouter] Error loading skill sets:', err);
+    return res.status(500).json({ success: false, error: 'Không thể tải danh sách đề luyện kỹ năng.' });
+  }
+});
+
+examRouter.post('/start-skill-set', (req: Request, res: Response) => {
+  try {
+    pruneExpiredSessions();
+    const db = getQBankDb();
+    if (!db) {
+      return res.status(500).json({ success: false, error: 'Cơ sở dữ liệu đề thi chưa sẵn sàng.' });
+    }
+    const body = req.body || {};
+    const level = parseInt(String(body.level || '1'), 10);
+    const skill = String(body.skill || 'listening').trim().toLowerCase();
+    const setIndex = parseInt(String(body.setIndex || '1'), 10);
+
+    if (!Number.isInteger(level) || level < 1 || level > 6) {
+      return res.status(400).json({ success: false, error: 'Cấp độ HSK không hợp lệ.' });
+    }
+    if (!['listening', 'reading', 'writing'].includes(skill)) {
+      return res.status(400).json({ success: false, error: 'Kỹ năng không hợp lệ.' });
+    }
+    if (level === 1 && skill === 'writing') {
+      return res.status(400).json({ success: false, error: 'HSK 1 không có phần thi Viết (书写).' });
+    }
+
+    const orderedRows = loadOrderedSkillBankRows(db, level, skill);
+    const partitioned = partitionSkillBankIntoSets(orderedRows, level, skill);
+    const picked = partitioned.find((s) => s.setIndex === setIndex) || partitioned[0];
+    if (!picked || picked.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy đề kỹ năng yêu cầu.' });
+    }
+
+    const normalizedQuestions: ExamQuestionItem[] = picked.rows.map((r: any, idx: number) => {
+      let opts: string[] = [];
+      let optsImages: string[] = [];
+      try { opts = JSON.parse(r.options || '[]'); } catch {}
+      try { optsImages = JSON.parse(r.options_images || '[]'); } catch {}
+      const ansIdx = Number(r.answer_idx) || 0;
+      const audioText = skill === 'listening' ? (r.audio_text || r.stem) : undefined;
+      const audioUrl =
+        skill === 'listening'
+          ? r.audio_url || (audioText ? `/api/tts?text=${encodeURIComponent(audioText)}&voice=auto` : undefined)
+          : undefined;
+      return {
+        id: String(r.id),
+        level,
+        section: skill as 'listening' | 'reading' | 'writing',
+        part_type: String(r.part_type || 'read_comprehension_4opt'),
+        item_number: idx + 1,
+        stem: String(r.stem || ''),
+        pinyin_stem: r.pinyin || '',
+        passage: r.passage || undefined,
+        options: Array.isArray(opts) ? opts : [],
+        options_images: Array.isArray(optsImages) && optsImages.length > 0 ? optsImages : undefined,
+        image_url: r.image_url || undefined,
+        illustration: r.illustration_theme || undefined,
+        audio_text: audioText,
+        audio_url: audioUrl,
+        answer_index: ansIdx,
+        answer_idx: ansIdx,
+        explanation_vi: String(r.explanation_vi || ''),
+      };
+    });
+
+    const now = Date.now();
+    const sessionId = `skill_set_${level}_${skill}_${picked.setIndex}_${now}_${crypto.randomBytes(4).toString('hex')}`;
+    const bp = HSK_BLUEPRINT_SUMMARIES[level] || HSK_BLUEPRINT_SUMMARIES[1];
+
+    const session: ActiveExamSession = {
+      sessionId,
+      level,
+      mode: 'practice',
+      skill,
+      totalQuestions: normalizedQuestions.length,
+      requestedCount: normalizedQuestions.length,
+      actualCount: normalizedQuestions.length,
+      isShortage: false,
+      usingFixtureFallback: false,
+      isFixtureDemo: false,
+      dataSource: 'qbank',
+      fallbackNotice: null,
+      timeLimitMinutes: 0,
+      maxScore: normalizedQuestions.length * 5,
+      passScore: Math.round(normalizedQuestions.length * 5 * 0.6),
+      hasPinyin: bp.has_pinyin,
+      audioPlayback: bp.audio_playback,
+      createdAt: now,
+      expiresAt: now + SESSION_TTL_MS,
+      questions: normalizedQuestions,
+    };
+
+    activeExamSessions.set(sessionId, session);
+    saveSessionSnapshotToDb(session);
+
+    const clientQuestions = normalizedQuestions.map(stripAnswerFromQuestion);
+
+    return res.json({
+      success: true,
+      sessionId,
+      skillSetMeta: {
+        level,
+        skill,
+        setIndex: picked.setIndex,
+        totalSets: partitioned.length,
+        title: picked.title,
+        rangeLabel: picked.rangeLabel,
+        difficultyTier: picked.difficultyTier,
+        difficultyLabelVi: DIFFICULTY_LABELS_VI[picked.difficultyTier],
+      },
+      questions: clientQuestions,
+      totalQuestions: session.totalQuestions,
+      dataSource: 'qbank',
+      session: {
+        sessionId: session.sessionId,
+        level: session.level,
+        mode: 'practice',
+        skill,
+        dataSource: 'qbank',
+        totalQuestions: session.totalQuestions,
+        requestedCount: session.requestedCount,
+        actualCount: session.actualCount,
+        isShortage: false,
+        fallbackNotice: null,
+        timeLimitMinutes: 0,
+        maxScore: session.maxScore,
+        passScore: session.passScore,
+        hasPinyin: session.hasPinyin,
+        audioPlayback: session.audioPlayback,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        questions: clientQuestions,
+      },
+    });
+  } catch (err: any) {
+    console.error('[ExamRouter] Error starting skill set:', err);
+    return res.status(500).json({ success: false, error: 'Không thể khởi tạo đề luyện kỹ năng.' });
+  }
+});
+
+// =========================================================================
 // 3. POST /api/exam/generate-mock
 // Assembles mock exam or practice session according to official blueprint (0 LLM calls)
 // =========================================================================

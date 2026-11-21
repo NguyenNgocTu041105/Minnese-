@@ -187,6 +187,28 @@ export function parseOptionLabelToIdx(label: string): number | null {
 }
 
 /**
+ * Restores lost paragraph line-breaks when users copy rendered HTML directly from
+ * Gemini Web, ChatGPT, or DeepSeek chat UI (e.g. "B. 错Câu 2:", "ĐÁP ÁN...Câu 1: A. ...Câu 2: B.").
+ * Preserves ranges like "(Câu 1 – Câu 36)" or "(TỪ CÂU 1 ĐẾN CÂU 80)" untouched.
+ */
+export function restoreGluedClipboardNewlines(raw: string): string {
+  if (!raw || typeof raw !== 'string') return '';
+  return raw
+    // Split glued major exam section headers: "...Câu 36)II. 阅读" or "...起。III. 书写"
+    .replace(/([^\r\n])((?:I{1,3}|IV)\.\s*(?:听力|阅读|书写|PHẦN\s*\d))/g, '$1\n$2')
+    // Split glued subsection headers: "...(Câu 1 – Câu 36)Nghe 1A (Câu 1 – Câu 13):"
+    .replace(/([^\r\n])((?:Nghe|Đọc|Viết|Phần)\s*\d+[A-Za-z]?\s*\(Câu\s*\d+)/gi, '$1\n$2')
+    // Split glued Answer Key section header: "...早起。ĐÁP ÁN VÀ GIẢI THÍCH..."
+    .replace(/([^\r\n])((?:ĐÁP\s*ÁN(?:\s*VÀ\s*GIẢI\s*THÍCH)?|BẢNG\s*ĐÁP\s*ÁN|ANSWER\s*KEY)\b)/gi, '$1\n$2')
+    // Split glued question boundaries: "B. 错Câu 2:", "...Câu 80)Câu 1: A. ...", "...này.Câu 14:"
+    .replace(/([^\r\n])((?:Câu|Question|Bài)\s*\d+\s*[:：])/gi, '$1\n$2')
+    // Split glued [IMG: ...] tags if attached to previous line
+    .replace(/([^\r\n])(\[(?:IMG|IMAGE)\s*[:：])/gi, '$1\n$2')
+    // Split glued standalone A/B/C/D options if stuck directly after Chinese punctuation or parentheses
+    .replace(/([。！？?!）\)])([A-F]\.\s+[\u4e00-\u9fff])/g, '$1\n$2');
+}
+
+/**
  * Parses raw text or JSON into normalized CandidateQuestion objects.
  */
 export function parseUniversalQuestions(
@@ -207,6 +229,19 @@ export function parseUniversalQuestions(
     .replace(/【答案】/g, '\nĐáp án: ')
     .replace(/【解析】/g, '\nGiải thích: ')
     .replace(/【听力文本】/g, '### Bài nghe:\n');
+
+  // Unwrap plain text/markdown code fences (```text ... ```) produced by copy-safe prompts
+  if (!text.includes('```json')) {
+    const fencedTextMatch = text.match(/^\s*```(?:text|txt|markdown|md|plain)?\s*\r?\n([\s\S]*?)\r?\n```\s*$/i);
+    if (fencedTextMatch && fencedTextMatch[1]) {
+      text = fencedTextMatch[1].trim();
+    }
+  }
+
+  // Restore glued newlines from Gemini/ChatGPT web HTML copy-paste (when not JSON)
+  if (!text.trim().startsWith('{') && !text.trim().startsWith('[') && !text.includes('```json')) {
+    text = restoreGluedClipboardNewlines(text);
+  }
 
   // Feature 1: Normalize full-width Latin letters \uFF21-\uFF26 to ASCII A-F
   const normalizedInput = normalizeFullWidthLetters(text);

@@ -613,6 +613,11 @@ export function buildExternalAiPrompt(config: ExternalPromptConfig): string {
   const cleanVisualImgRule =
     'Mỗi mục có hình ảnh bắt buộc dùng thẻ `[IMG: <english scene description without Chinese characters or answer words>]` viết hoàn toàn bằng tiếng Anh tự nhiên mô tả bối cảnh/sự vật, TUYỆT ĐỐI KHÔNG chứa chữ Hán, Pinyin hay từ khóa đáp án.';
 
+  const copySafeDirective =
+    formatType === 'json_strict'
+      ? `\n\n### QUY TẮC XUẤT KHỐI MÃ CHỐNG LỖI SAO CHÉP (BẮT BUỘC):\n- ĐẶT TOÀN BỘ MẢNG JSON VÀO ĐÚNG 1 KHỐI MÃ \`\`\`json ... \`\`\` DUY NHẤT, không viết lời dẫn mở đầu hay kết thúc ngoài khối mã.`
+      : `\n\n### QUY TẮC CHỐNG DÍNH DÒNG KHI SAO CHÉP TỪ GEMINI / CHATGPT / DEEPSEEK (BẮT BUỘC):\n- ĐẶT TOÀN BỘ NỘI DUNG ĐỀ THI VÀ PHẦN ĐÁP ÁN VÀO **ĐÚNG 1 KHỐI MÃ MARKDOWN DUY NHẤT** (mở đầu bằng \`\`\`text và kết thúc bằng \`\`\`) để người dùng bấm nút Sao chép (Copy) giữ nguyên 100% xuống dòng, TUYỆT ĐỐI không bị dính hàng.\n- Mỗi tiêu đề phần, mỗi \`Câu 1:\`, \`Câu 2:\`, từng thẻ \`[IMG: ...]\`, từng đáp án \`A.\`, \`B.\`, \`C.\`, \`D.\`, và từng dòng trong phần đáp án (\`Câu 1: A. Giải thích: ...\`) BẮT BUỘC xuống dòng riêng biệt; để 1 dòng trống giữa các câu.\n- KHÔNG dùng bảng Markdown (|---|) và không viết lời chào mở đầu/kết thúc bên ngoài khối \`\`\`text.`;
+
   const headerBlock = `[Hệ thống Khảo thí HSK 3.0 Minnese — Prompt tối ưu cho ${modelMeta.name}]
 Bạn là Chuyên gia Ra đề Khảo thí Tiếng Trung Quốc tế chuẩn HSK 3.0 (CLEC / CTI).
 Hãy biên soạn bộ đề thi **HSK ${level}** (${spec.cefr} — phạm vi ${spec.vocabCount} từ vựng chuẩn).
@@ -622,7 +627,7 @@ ${topicText}
 - Phạm vi từ vựng & ngữ pháp: Bám sát khung HSK ${level} (${spec.grammarSummary}).${forbiddenLine}
 ${pinyinInstruction}
 - Tính đơn nhất đáp án: Mỗi câu hỏi chỉ có DUY NHẤT 1 đáp án đúng hoàn toàn về cả ngữ pháp lẫn ngữ nghĩa; các phương án nhiễu phải cùng từ loại (POS) nhưng sai rõ ràng về ngữ cảnh hoặc logic.
-- Mọi lời giải thích đều phải viết bằng **tiếng Việt** chi tiết, dịch nghĩa câu và giải thích vì sao đáp án đó đúng.${modelDirectiveLine}`;
+- Mọi lời giải thích đều phải viết bằng **tiếng Việt** chi tiết, dịch nghĩa câu và giải thích vì sao đáp án đó đúng.${modelDirectiveLine}${copySafeDirective}`;
 
   if (formatType === 'full_cbt_mock_exam') {
     const total = Math.max(4, count);

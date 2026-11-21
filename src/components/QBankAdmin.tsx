@@ -1650,13 +1650,6 @@ export const QBankAdmin: React.FC = () => {
 
         if (wasRunning && !nextStatus.isRunning) {
           loadCoverageDashboard();
-          if (nextStatus.lastError) {
-            setActionErrorMsg(`Đợt sinh đề nền kết thúc với cảnh báo: ${nextStatus.lastError}`);
-          } else {
-            setActionSuccessMsg(
-              `✅ Đã hoàn tất đợt sinh câu hỏi nền! Tiến độ hôm nay: ${nextStatus.generatedToday} câu.`
-            );
-          }
         }
       }
     }, pollMs);
@@ -3251,8 +3244,8 @@ export const QBankAdmin: React.FC = () => {
   return (
     <div className="w-full min-h-[calc(100vh-4rem)] bg-[var(--color-background)] text-[var(--color-text-primary)] pb-16">
       {/* Top Banner / Header */}
-      <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)]/35 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.35)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2.5">
@@ -3320,8 +3313,8 @@ export const QBankAdmin: React.FC = () => {
             </div>
           </div>
 
-          {/* Sub-Tabs Navigation */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 mt-6 pt-4 border-t border-[var(--color-border)]/60 overflow-x-auto pb-1">
+          {/* Sub-Tabs Navigation — Balanced 4-Column Symmetrical Bar */}
+          <div className="mt-5 p-1.5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] grid grid-cols-2 md:grid-cols-4 gap-1.5">
             <button
               type="button"
               data-testid="subtab-duyet-de"
@@ -3332,25 +3325,25 @@ export const QBankAdmin: React.FC = () => {
                 loadProgress();
                 loadPendingQuestions();
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer silk-pill ${
                 activeSubTab === 'duyet_de'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
+                  ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_18px_-4px_rgba(20,184,166,0.45)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
               }`}
             >
-              <CheckCircle2 className="w-4 h-4" data-testid="subtab-duyet-de-icon" />
-              <span>Duyệt câu mới</span>
+              <CheckCircle2 className="w-4 h-4 shrink-0" data-testid="subtab-duyet-de-icon" />
+              <span className="truncate">Duyệt câu mới</span>
               {totalPendingCount > 0 ? (
                 <span
                   data-testid="badge-pending-count"
-                  className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
                     activeSubTab === 'duyet_de' ? 'bg-white/25 text-white' : 'bg-amber-500 text-white'
                   }`}
                 >
                   {totalPendingCount}
                 </span>
               ) : (
-                <span className="text-[10px] opacity-75">(0)</span>
+                <span className="text-[10px] opacity-75 shrink-0">(0)</span>
               )}
             </button>
 
@@ -3362,14 +3355,14 @@ export const QBankAdmin: React.FC = () => {
                 setHasUserSwitchedTab(true);
                 setActiveSubTab('review');
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer silk-pill ${
                 activeSubTab === 'review'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
+                  ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_18px_-4px_rgba(20,184,166,0.45)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
               }`}
             >
-              <FileText className="w-4 h-4" />
-              <span>Kho câu hỏi chính ({totalCount || totalQuestionsCount})</span>
+              <FileText className="w-4 h-4 shrink-0" />
+              <span className="truncate">Kho câu hỏi chính ({totalCount || totalQuestionsCount})</span>
             </button>
 
             <button
@@ -3380,14 +3373,14 @@ export const QBankAdmin: React.FC = () => {
                 setHasUserSwitchedTab(true);
                 setActiveSubTab('import');
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer silk-pill ${
                 activeSubTab === 'import'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
+                  ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_18px_-4px_rgba(20,184,166,0.45)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
               }`}
             >
-              <Upload className="w-4 h-4" />
-              <span>Nhập đề đa nguồn</span>
+              <Upload className="w-4 h-4 shrink-0" />
+              <span className="truncate">Nhập đề đa nguồn</span>
             </button>
 
             <button
@@ -3399,14 +3392,14 @@ export const QBankAdmin: React.FC = () => {
                 setActiveSubTab('custom_exams');
                 loadBackendCustomExamSets();
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shrink-0 silk-pill ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer silk-pill ${
                 activeSubTab === 'custom_exams'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]'
+                  ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_18px_-4px_rgba(20,184,166,0.45)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
               }`}
             >
-              <Layers className="w-4 h-4" />
-              <span>Kho Đề Của Tôi ({customExamSets.length})</span>
+              <Layers className="w-4 h-4 shrink-0" />
+              <span className="truncate">Kho Đề Của Tôi ({customExamSets.length})</span>
             </button>
           </div>
         </div>
@@ -3414,74 +3407,9 @@ export const QBankAdmin: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        {/* Quick 3-Step Guide — collapsed by default, hidden on the review workbench */}
-        {activeSubTab !== 'duyet_de' ? (
-        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 border border-indigo-500/20 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">💡</span>
-              <div>
-                <h3 className="text-xs sm:text-sm font-bold text-[var(--color-text-primary)]">
-                  Quy trình 3 bước dễ dàng cho giáo viên & quản lý
-                </h3>
-                <p className="text-[11px] text-[var(--color-text-secondary)]">
-                  Hệ thống tự động vận hành, bạn chỉ cần xem lại nội dung trước khi xuất bản cho học viên.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowQuickGuide(!showQuickGuide)}
-              className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] bg-[var(--color-surface)] px-2.5 py-1 rounded-full border border-[var(--color-border)] cursor-pointer self-start sm:self-auto"
-            >
-              {showQuickGuide ? 'Thu gọn hướng dẫn ▴' : 'Xem hướng dẫn ▾'}
-            </button>
-          </div>
-
-          {showQuickGuide && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 animate-in fade-in">
-              <div className="p-3.5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-start gap-3">
-                <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                  1
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[var(--color-text-primary)]">Nhập Đề Đa Nguồn & Kiểm Duyệt</p>
-                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5 leading-relaxed">
-                    Mở tab <strong>"Nhập đề đa nguồn"</strong> để tạo prompt 1-Click, dán đề từ Gemini/ChatGPT/Claude và tự động kiểm duyệt 6 Cổng.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-start gap-3">
-                <div className="w-7 h-7 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                  2
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[var(--color-text-primary)]">Xem & Duyệt Nhanh</p>
-                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5 leading-relaxed">
-                    Vào tab <strong>"Duyệt câu mới"</strong>, kiểm tra câu chữ tiếng Trung và bấm nút <strong className="text-emerald-600">✓ Phê duyệt</strong> (hoặc sửa lời giải).
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-start gap-3">
-                <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                  3
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[var(--color-text-primary)]">Học Viên Luyện Tập</p>
-                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5 leading-relaxed">
-                    Câu hỏi đã duyệt sẽ tự động phân loại vào phần Luyện tập và Đề thi thử HSK cho học viên trên web.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        ) : null}
         {/* Global Action Success Toast */}
         {actionSuccessMsg && (
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-medium flex items-center justify-between shadow-[0_6px_20px_-8px_rgba(16,185,129,0.28)] animate-in fade-in">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{actionSuccessMsg}</span>
@@ -3500,7 +3428,7 @@ export const QBankAdmin: React.FC = () => {
         {actionErrorMsg && (
           <div
             data-testid="global-action-error-toast"
-            className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs animate-in fade-in"
+            className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-400 text-xs sm:text-sm font-medium flex items-center justify-between shadow-[0_6px_20px_-8px_rgba(244,63,94,0.28)] animate-in fade-in"
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -3516,142 +3444,13 @@ export const QBankAdmin: React.FC = () => {
           </div>
         )}
 
-        {/* Global Stats & Coverage — keep off the review workbench so questions stay on screen */}
-        {activeSubTab !== 'duyet_de' ? (
-        <section aria-label="Dashboard Stats" className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* Card 1: Total */}
-            <div
-              onClick={() => {
-                setFilterStatus('all');
-                setActiveSubTab('review');
-              }}
-              className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs flex items-center justify-between cursor-pointer hover:border-indigo-500/40 transition-all"
-              title="Xem tất cả câu hỏi trong kho"
-            >
-              <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
-                  Tổng câu hỏi
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-[var(--color-text-primary)] mt-1">
-                  {totalCount}
-                </p>
-                <p className="text-[10px] sm:text-xs text-[var(--color-text-secondary)] mt-0.5">
-                  Kho dữ liệu qbank.db
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
-                <Database className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Card 2: Approved */}
-            <div
-              onClick={() => {
-                setFilterStatus('approved');
-                setActiveSubTab('review');
-              }}
-              className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs flex items-center justify-between cursor-pointer hover:border-emerald-500/40 transition-all"
-              title="Xem các câu hỏi đã phê duyệt"
-            >
-              <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                  Đã phê duyệt
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                  {approvedCount}
-                </p>
-                <p className="text-[10px] sm:text-xs text-[var(--color-text-secondary)] mt-0.5">
-                  Sẵn sàng nạp vào thi thử
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Card 3: Needs Review */}
-            <div
-              onClick={() => {
-                setFilterStatus('needs_review');
-                setActiveSubTab('review');
-              }}
-              className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition-all"
-              title="Xem các câu cần xem xét"
-            >
-              <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                  Cần xem xét
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
-                  {needsReviewCount}
-                </p>
-                <p className="text-[10px] sm:text-xs text-[var(--color-text-secondary)] mt-0.5">
-                  Chờ giáo viên duyệt
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Card 4: Rejected */}
-            <div
-              onClick={() => {
-                setFilterStatus('rejected');
-                setActiveSubTab('review');
-              }}
-              className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs flex items-center justify-between cursor-pointer hover:border-rose-500/40 transition-all"
-              title="Xem các câu bị từ chối"
-            >
-              <div>
-                <p className="text-[11px] sm:text-xs font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                  Bị từ chối
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
-                  {rejectedCount}
-                </p>
-                <p className="text-[10px] sm:text-xs text-[var(--color-text-secondary)] mt-0.5">
-                  Không nạp vào đề thi
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                <XCircle className="w-5 h-5" />
-              </div>
-            </div>
-          </div>
-
-          {/* Quality Flags Notice Banner */}
-          {stats?.flags_summary && stats.flags_summary.total_with_flags ? (
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-                <span>
-                  Phát hiện <strong>{stats.flags_summary.total_with_flags}</strong> câu có cờ cảnh báo chất lượng (Đa nghĩa Solver: {stats.flags_summary.solver_ambiguity || 0}, Chữ nhiễu: {stats.flags_summary.char_noise || 0}, Ngoài cấp: {stats.flags_summary.out_of_level || 0}).
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterStatus('needs_review');
-                  setActiveSubTab('review');
-                }}
-                className="underline font-bold text-xs shrink-0 cursor-pointer hover:opacity-80"
-              >
-                Xem chi tiết
-              </button>
-            </div>
-          ) : null}
-        </section>
-        ) : null}
-
         {/* VIEW 0: APPROVAL WORKFLOW & PROGRESS TRACKING (DUYET DE) */}
         {activeSubTab === 'duyet_de' && (
           <section aria-label="Approval Workflow and Progress Tracking" className="space-y-6">
             {/* Compact workbench header — questions first, not dashboard copy */}
             <div
               id="pending-questions-workbench"
-              className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-3"
+              className="p-4 sm:p-5 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]/35 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.32)] space-y-3"
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
@@ -6358,7 +6157,7 @@ export const QBankAdmin: React.FC = () => {
         {/* VIEW: UNIVERSAL IMPORT & MANUAL ADD STUDIO */}
         {activeSubTab === 'import' && (
           <section aria-label="Universal Question Import Studio" className="space-y-6">
-            <div className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-5">
+            <div className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)]/35 shadow-[0_12px_36px_-14px_rgba(0,0,0,0.35)] space-y-5">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-bold border border-[var(--color-primary)]/20 mb-2">
@@ -6416,68 +6215,68 @@ export const QBankAdmin: React.FC = () => {
                 </div>
               </div>
 
-              {/* 3-MODE IMPORT SWITCHER */}
-              <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] pb-3">
+              {/* 4-MODE IMPORT SWITCHER — Balanced 4-Column Symmetrical Bar */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-1.5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                 <button
                   type="button"
                   data-testid="tab-import-mode-file"
                   onClick={() => setImportMode('file')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     importMode === 'file'
-                      ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+                      ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
                   }`}
                 >
-                  <UploadCloud className="w-4 h-4" />
-                  <span>Tải tệp tin (.xlsx, .csv, .docx, .pdf)</span>
+                  <UploadCloud className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Tải tệp (.xlsx, .docx, .pdf)</span>
                 </button>
 
                 <button
                   type="button"
                   data-testid="tab-import-mode-text"
                   onClick={() => setImportMode('text')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     importMode === 'text'
-                      ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+                      ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
                   }`}
                 >
-                  <FileText className="w-4 h-4" />
-                  <span>Dán văn bản thô / JSON</span>
+                  <FileText className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Dán văn bản thô / JSON</span>
                 </button>
 
                 <button
                   type="button"
                   data-testid="tab-import-mode-prompt"
                   onClick={() => setImportMode('prompt')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     importMode === 'prompt'
-                      ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+                      ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
                   }`}
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Tạo Prompt Mẫu 1-Click</span>
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Tạo Prompt Mẫu 1-Click</span>
                 </button>
 
                 <button
                   type="button"
                   data-testid="tab-import-ocr"
                   onClick={() => setImportMode('ocr')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     importMode === 'ocr'
-                      ? 'bg-[var(--color-primary)] text-white shadow-xs'
-                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+                      ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
                   }`}
                 >
-                  <Camera className="w-4 h-4" />
-                  <span>📷 Quét Ảnh / OCR</span>
+                  <Camera className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Quét Ảnh / OCR</span>
                 </button>
               </div>
 
               {/* Import Configuration Controls (only shown for file / text / ocr modes; unified inside prompt mode) */}
               {importMode !== 'prompt' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.28)]">
                   {/* Level selector */}
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Cấp độ mặc định:</label>
@@ -7636,7 +7435,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
         {activeSubTab === 'custom_exams' && (
           <section aria-label="My Custom Exam Sets" className="space-y-4">
             <div
-              className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-4"
+              className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)]/35 shadow-[0_12px_36px_-14px_rgba(0,0,0,0.35)] space-y-4"
               data-testid="custom-exam-sets-panel"
             >
               <div className="flex flex-col gap-3">
@@ -7797,7 +7596,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                     <div
                       key={examSet.id}
                       data-testid={`custom-exam-card-${examSet.id}`}
-                      className="p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex flex-col justify-between gap-3 hover:border-[var(--color-primary)]/40 transition-all"
+                      className="p-4 rounded-2xl bg-[var(--color-background)]/80 border border-[var(--color-border)]/35 shadow-[0_6px_22px_-10px_rgba(0,0,0,0.32)] flex flex-col justify-between gap-3 hover:border-[var(--color-primary)]/40 hover:shadow-[0_10px_28px_-10px_rgba(20,184,166,0.22)] transition-all"
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-1.5 flex-wrap">
@@ -7981,7 +7780,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
         {activeSubTab === 'review' && (
           <section aria-label="Review and Edit Questions" className="space-y-4">
             {/* Filter & Search Bar */}
-            <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]/35 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.32)] flex flex-col md:flex-row md:items-center justify-between gap-3">
               {/* Level & Status Dropdowns */}
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-1.5">

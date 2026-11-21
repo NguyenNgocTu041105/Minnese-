@@ -1174,11 +1174,42 @@ examRouter.get('/catalog', (req: Request, res: Response) => {
       return true;
     });
 
+    const skillCountsByLevel: Record<number, { listening: number; reading: number; writing: number; total: number }> = {
+      1: { listening: 0, reading: 0, writing: 0, total: 0 },
+      2: { listening: 0, reading: 0, writing: 0, total: 0 },
+      3: { listening: 0, reading: 0, writing: 0, total: 0 },
+      4: { listening: 0, reading: 0, writing: 0, total: 0 },
+      5: { listening: 0, reading: 0, writing: 0, total: 0 },
+      6: { listening: 0, reading: 0, writing: 0, total: 0 },
+    };
+    try {
+      const skRows = db
+        .prepare(
+          `SELECT level, skill, COUNT(*) as c
+           FROM questions
+           WHERE status = 'approved' AND is_active = 1
+           GROUP BY level, skill`
+        )
+        .all() as any[];
+      for (const r of skRows) {
+        const lvl = Number(r.level);
+        const sk = String(r.skill || '').toLowerCase();
+        const cnt = Number(r.c) || 0;
+        if (skillCountsByLevel[lvl]) {
+          if (sk === 'listening' || sk === 'reading' || sk === 'writing') {
+            skillCountsByLevel[lvl][sk] += cnt;
+          }
+          skillCountsByLevel[lvl].total += cnt;
+        }
+      }
+    } catch {}
+
     return res.json({
       success: true,
       total: filtered.length,
       sets: filtered,
       summaryByLevel,
+      skillCountsByLevel,
     });
   } catch (err: any) {
     console.error('[ExamRouter] Error loading exam catalog:', err);

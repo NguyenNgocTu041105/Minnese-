@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import {
-  Trophy,
-  Brain,
   BookOpen,
   Search,
   Clock,
@@ -13,6 +11,9 @@ import {
   ChevronRight,
   Zap,
   Target,
+  Volume2,
+  PenTool,
+  Shuffle,
 } from 'lucide-react';
 import { UserStats, HSKLevel, OnlineExamDoc, UserProfile } from '../../types';
 import { fetchOnlineExamsFromFirestore, getOnlineExamByCodeFromFirestore } from '../../lib/firebase';
@@ -46,6 +47,13 @@ interface OfficialCatalogItem {
   } | null;
 }
 
+interface SkillCounts {
+  listening: number;
+  reading: number;
+  writing: number;
+  total: number;
+}
+
 type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
 
 const HSK_LEVELS: HSKLevel[] = [1, 2, 3, 4, 5, 6];
@@ -57,9 +65,10 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   activeExamToRun,
   onExitExam,
 }) => {
-  const [mockLevel, setMockLevel] = useState<HSKLevel>(1);
-  const [mockDifficulty, setMockDifficulty] = useState<DifficultyFilter>('all');
-  const [practiceLevel, setPracticeLevel] = useState<HSKLevel>(1);
+  const defaultLevel: HSKLevel =
+    userProfile?.current_level && userProfile.current_level >= 1 && userProfile.current_level <= 6
+      ? (userProfile.current_level as HSKLevel)
+      : 1;
 
   const [onlineExamsList, setOnlineExamsList] = useState<OnlineExamDoc[]>([]);
   const [isLoadingExams, setIsLoadingExams] = useState(false);
@@ -67,18 +76,33 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   const [activeExamRunning, setActiveExamRunning] = useState<OnlineExamDoc | null>(null);
   const [examSearchError, setExamSearchError] = useState<string | null>(null);
 
-  // Official Tiered HSK 3.0 Exam Catalog (SQLite QBank via /api/exam/catalog)
+  // Unified Level + Difficulty state controlling the entire Luyện tập page
   const [officialCatalog, setOfficialCatalog] = useState<OfficialCatalogItem[]>([]);
   const [catalogSummary, setCatalogSummary] = useState<
     Record<number, { total: number; easy: number; medium: number; hard: number }>
   >({});
+  const [skillCountsByLevel, setSkillCountsByLevel] = useState<Record<number, SkillCounts>>({});
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
-  const [selectedExamLevel, setSelectedExamLevel] = useState<number | 'all'>('all');
+  const [selectedExamLevel, setSelectedExamLevel] = useState<number | 'all'>(defaultLevel);
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>('all');
   const [catalogSearch, setCatalogSearch] = useState('');
 
-  // Exclude class homework assignments (HW-* / ASSIGN-*) from the public practice/mock exam list,
-  // since assigned homework lives exclusively in the "Bài tập được giao" section on the Home (Tổng quan) tab.
+  // Effective numeric HSK level for 1-Click Random Exam & Skill Practice buttons
+  const activeNumericLevel: HSKLevel =
+    selectedExamLevel === 'all' ? defaultLevel : (selectedExamLevel as HSKLevel);
+
+  const activeSkillCounts: SkillCounts = skillCountsByLevel[activeNumericLevel] || {
+    listening: 0,
+    reading: 0,
+    writing: 0,
+    total: 0,
+  };
+
+  const totalApprovedQuestions = useMemo(() => {
+    return Object.values(skillCountsByLevel).reduce((sum, s) => sum + (s?.total || 0), 0);
+  }, [skillCountsByLevel]);
+
+  // Exclude class homework assignments (HW-* / ASSIGN-*) from the public practice/mock exam list
   const publicPracticeExams = useMemo(() => {
     return onlineExamsList.filter((exam) => {
       const code = (exam.exam_code || '').trim().toUpperCase();
@@ -111,7 +135,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   }, [levelScopedCatalog, selectedDifficulty, catalogSearch]);
 
   const [activeHskExamView, setActiveHskExamView] = useState<'hall' | 'mock' | 'practice' | 'notebook' | null>(null);
-  const [hskExamInitialLevel, setHskExamInitialLevel] = useState<number>(1);
+  const [hskExamInitialLevel, setHskExamInitialLevel] = useState<number>(defaultLevel);
   const [hskExamInitialSkill, setHskExamInitialSkill] = useState<string | undefined>(undefined);
   const [hskExamInitialDifficulty, setHskExamInitialDifficulty] = useState<DifficultyFilter>('all');
   const [activeOfficialSet, setActiveOfficialSet] = useState<{
@@ -198,6 +222,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
         if (data?.success) {
           setOfficialCatalog(Array.isArray(data.sets) ? data.sets : []);
           setCatalogSummary(data.summaryByLevel || {});
+          setSkillCountsByLevel(data.skillCountsByLevel || {});
         }
       }
     } catch (e) {
@@ -245,16 +270,18 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
     }
   };
 
-  const launchMock = (level: HSKLevel) => {
+  const launchRandomMock = (level: HSKLevel) => {
     setActiveOfficialSet(null);
     setHskExamInitialLevel(level);
-    setHskExamInitialDifficulty(mockDifficulty);
+    setHskExamInitialSkill(undefined);
+    setHskExamInitialDifficulty(selectedDifficulty);
     setActiveHskExamView('mock');
   };
 
-  const launchPractice = (level: HSKLevel) => {
+  const launchSkillPractice = (level: HSKLevel, skill: 'all' | 'listening' | 'reading' | 'writing') => {
     setActiveOfficialSet(null);
     setHskExamInitialLevel(level);
+    setHskExamInitialSkill(skill === 'all' ? undefined : skill);
     setHskExamInitialDifficulty('all');
     setActiveHskExamView('practice');
   };
@@ -334,7 +361,11 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
         </div>
 
         <HSKMockExam
-          key={activeOfficialSet ? `${activeOfficialSet.id}_${activeOfficialSet.mode}` : `${activeHskExamView}_${hskExamInitialLevel}_${hskExamInitialDifficulty}`}
+          key={
+            activeOfficialSet
+              ? `${activeOfficialSet.id}_${activeOfficialSet.mode}`
+              : `${activeHskExamView}_${hskExamInitialLevel}_${hskExamInitialSkill || 'all'}_${hskExamInitialDifficulty}`
+          }
           initialMode={activeHskExamView}
           initialLevel={hskExamInitialLevel}
           initialSkill={hskExamInitialSkill}
@@ -358,203 +389,93 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   const medCnt = levelScopedCatalog.filter((s) => s.difficultyTier === 'medium').length;
   const hardCnt = levelScopedCatalog.filter((s) => s.difficultyTier === 'hard').length;
 
+  const difficultyShortLabel =
+    selectedDifficulty === 'easy'
+      ? 'Khởi động'
+      : selectedDifficulty === 'medium'
+      ? 'Chuẩn thi'
+      : selectedDifficulty === 'hard'
+      ? 'Thử thách'
+      : 'ngẫu nhiên';
+
   return (
-    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 animate-fade-in" id="quizzes-container">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-5 animate-fade-in" id="quizzes-container">
+      {/* Header Row */}
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
             Phòng Thi Thử & Luyện Đề HSK 3.0 (CTI / CLEC)
           </p>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)] tracking-tight">Luyện tập</h1>
           <p className="text-sm text-[var(--color-text-secondary)] max-w-2xl leading-relaxed">
-            Kho {officialCatalog.length > 0 ? `${officialCatalog.length} bộ đề chuẩn HSK 3.0` : 'đề thi thử chuẩn HSK 3.0'} đã phê duyệt và phân bậc độ khó từ <strong>Khởi động</strong> → <strong>Chuẩn thi</strong> → <strong>Thử thách</strong>.
+            {officialCatalog.length > 0
+              ? `${officialCatalog.length} bộ đề chuẩn HSK 3.0 (${totalApprovedQuestions.toLocaleString('vi-VN')} câu đã kiểm duyệt) xếp sẵn từ Khởi động → Chuẩn thi → Thử thách.`
+              : 'Kho đề thi thử & luyện kỹ năng chuẩn HSK 3.0 đã kiểm duyệt.'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveOfficialSet(null);
-            setActiveHskExamView('notebook');
-          }}
-          className="self-start sm:self-auto px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1.5 cursor-pointer"
-        >
-          <BookOpen className="w-4 h-4 text-amber-500" />
-          <span>Sổ câu sai</span>
-        </button>
-      </div>
 
-      {/* Top 2 Quick Action Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="silk-card p-5 sm:p-6 space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Trophy className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-[var(--color-text-primary)]">Thi thử HSK 1-Click</h2>
-              <p className="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed">
-                Chọn cấp độ và mức độ khó phù hợp để vào ngay phòng thi bấm giờ chuẩn CTI / CLEC.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-              {HSK_LEVELS.map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => setMockLevel(lvl)}
-                  className={`silk-pill px-3 py-1 text-xs font-bold cursor-pointer ${
-                    mockLevel === lvl
-                      ? 'bg-teal-600 text-white shadow-xs'
-                      : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                  }`}
-                >
-                  HSK {lvl}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-[var(--color-text-secondary)] mr-0.5">Độ khó:</span>
-              {[
-                { key: 'all', label: 'Ngẫu nhiên', active: 'bg-slate-700 text-white' },
-                { key: 'easy', label: '🟢 Khởi động', active: 'bg-emerald-600 text-white' },
-                { key: 'medium', label: '🟡 Chuẩn thi', active: 'bg-amber-600 text-white' },
-                { key: 'hard', label: '🔴 Thử thách', active: 'bg-rose-600 text-white' },
-              ].map((d) => (
-                <button
-                  key={d.key}
-                  type="button"
-                  onClick={() => setMockDifficulty(d.key as DifficultyFilter)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
-                    mockDifficulty === d.key
-                      ? `${d.active} shadow-xs`
-                      : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => launchMock(mockLevel)}
-            className="silk-btn w-full px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-          >
-            <Zap className="w-4 h-4" />
-            <span>Thi thử HSK {mockLevel} ngay</span>
-          </button>
-        </section>
-
-        <section className="silk-card p-5 sm:p-6 space-y-4 flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Brain className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-[var(--color-text-primary)]">Luyện kỹ năng nhanh</h2>
-                <p className="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed">
-                  Luyện không áp lực thời gian: kiểm tra đáp án & giải thích ngữ pháp tiếng Việt ngay sau từng câu.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {HSK_LEVELS.map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => setPracticeLevel(lvl)}
-                  className={`silk-pill px-3 py-1 text-xs font-bold cursor-pointer ${
-                    practiceLevel === lvl
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                  }`}
-                >
-                  HSK {lvl}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => launchPractice(practiceLevel)}
-            className="silk-btn w-full px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-          >
-            <Brain className="w-4 h-4" />
-            <span>Luyện kỹ năng HSK {practiceLevel}</span>
-          </button>
-        </section>
-      </div>
-
-      {/* Main Public Exam Library: All 102 Official HSK 3.0 Sets Ranked Easy → Medium → Hard + Teacher Code Lookup */}
-      <section className="silk-card p-5 sm:p-6 space-y-4" data-testid="quizzes-official-exam-library">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <Target className="w-5 h-5 text-teal-600" />
-              <span>Kho Đề Thi HSK 3.0 Chuẩn & Đề Tự Luyện ({officialCatalog.length} bộ đề)</span>
-            </h2>
-            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-              Xếp hạng sẵn từ <strong>🟢 Khởi động (Vừa sức)</strong> → <strong>🟡 Chuẩn thi</strong> → <strong>🔴 Thử thách</strong> để bạn chọn đúng trình độ hoặc nhập mã đề của giáo viên.
-            </p>
-          </div>
-
-          <form onSubmit={handleLookupExamCode} className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <form onSubmit={handleLookupExamCode} className="flex items-center gap-1.5">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 text-[var(--color-text-secondary)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-[var(--color-text-secondary)] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={examCodeInput}
                 onChange={(e) => setExamCodeInput(e.target.value.toUpperCase())}
-                placeholder="Nhập mã đề GV (EXAM-XXXX)"
-                className="silk-input pl-8 pr-3 py-2 text-xs font-mono font-bold w-52 uppercase text-center tracking-wider"
+                placeholder="Mã đề GV (EXAM-XXXX)"
+                className="silk-input pl-8 pr-2.5 py-1.5 text-xs font-mono font-bold w-44 uppercase tracking-wider"
               />
             </div>
             <button
               type="submit"
               disabled={isLoadingExams || !examCodeInput.trim()}
-              className="silk-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="silk-btn px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold disabled:opacity-50 flex items-center gap-1 shadow-xs cursor-pointer"
             >
               <span>Mở mã</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveOfficialSet(null);
+              setActiveHskExamView('notebook');
+            }}
+            className="px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] flex items-center gap-1.5 cursor-pointer"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+            <span>Sổ câu sai</span>
+          </button>
         </div>
+      </div>
 
-        {examSearchError && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-medium">
-            {examSearchError}
-          </div>
-        )}
+      {examSearchError && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-medium">
+          {examSearchError}
+        </div>
+      )}
 
-        {/* HSK Level Filter Tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--color-border)]">
+      {/* UNIFIED WORKSPACE CARD: Single HSK Bar + Compact Quick Actions (1-Click Random + Skill Practice) + Full Tiered Exam Library */}
+      <section className="silk-card p-5 sm:p-6 space-y-4" data-testid="quizzes-official-exam-library">
+        {/* 1. Single Unified HSK Level Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {(['all', 1, 2, 3, 4, 5, 6] as const).map((lvl) => {
-              const cnt =
-                lvl === 'all'
-                  ? officialCatalog.length
-                  : catalogSummary[lvl]?.total ?? officialCatalog.filter((s) => s.level === lvl).length;
+            {HSK_LEVELS.map((lvl) => {
+              const cnt = catalogSummary[lvl]?.total ?? officialCatalog.filter((s) => s.level === lvl).length;
               return (
                 <button
                   key={lvl}
                   type="button"
                   data-testid={`quizzes-level-tab-${lvl}`}
                   onClick={() => setSelectedExamLevel(lvl)}
-                  className={`silk-pill px-3 py-1.5 text-xs font-bold whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                  className={`silk-pill px-3.5 py-1.5 text-xs font-bold whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                     selectedExamLevel === lvl
                       ? 'bg-teal-600 text-white shadow-xs'
                       : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
                   }`}
                 >
-                  <span>{lvl === 'all' ? 'Tất cả' : `HSK ${lvl}`}</span>
+                  <span>HSK {lvl}</span>
                   <span
                     className={`px-1.5 py-0.2 rounded-md text-[10px] ${
                       selectedExamLevel === lvl ? 'bg-white/20 text-white' : 'bg-[var(--color-surface)]'
@@ -565,6 +486,25 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
                 </button>
               );
             })}
+            <button
+              type="button"
+              data-testid="quizzes-level-tab-all"
+              onClick={() => setSelectedExamLevel('all')}
+              className={`silk-pill px-3 py-1.5 text-xs font-bold whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                selectedExamLevel === 'all'
+                  ? 'bg-slate-700 text-white shadow-xs'
+                  : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] border border-[var(--color-border)]'
+              }`}
+            >
+              <span>Tất cả</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-md text-[10px] ${
+                  selectedExamLevel === 'all' ? 'bg-white/20 text-white' : 'bg-[var(--color-surface)]'
+                }`}
+              >
+                {officialCatalog.length}
+              </span>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -585,42 +525,112 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
                 loadOnlineExams();
               }}
               className="text-xs text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+              title="Làm mới danh sách đề"
             >
-              <RotateCcw className={`w-3 h-3 ${isLoadingCatalog || isLoadingExams ? 'animate-spin' : ''}`} />
-              <span>Làm mới</span>
+              <RotateCcw className={`w-3.5 h-3.5 ${isLoadingCatalog || isLoadingExams ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Làm mới</span>
             </button>
           </div>
         </div>
 
-        {/* Difficulty Tier Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { key: 'all', label: `Tất cả mức độ (${levelScopedCatalog.length})`, active: 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' },
-            { key: 'easy', label: `🟢 Khởi động / Vừa sức (${easyCnt})`, active: 'bg-emerald-600 text-white' },
-            { key: 'medium', label: `🟡 Chuẩn thi thật (${medCnt})`, active: 'bg-amber-600 text-white' },
-            { key: 'hard', label: `🔴 Thử thách / Khó (${hardCnt})`, active: 'bg-rose-600 text-white' },
-          ].map((pill) => (
+        {/* 2. Compact 1-Row Quick Action Strip: 1-Click Random Exam + Direct Skill Practice (Nghe / Đọc / Viết) */}
+        <div className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Left: 1-Click Random Exam */}
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
-              key={pill.key}
               type="button"
-              data-testid={`quizzes-diff-pill-${pill.key}`}
-              onClick={() => setSelectedDifficulty(pill.key as DifficultyFilter)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                selectedDifficulty === pill.key
-                  ? `${pill.active} shadow-xs`
-                  : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-slate-400'
-              }`}
+              data-testid="btn-quick-random-mock"
+              onClick={() => launchRandomMock(activeNumericLevel)}
+              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-all"
             >
-              {pill.label}
+              <Shuffle className="w-3.5 h-3.5" />
+              <span>Thi ngẫu nhiên HSK {activeNumericLevel} ({difficultyShortLabel})</span>
             </button>
-          ))}
+            <span className="text-[11px] text-[var(--color-text-secondary)] hidden xl:inline">
+              Hệ thống tự bốc đề bấm giờ đúng chuẩn
+            </span>
+          </div>
+
+          {/* Right: Direct Skill Practice Buttons with live question counts */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-bold text-[var(--color-text-secondary)] mr-1">
+              Luyện kỹ năng HSK {activeNumericLevel}:
+            </span>
+            <button
+              type="button"
+              data-testid="btn-skill-listening"
+              onClick={() => launchSkillPractice(activeNumericLevel, 'listening')}
+              className="px-3 py-1.5 rounded-xl bg-blue-500/12 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/25 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Nghe</span>
+              {activeSkillCounts.listening > 0 && (
+                <span className="text-[10px] opacity-80 font-mono">({activeSkillCounts.listening})</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              data-testid="btn-skill-reading"
+              onClick={() => launchSkillPractice(activeNumericLevel, 'reading')}
+              className="px-3 py-1.5 rounded-xl bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Đọc</span>
+              {activeSkillCounts.reading > 0 && (
+                <span className="text-[10px] opacity-80 font-mono">({activeSkillCounts.reading})</span>
+              )}
+            </button>
+
+            {(activeNumericLevel >= 2 || activeSkillCounts.writing > 0) && (
+              <button
+                type="button"
+                data-testid="btn-skill-writing"
+                onClick={() => launchSkillPractice(activeNumericLevel, 'writing')}
+                className="px-3 py-1.5 rounded-xl bg-purple-500/12 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <PenTool className="w-3.5 h-3.5" />
+                <span>Viết</span>
+                {activeSkillCounts.writing > 0 && (
+                  <span className="text-[10px] opacity-80 font-mono">({activeSkillCounts.writing})</span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="px-3.5 py-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-200/80 dark:border-emerald-800/50 text-xs text-emerald-900 dark:text-emerald-200">
-          💡 <strong>Gợi ý lộ trình:</strong> Nếu mới bắt đầu cấp độ này, hãy làm các đề <strong>🟢 Khởi động</strong> ở đầu danh sách trước để quen nhịp bài thi, sau đó nâng dần lên <strong>🟡 Chuẩn thi</strong> và <strong>🔴 Thử thách</strong>.
+        {/* 3. Difficulty Filter Pills + Progression Guidance */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { key: 'all', label: `Tất cả mức độ (${levelScopedCatalog.length})`, active: 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' },
+              { key: 'easy', label: `🟢 Khởi động / Vừa sức (${easyCnt})`, active: 'bg-emerald-600 text-white' },
+              { key: 'medium', label: `🟡 Chuẩn thi thật (${medCnt})`, active: 'bg-amber-600 text-white' },
+              { key: 'hard', label: `🔴 Thử thách / Khó (${hardCnt})`, active: 'bg-rose-600 text-white' },
+            ].map((pill) => (
+              <button
+                key={pill.key}
+                type="button"
+                data-testid={`quizzes-diff-pill-${pill.key}`}
+                onClick={() => setSelectedDifficulty(pill.key as DifficultyFilter)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  selectedDifficulty === pill.key
+                    ? `${pill.active} shadow-xs`
+                    : 'bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-slate-400'
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-[11px] text-[var(--color-text-secondary)] flex items-center gap-1">
+            <Target className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+            <span>Đã xếp sẵn theo lộ trình Dễ → Khó</span>
+          </span>
         </div>
 
-        {/* Official Tiered HSK 3.0 Exam Sets Grid */}
+        {/* 4. Official Tiered HSK 3.0 Exam Sets Grid */}
         {isLoadingCatalog && officialCatalog.length === 0 ? (
           <div className="p-8 text-center text-xs text-[var(--color-text-secondary)]">
             Đang tải kho bộ đề chuẩn HSK 3.0...

@@ -797,7 +797,7 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
       (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets WHERE difficulty_tier IS NULL OR difficulty_score IS NULL').get() as any)?.c || 0
     );
     // Fast skip when local DB already holds the full bundled bank AND all sets are tiered
-    if (existingSetCount >= 102 && existingApprovedCount >= 7100 && untieredCount === 0) return;
+    if (existingSetCount >= 115 && existingApprovedCount >= 9000 && untieredCount === 0) return;
 
     const raw = zlib.gunzipSync(fs.readFileSync(seedPath)).toString('utf-8');
     const parsed = JSON.parse(raw) as { sets?: any[]; qs?: any[] };
@@ -855,6 +855,12 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
           updateSetTier.run(s.difficulty_tier, s.difficulty_score, s.difficulty_metrics || null, s.id);
         }
       }
+      db.prepare(`
+        UPDATE custom_exam_sets
+        SET title = 'Đề Thi Thử HSK 1 (3.0) — Đề số 01 (Giao tiếp cơ bản - 40 câu)',
+            source_label = 'Bộ đề chuẩn HSK 3.0'
+        WHERE id = 'custom_exam_chatgpt_hsk1_40q'
+      `).run();
       for (const q of qs) {
         const cHash =
           q.content_hash ||

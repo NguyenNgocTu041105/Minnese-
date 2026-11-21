@@ -37,12 +37,12 @@ const LEVEL_COMPLEXITY_BANDS: Record<
   number,
   { min: number; easyMax: number; hardMin: number; max: number }
 > = {
-  1: { min: 38, easyMax: 49.5, hardMin: 58.0, max: 70 },
-  2: { min: 66, easyMax: 81.5, hardMin: 90.5, max: 100 },
-  3: { min: 92, easyMax: 132.5, hardMin: 145.0, max: 168 },
-  4: { min: 135, easyMax: 188.5, hardMin: 206.0, max: 232 },
-  5: { min: 200, easyMax: 274.0, hardMin: 292.0, max: 318 },
-  6: { min: 210, easyMax: 252.0, hardMin: 280.0, max: 340 },
+  1: { min: 24, easyMax: 32.0, hardMin: 41.0, max: 54 },
+  2: { min: 36, easyMax: 50.5, hardMin: 60.5, max: 70 },
+  3: { min: 48, easyMax: 72.0, hardMin: 86.0, max: 108 },
+  4: { min: 85, easyMax: 142.0, hardMin: 168.0, max: 202 },
+  5: { min: 155, easyMax: 242.0, hardMin: 280.0, max: 310 },
+  6: { min: 185, easyMax: 218.0, hardMin: 235.0, max: 265 },
 };
 
 /**

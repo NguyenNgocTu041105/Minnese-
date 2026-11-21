@@ -7613,7 +7613,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                           </span>
                         </div>
                         {editingExamTitleId === examSet.id ? (
-                          <div className="space-y-1.5">
+                          <div className="space-y-2 p-2.5 rounded-xl bg-[var(--color-surface)]/80 border border-[var(--color-border)]/45">
                             <input
                               type="text"
                               value={editingExamTitleValue}
@@ -7625,16 +7625,40 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                   setEditingExamTitleValue('');
                                 }
                               }}
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-primary)] text-xs font-semibold text-[var(--color-text-primary)] focus:outline-hidden"
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--color-background)] border border-[var(--color-primary)]/70 text-xs font-semibold text-[var(--color-text-primary)] focus:outline-hidden"
                               autoFocus
                             />
+                            {/* Optional manual difficulty override inside edit panel */}
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] font-semibold text-[var(--color-text-secondary)] mr-0.5 shrink-0">Độ khó:</span>
+                              {(
+                                [
+                                  { key: 'easy', label: 'Khởi động', active: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' },
+                                  { key: 'medium', label: 'Chuẩn thi', active: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40' },
+                                  { key: 'hard', label: 'Thử thách', active: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40' },
+                                ] as const
+                              ).map((opt) => (
+                                <button
+                                  key={opt.key}
+                                  type="button"
+                                  onClick={() => handleChangeCustomExamDifficulty(examSet.id, opt.key)}
+                                  className={`flex-1 py-0.5 px-1.5 rounded-md text-[10px] font-semibold border transition-all cursor-pointer ${
+                                    tier === opt.key
+                                      ? opt.active
+                                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] border-[var(--color-border)]/50 hover:border-[var(--color-primary)]/40'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
                             <div className="flex items-center gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => handleRenameCustomExam(examSet.id, editingExamTitleValue)}
-                                className="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold cursor-pointer"
+                                className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold cursor-pointer"
                               >
-                                Lưu tên
+                                Lưu
                               </button>
                               <button
                                 type="button"
@@ -7648,7 +7672,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                     })
                                   )
                                 }
-                                className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)] text-[10px] font-semibold text-[var(--color-primary)] cursor-pointer"
+                                className="px-2 py-1 rounded-md bg-[var(--color-background)] border border-[var(--color-border)]/50 hover:border-[var(--color-primary)] text-[10px] font-semibold text-[var(--color-primary)] cursor-pointer"
                                 title="Tự sinh tên khớp chuẩn danh mục HSK 3.0"
                               >
                                 ✨ Tên chuẩn
@@ -7659,9 +7683,9 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                   setEditingExamTitleId(null);
                                   setEditingExamTitleValue('');
                                 }}
-                                className="px-2 py-0.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] text-[var(--color-text-secondary)] cursor-pointer"
+                                className="px-2 py-1 rounded-md bg-[var(--color-background)] border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-secondary)] cursor-pointer"
                               >
-                                Hủy
+                                Đóng
                               </button>
                             </div>
                           </div>
@@ -7677,7 +7701,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 setEditingExamTitleValue(examSet.title);
                               }}
                               className="p-1 rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] shrink-0 cursor-pointer transition-colors"
-                              title="Đổi tên bộ đề (hoặc tự đặt tên chuẩn HSK 3.0)"
+                              title="Chỉnh sửa tên bộ đề & bậc độ khó"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -7691,30 +7715,6 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                             ? `~${examSet.difficultyMetrics.uniqueHanziCount} chữ Hán • TB ${examSet.difficultyMetrics.avgStemHanzi} chữ/câu`
                             : `Nguồn: ${examSet.sourceLabel}`}
                         </p>
-                        {/* Quick 1-click Difficulty Tier Switcher */}
-                        <div className="flex items-center gap-1 pt-1">
-                          {(
-                            [
-                              { key: 'easy', label: 'Khởi động', active: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' },
-                              { key: 'medium', label: 'Chuẩn thi', active: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40' },
-                              { key: 'hard', label: 'Thử thách', active: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40' },
-                            ] as const
-                          ).map((opt) => (
-                            <button
-                              key={opt.key}
-                              type="button"
-                              onClick={() => handleChangeCustomExamDifficulty(examSet.id, opt.key)}
-                              className={`flex-1 py-0.5 px-1.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
-                                tier === opt.key
-                                  ? opt.active
-                                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
-                              }`}
-                              title={`Chuyển bộ đề sang bậc ${opt.label}`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--color-border)]">

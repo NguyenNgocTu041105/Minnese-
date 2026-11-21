@@ -46,7 +46,7 @@ import { AIExamStudio } from './Admin/AIExamStudio';
 import { playChineseAudio, playDialogueSequence, playPutonghuaAudioStream, stopChineseAudio } from '../utils/chineseAudio';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, loginWithGoogle } from '../lib/firebase';
-import { HSKIllustrationCanvas, resolveSceneKey } from './HSKIllustrationCanvas';
+import { HSKIllustrationCanvas, resolveSceneKey, getBalancedImageOptionsLayout } from './HSKIllustrationCanvas';
 import { ExportExamModal, downloadExportFile } from './Admin/ExportExamModal';
 import { GoldenPromptLibraryModal } from './Admin/GoldenPromptLibraryModal';
 import { HSKMockExam } from './HSKMockExam';
@@ -5430,10 +5430,11 @@ export const QBankAdmin: React.FC = () => {
                               : [];
 
                             if (isPic && optImages.length > 0) {
+                              const picLayout = getBalancedImageOptionsLayout(optImages.length);
                               return (
                                 <div
                                   data-testid="card-option-images"
-                                  className={`w-full grid gap-4 pt-1 ${optImages.length <= 3 ? 'grid-cols-3' : optImages.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}
+                                  className={`${picLayout.containerClass} pt-1`}
                                 >
                                   {optImages.map((scene, imageIdx) => {
                                     const isCorrect = q.answer_idx === imageIdx;
@@ -5443,7 +5444,7 @@ export const QBankAdmin: React.FC = () => {
                                     return (
                                       <div
                                         key={`${scene}-${imageIdx}`}
-                                        className={`space-y-2 rounded-2xl border p-2.5 transition-all silk-card-interactive ${
+                                        className={`space-y-2 rounded-2xl border p-2.5 transition-all silk-card-interactive ${picLayout.itemClass} ${
                                           isCorrect
                                             ? 'border-2 border-emerald-500 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100 shadow-xs'
                                             : 'border border-[var(--color-border)] bg-[var(--color-background)]'
@@ -7360,15 +7361,17 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         )}
 
                         {/* Option Images Grid in Import Modal */}
-                        {Array.isArray(q.options_images) && q.options_images.length > 0 && (
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-2.5 max-w-2xl" data-testid={`modal-preview-option-images-${idx}`}>
+                        {Array.isArray(q.options_images) && q.options_images.length > 0 && (() => {
+                          const modalPicLayout = getBalancedImageOptionsLayout(q.options_images.length);
+                          return (
+                          <div className={`${modalPicLayout.containerClass} my-2.5`} data-testid={`modal-preview-option-images-${idx}`}>
                             {q.options_images.map((optImg: string, optImgIdx: number) => {
                               const label = String.fromCharCode(65 + optImgIdx);
                               const isCorrect = q.answer_idx === optImgIdx;
                               return (
                                 <div
                                   key={optImgIdx}
-                                  className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 ${
+                                  className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 ${modalPicLayout.itemClass} ${
                                     isCorrect
                                       ? 'border-emerald-500 bg-emerald-500/10'
                                       : 'border-[var(--color-border)] bg-[var(--color-surface)]'
@@ -7386,7 +7389,8 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                               );
                             })}
                           </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Options */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-2.5">
@@ -8199,10 +8203,11 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                           : [];
 
                         if (isPic && optImages.length > 0) {
+                          const qbPicLayout = getBalancedImageOptionsLayout(optImages.length);
                           return (
                             <div
                               data-testid={`card-qb-option-images-${q.question_id}`}
-                              className={`w-full grid gap-4 pt-1 ${optImages.length <= 3 ? 'grid-cols-3' : optImages.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}
+                              className={`${qbPicLayout.containerClass} pt-1`}
                             >
                               {optImages.map((scene, imageIdx) => {
                                 const isCorrect = q.answer_index === imageIdx;
@@ -8212,7 +8217,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                                 return (
                                   <div
                                     key={`${scene}-${imageIdx}`}
-                                    className={`space-y-2 rounded-2xl border p-2.5 transition-all silk-card-interactive ${
+                                    className={`space-y-2 rounded-2xl border p-2.5 transition-all silk-card-interactive ${qbPicLayout.itemClass} ${
                                       isCorrect
                                         ? 'bg-emerald-500/10 border-2 border-emerald-500 shadow-xs'
                                         : 'bg-[var(--color-background)] border border-[var(--color-border)]'

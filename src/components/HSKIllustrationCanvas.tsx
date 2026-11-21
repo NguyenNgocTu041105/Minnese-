@@ -63,6 +63,50 @@ export const VALID_ILLUSTRATION_THEMES = [
 export type SceneKey = (typeof VALID_ILLUSTRATION_THEMES)[number];
 
 /**
+ * Returns a symmetric, balanced layout container class + optional item width class
+ * for multi-image option cards so every question (2, 3, 4, 5, or 6 images) renders
+ * with consistent, well-proportioned rows and zero uneven orphan columns.
+ * - 2 images: 1x2 centered
+ * - 3 images: 1x3 centered
+ * - 4 images: 2x2 centered (matches official HSK paper layout, never cramped 4-in-a-row)
+ * - 5 images: 3 top + 2 centered bottom (flex wrap centered)
+ * - 6 images: 3x2 centered
+ */
+export function getBalancedImageOptionsLayout(count: number): {
+  containerClass: string;
+  itemClass: string;
+} {
+  if (count === 2) {
+    return {
+      containerClass: 'w-full max-w-xl mx-auto grid grid-cols-2 gap-3.5',
+      itemClass: '',
+    };
+  }
+  if (count === 3) {
+    return {
+      containerClass: 'w-full max-w-3xl mx-auto grid grid-cols-3 gap-3.5',
+      itemClass: '',
+    };
+  }
+  if (count === 4) {
+    return {
+      containerClass: 'w-full max-w-2xl mx-auto grid grid-cols-2 gap-3.5',
+      itemClass: '',
+    };
+  }
+  if (count === 5) {
+    return {
+      containerClass: 'w-full max-w-3xl mx-auto flex flex-wrap justify-center gap-3.5',
+      itemClass: 'w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.7rem)]',
+    };
+  }
+  return {
+    containerClass: 'w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-3 gap-3.5',
+    itemClass: '',
+  };
+}
+
+/**
  * Checks if a string is one of the 27 valid illustration themes
  */
 export function isValidIllustrationTheme(theme: string | null | undefined): theme is SceneKey {

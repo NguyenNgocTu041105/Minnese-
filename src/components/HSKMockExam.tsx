@@ -63,7 +63,7 @@ import {
   findQuestionById,
 } from '../data/hskMockExamFixtures';
 export type { HSKExamQuestion };
-import { HSKIllustrationCanvas } from './HSKIllustrationCanvas';
+import { HSKIllustrationCanvas, getBalancedImageOptionsLayout } from './HSKIllustrationCanvas';
 import { playChineseAudio, stopChineseAudio, playAudioUrl, playDialogueSequence, HSK_LEVEL_AUDIO_PACING } from '../utils/chineseAudio';
 import { VoiceSettingsModal } from './VoiceSettingsModal';
 import { getSentencePinyin, splitHanziAndPinyin, sanitizeHanziOnly } from '../utils/pinyinUtils';
@@ -4291,15 +4291,10 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   };
                 });
 
-                const colsClass =
-                  currentQuestion.options_images!.length <= 3
-                    ? 'grid-cols-1 sm:grid-cols-3'
-                    : currentQuestion.options_images!.length === 4
-                    ? 'grid-cols-2 sm:grid-cols-4'
-                    : 'grid-cols-2 sm:grid-cols-3';
+                const imgLayout = getBalancedImageOptionsLayout(currentQuestion.options_images!.length);
 
                 return (
-                  <div className={`grid ${colsClass} gap-3 pt-2`}>
+                  <div className={`${imgLayout.containerClass} pt-2`}>
                     {(currentQuestion.options || []).map((optText, optIdx) => {
                       const letter = String.fromCharCode(65 + optIdx);
                       const isSelected = userAnswers[currentQuestion.id] === optIdx;
@@ -4327,7 +4322,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                           data-testid={`exam-option-${letter.toLowerCase()}`}
                           data-option-index={optIdx}
                           onClick={() => handleSelectOption(currentQuestion.id, optIdx)}
-                          className={`group relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${cardStyle}`}
+                          className={`group relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${imgLayout.itemClass} ${cardStyle}`}
                         >
                           {/* Top bar with Letter Badge and Zoom Preview Button */}
                           <div className="flex items-center justify-between">
@@ -5033,8 +5028,10 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   )}
 
                   {/* Options */}
-                  {item.options_images && item.options_images.length > 0 ? (
-                    <div className={`w-full grid gap-3.5 text-xs ${item.options_images.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                  {item.options_images && item.options_images.length > 0 ? (() => {
+                    const revImgLayout = getBalancedImageOptionsLayout(item.options_images!.length);
+                    return (
+                    <div className={`${revImgLayout.containerClass} text-xs`}>
                       {(item.options || []).map((opt, optIdx) => {
                         const optLetter = String.fromCharCode(65 + optIdx);
                         const isCorrectOpt = optIdx === item.correctAnswer;
@@ -5053,7 +5050,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                         return (
                           <div
                             key={optIdx}
-                            className={`p-2 rounded-xl border flex flex-col justify-between gap-1.5 ${cardStyle}`}
+                            className={`p-2 rounded-xl border flex flex-col justify-between gap-1.5 ${revImgLayout.itemClass} ${cardStyle}`}
                           >
                             <div className="flex items-center justify-between">
                               <span className="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center bg-white/60 dark:bg-black/30">
@@ -5087,7 +5084,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                         );
                       })}
                     </div>
-                  ) : item.options && item.options.length > 0 && !(item.section === 'writing' || item.part_type?.startsWith('write_')) ? (
+                    );
+                  })() : item.options && item.options.length > 0 && !(item.section === 'writing' || item.part_type?.startsWith('write_')) ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {item.options.map((opt, optIdx) => {
                         const optLetter = String.fromCharCode(65 + optIdx);
@@ -5529,8 +5527,10 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                   )}
 
                   {/* Options */}
-                  {item.options_images && item.options_images.length > 0 ? (
-                    <div className={`w-full grid gap-3.5 text-xs ${item.options_images.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                  {item.options_images && item.options_images.length > 0 ? (() => {
+                    const nbImgLayout = getBalancedImageOptionsLayout(item.options_images!.length);
+                    return (
+                    <div className={`${nbImgLayout.containerClass} text-xs`}>
                       {(item.options || []).map((opt, optIdx) => {
                         const optLetter = String.fromCharCode(65 + optIdx);
                         const isCorrectOpt = optIdx === item.correctAnswer;
@@ -5549,7 +5549,7 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                         return (
                           <div
                             key={optIdx}
-                            className={`p-2 rounded-xl border flex flex-col justify-between gap-1.5 ${cardStyle}`}
+                            className={`p-2 rounded-xl border flex flex-col justify-between gap-1.5 ${nbImgLayout.itemClass} ${cardStyle}`}
                           >
                             <div className="flex items-center justify-between">
                               <span className="w-5 h-5 rounded-md text-[11px] font-bold flex items-center justify-center bg-white/60 dark:bg-black/30">
@@ -5583,7 +5583,8 @@ export const HSKMockExam: React.FC<HSKMockExamProps> = ({
                         );
                       })}
                     </div>
-                  ) : item.section === 'writing' || item.part_type?.startsWith('write_') ? (
+                    );
+                  })() : item.section === 'writing' || item.part_type?.startsWith('write_') ? (
                     <div className="space-y-2">
                       <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs">
                         <div className="font-bold text-amber-900 dark:text-amber-200 mb-1">

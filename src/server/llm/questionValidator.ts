@@ -1952,14 +1952,20 @@ export function validateCandidate(
   // Strips inline Latin/pinyin in parentheses so parenthesized pinyin annotations are properly handled)
   const latinVietnameseRegex = /[a-zA-ZàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/;
   const isPinyinPrompt = Boolean(q.part_type && /pinyin/i.test(q.part_type));
+  const hasOrderingOptions = Boolean(
+    Array.isArray(q.options) &&
+    q.options.length >= 2 &&
+    q.options.every((o: any) => typeof o === 'string' && /^[A-F](?:\s*(?:[-–—→,]|->)\s*[A-F]){2,5}$/i.test(o.trim()))
+  );
   const isSentenceOrdering = Boolean(
-    q.part_type && /^(?:read_paragraph_sentence_ordering|read_sentence_order_5opt)$/i.test(q.part_type.trim())
+    hasOrderingOptions ||
+    (q.part_type && /^(?:read_paragraph_sentence_ordering|read_sentence_order_[3456]opt)$/i.test(q.part_type.trim()))
   );
   let stemForLatinCheck = typeof q.stem === 'string'
     ? stripParenthesizedPinyin(q.stem)
     : q.stem;
   if (isSentenceOrdering && typeof stemForLatinCheck === 'string') {
-    stemForLatinCheck = stemForLatinCheck.replace(/(^|\n)\s*[A-E]\s*[.．、:：]\s*/g, '$1');
+    stemForLatinCheck = stemForLatinCheck.replace(/(^|\n|[\u4e00-\u9fa5。！？?!）\)])\s*[A-F]\s*[.．、:：]\s*/g, '$1');
   }
   if (stemForLatinCheck && !isPinyinPrompt && latinVietnameseRegex.test(stemForLatinCheck)) {
     errors.push('stem contains invalid Latin or Vietnamese characters');
@@ -1969,7 +1975,7 @@ export function validateCandidate(
       if (typeof opt === 'string') {
         const trimmedOpt = opt.trim();
         const isLetterOrTfLabel = /^(?:[A-Fa-f]|对|错|√|×|✓|✗|Đúng|Sai|True|False|✓\s*Đúng|✗\s*Sai)$/i.test(trimmedOpt);
-        const isOrderingSequence = isSentenceOrdering && /^[A-E](?:[-–,\s]+[A-E]){3,4}$/.test(trimmedOpt);
+        const isOrderingSequence = isSentenceOrdering && /^[A-F](?:\s*(?:[-–—→,]|->)\s*[A-F]){2,5}$/i.test(trimmedOpt);
         const optForLatinCheck = stripParenthesizedPinyin(opt);
         if (latinVietnameseRegex.test(optForLatinCheck) && !isLetterOrTfLabel && !isOrderingSequence) {
           errors.push(`option '${opt}' contains invalid Latin or Vietnamese characters`);

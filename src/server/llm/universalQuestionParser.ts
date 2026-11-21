@@ -204,8 +204,8 @@ export function restoreGluedClipboardNewlines(raw: string): string {
     .replace(/([^\r\n])((?:Câu|Question|Bài)\s*\d+\s*[:：])/gi, '$1\n$2')
     // Split glued [IMG: ...] tags if attached to previous line
     .replace(/([^\r\n])(\[(?:IMG|IMAGE)\s*[:：])/gi, '$1\n$2')
-    // Split glued standalone A/B/C/D options if stuck directly after Chinese punctuation or parentheses
-    .replace(/([。！？?!）\)])([A-F]\.\s+[\u4e00-\u9fff])/g, '$1\n$2');
+    // Split glued standalone A/B/C/D options or ordering sentences if stuck directly after Chinese text, punctuation, or parentheses
+    .replace(/([。！？?!）\)\u4e00-\u9fff])([A-F]\.\s+[\u4e00-\u9fff])/g, '$1\n$2');
 }
 
 /**
@@ -1540,8 +1540,13 @@ export function parseSingleQuestionBlock(
     if (isOpenEndedWriting) break;
     const line = lines[i];
     const lineWithoutImg = line.replace(IMG_TAG_GLOBAL_REGEX, '').replace(CHINESE_BRACKET_IMG_GLOBAL_REGEX, '');
+    // Protect single sentence-ordering option lines like "A. B - A - C" or "B. B -> C -> A" from being misread as multiple horizontal options
+    const isSingleOrderingOptionLine =
+      /^(?:[-*•+]\s*)?(?:(\[xX✓✔\]|[✓✔]|\*(?!\*))\s*)?(?:\*\*)?(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-Fa-f\uFF21-\uFF26①-⑥❶-❻Ⓐ-Ⓕ1-6](?:\*\*|[\)\]）\.\:、\uFF0E\uFF1A])\s*[A-Fa-f](?:\s*(?:[-–—→,]|->)\s*[A-Fa-f]){2,5}\s*$/i.test(
+        lineWithoutImg.trim()
+      );
     // Check if single line contains multiple horizontal options (e.g. A. ... B. ... C. ... D. ... or 2x2 grid line 2: C. ... D. ...)
-    if (/(?:^|[\s\t]+|[。！？，；：,.!?;:\)\]）])(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s].+?[\s\t]+(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s]/i.test(lineWithoutImg)) {
+    if (!isSingleOrderingOptionLine && /(?:^|[\s\t]+|[。！？，；：,.!?;:\)\]）])(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s].+?[\s\t]+(?:(?:Option|选项|Phương\s*án|Lựa\s*chọn)\s*)?[\(\[（]?[A-F\uFF21-\uFF26\uFF41-\uFF46①-⑥❶-❻Ⓐ-Ⓕ1-6][\)\]）\.\:、\/\-–—\uFF0E\uFF1A\s]/i.test(lineWithoutImg)) {
       let m: RegExpExecArray | null;
       inlineOptionRegex.lastIndex = 0;
       while ((m = inlineOptionRegex.exec(line)) !== null) {
@@ -1941,9 +1946,15 @@ export function parseSingleQuestionBlock(
   }
 
   const hasOptionImages = optionsImages.filter(Boolean).length > 0;
+  const isSentenceOrderingOptions =
+    options.length >= 2 &&
+    options.every((o) => /^[A-F](?:\s*(?:[-–—→,]|->)\s*[A-F]){2,5}$/i.test(o.trim()));
 
   if (options.length === 2 && options[0] === '对' && options[1] === '错') {
     partType = skill === 'listening' ? 'listen_true_false_2opt' : 'read_true_false_2opt';
+  } else if (isSentenceOrderingOptions) {
+    skill = 'reading';
+    partType = options.length === 5 ? 'read_paragraph_sentence_ordering' : `read_sentence_order_${options.length}opt`;
   } else if (hasOptionImages && skill === 'listening') {
     partType = options.length === 6 ? 'listen_dialogue_picture_match_6opt' : 'listen_picture_match_4opt';
   } else if (hasOptionImages && skill === 'reading') {

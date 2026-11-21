@@ -7339,7 +7339,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         </div>
 
                         {/* Question Stem */}
-                        <p className="text-sm font-bold font-chinese text-[var(--color-text-primary)] leading-relaxed">
+                        <p className="text-sm font-bold font-chinese text-[var(--color-text-primary)] leading-relaxed whitespace-pre-line">
                           {q.stem}
                         </p>
                         {q.pinyin && (
@@ -7393,30 +7393,43 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                         })()}
 
                         {/* Options */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-2.5">
-                          {Array.isArray(q.options) &&
-                            q.options.map((opt: string, optIdx: number) => {
-                              const isCorrect = q.answer_idx === optIdx;
-                              const label = String.fromCharCode(65 + optIdx);
-                              return (
-                                <div
-                                  key={optIdx}
-                                  className={`p-2 rounded-xl text-xs flex items-center gap-2 border ${
-                                    isCorrect
-                                      ? 'border-emerald-500 bg-emerald-500/15 font-bold text-emerald-800 dark:text-emerald-200'
-                                      : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]'
-                                  }`}
-                                >
-                                  <span className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                                    isCorrect ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                                  }`}>
-                                    {label}
-                                  </span>
-                                  <span className="font-chinese truncate">{opt}</span>
-                                </div>
-                              );
-                            })}
-                        </div>
+                        {(() => {
+                          const optCount = Array.isArray(q.options) ? q.options.length : 0;
+                          const optionsGridClass =
+                            optCount === 2
+                              ? 'grid grid-cols-2 gap-2.5 my-2.5 max-w-md mx-auto'
+                              : optCount === 3
+                              ? 'grid grid-cols-1 sm:grid-cols-3 gap-2 my-2.5 max-w-2xl mx-auto'
+                              : optCount >= 5
+                              ? 'grid grid-cols-2 sm:grid-cols-3 gap-2 my-2.5'
+                              : 'grid grid-cols-2 sm:grid-cols-4 gap-2 my-2.5';
+                          return (
+                            <div className={optionsGridClass}>
+                              {Array.isArray(q.options) &&
+                                q.options.map((opt: string, optIdx: number) => {
+                                  const isCorrect = q.answer_idx === optIdx;
+                                  const label = String.fromCharCode(65 + optIdx);
+                                  return (
+                                    <div
+                                      key={optIdx}
+                                      className={`p-2 rounded-xl text-xs flex items-center ${optCount === 2 ? 'justify-center' : ''} gap-2 border ${
+                                        isCorrect
+                                          ? 'border-emerald-500 bg-emerald-500/15 font-bold text-emerald-800 dark:text-emerald-200'
+                                          : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]'
+                                      }`}
+                                    >
+                                      <span className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                                        isCorrect ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                      }`}>
+                                        {label}
+                                      </span>
+                                      <span className="font-chinese truncate">{opt}</span>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          );
+                        })()}
 
                         {/* Explanation */}
                         {q.explanation_vi && (

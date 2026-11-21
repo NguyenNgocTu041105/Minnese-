@@ -797,7 +797,7 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
       (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets WHERE difficulty_tier IS NULL OR difficulty_score IS NULL').get() as any)?.c || 0
     );
     // Fast skip when local DB already holds the full bundled bank AND all sets are tiered
-    if (existingSetCount >= 115 && existingApprovedCount >= 9000 && untieredCount === 0) return;
+    if (existingSetCount >= 130 && existingApprovedCount >= 10100 && untieredCount === 0) return;
 
     const raw = zlib.gunzipSync(fs.readFileSync(seedPath)).toString('utf-8');
     const parsed = JSON.parse(raw) as { sets?: any[]; qs?: any[] };

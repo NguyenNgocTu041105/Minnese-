@@ -4011,12 +4011,8 @@ Return ONLY a JSON object matching this schema:
 
   app.listen(PORT, HOST, () => {
     console.log(`Minnese server running on http://${HOST}:${PORT}`);
-    // Initialize background question scheduler (controlled by ENABLE_AUTO_QUESTION_GENERATION)
-    if (process.env.NODE_ENV !== 'test' && process.env.DISABLE_AUTO_SCHEDULER !== 'true') {
-      initAutoQuestionScheduler();
-    } else {
-      console.log('[Scheduler] Background auto question scheduler bypassed (test or disabled mode).');
-    }
+    // Background auto question scheduler is permanently disabled to keep QBank 100% curated & ambiguity-free
+    console.log('[Scheduler] Background auto question scheduler disabled.');
   });
 }
 

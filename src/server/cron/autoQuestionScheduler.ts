@@ -77,7 +77,8 @@ function normalizePreferredProvider(raw?: string | null): SchedulerPreferredProv
 }
 
 export function getSchedulerConfig(): SchedulerConfig {
-  const enabled = (process.env.ENABLE_AUTO_QUESTION_GENERATION || 'false').toLowerCase().trim() === 'true';
+  // Disabled by default even if legacy ENABLE_AUTO_QUESTION_GENERATION=true exists in deployment env vars
+  const enabled = (process.env.FORCE_ENABLE_LEGACY_SCHEDULER || 'false').toLowerCase().trim() === 'true';
   const preferredProvider = normalizePreferredProvider(process.env.QUESTION_GENERATION_PREFERRED_PROVIDER);
   const rawInterval = parseFloat(process.env.QUESTION_GENERATION_INTERVAL_HOURS || '2');
   const intervalHours = Math.max(0.016, isNaN(rawInterval) ? 2 : rawInterval);

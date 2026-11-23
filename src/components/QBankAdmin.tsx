@@ -3465,40 +3465,6 @@ export const QBankAdmin: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs">
-                    <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Nguồn AI:</span>
-                    <select
-                      value={schedulerStatus?.preferredProvider || 'auto'}
-                      onChange={(e) =>
-                        handleUpdateSchedulerConfig({
-                          preferredProvider: e.target.value as 'auto' | 'ollama' | 'gemini' | 'groq' | 'deepseek',
-                        })
-                      }
-                      disabled={schedulerActionLoading}
-                      aria-label="Chọn nguồn AI sinh câu hỏi tự động"
-                      className="bg-transparent text-xs font-bold text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-                    >
-                      <option value="auto">Tự động (Waterfall)</option>
-                      <option value="gemini">Gemini</option>
-                      <option value="groq">Groq Cloud</option>
-                      <option value="deepseek">DeepSeek</option>
-                      <option value="ollama">Ollama (Local)</option>
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleToggleScheduler}
-                    disabled={schedulerActionLoading}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      schedulerStatus?.enabled
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/25'
-                        : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                    title={schedulerStatus?.enabled ? 'Bấm để tắt robot tự động sinh đề' : 'Bấm để bật robot tự động sinh đề'}
-                  >
-                    <div className={`w-2 h-2 rounded-full ${schedulerStatus?.enabled ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
-                    <span>{schedulerStatus?.enabled ? '🤖 Robot: ĐANG BẬT' : '🤖 Robot: ĐANG TẮT'}</span>
-                  </button>
                   <button
                     type="button"
                     data-testid="btn-refresh-progress"

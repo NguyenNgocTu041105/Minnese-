@@ -787,17 +787,60 @@ export function bootstrapOfficialExamsSeedIfNeeded(db: DatabaseSync): void {
     const seedPath = path.resolve(process.cwd(), 'data/qbank/seed_official_exams.json.gz');
     if (!fs.existsSync(seedPath)) return;
 
+    // One-time hygiene sweep: purge legacy auto-scheduler/Ollama/mock-llm ambiguous questions & polluted remix sets
+    try {
+      const legacyDirtyCount = Number(
+        (
+          db
+            .prepare(
+              `SELECT COUNT(*) as c FROM questions
+               WHERE status = 'approved'
+                 AND (provider_used IN ('gemini-1.5-flash','ollama-qwen2.5','mock-llm','groq-llama-3.3','deepseek-v3','deepseek-chat','uploaded_file','manual_baseline') OR provider_used IS NULL)`
+            )
+            .get() as any
+        )?.c || 0
+      );
+      const remixSetCount = Number(
+        (db.prepare("SELECT COUNT(*) as c FROM custom_exam_sets WHERE id LIKE '%remix%'").get() as any)?.c || 0
+      );
+      if (legacyDirtyCount > 0 || remixSetCount > 0) {
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          if (legacyDirtyCount > 0) {
+            db.prepare(
+              `UPDATE questions
+               SET status = 'rejected', is_active = 0, updated_at = datetime('now')
+               WHERE status = 'approved'
+                 AND (provider_used IN ('gemini-1.5-flash','ollama-qwen2.5','mock-llm','groq-llama-3.3','deepseek-v3','deepseek-chat','uploaded_file','manual_baseline') OR provider_used IS NULL)`
+            ).run();
+            db.prepare(
+              `DELETE FROM qb_questions
+               WHERE question_id IN (SELECT id FROM questions WHERE status = 'rejected' OR COALESCE(is_active, 1) = 0)`
+            ).run();
+          }
+          if (remixSetCount > 0) {
+            db.prepare("DELETE FROM custom_exam_sets WHERE id LIKE '%remix%'").run();
+          }
+          db.exec('COMMIT');
+        } catch {
+          db.exec('ROLLBACK');
+        }
+      }
+    } catch {
+      // Ignore hygiene sweep errors on partial schemas
+    }
+
     const existingSetCount = Number(
       (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets').get() as any)?.c || 0
     );
     const existingApprovedCount = Number(
-      (db.prepare("SELECT COUNT(*) as c FROM questions WHERE status = 'approved'").get() as any)?.c || 0
+      (db.prepare("SELECT COUNT(*) as c FROM questions WHERE status = 'approved' AND COALESCE(is_active, 1) = 1").get() as any)?.c || 0
     );
     const untieredCount = Number(
       (db.prepare('SELECT COUNT(*) as c FROM custom_exam_sets WHERE difficulty_tier IS NULL OR difficulty_score IS NULL').get() as any)?.c || 0
     );
-    // Fast skip when local DB already holds the full bundled bank AND all sets are tiered
-    if (existingSetCount >= 130 && existingApprovedCount >= 10100 && untieredCount === 0) return;
+    // Fast skip when local DB already holds the full clean bundled bank (117 official sets, 8,500+ gold questions)
+    if (existingSetCount >= 117 && existingApprovedCount >= 8400 && untieredCount === 0) return;
 
     const raw = zlib.gunzipSync(fs.readFileSync(seedPath)).toString('utf-8');
     const parsed = JSON.parse(raw) as { sets?: any[]; qs?: any[] };

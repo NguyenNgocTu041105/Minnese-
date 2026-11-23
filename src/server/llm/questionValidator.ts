@@ -1429,6 +1429,47 @@ export function validateCandidate(
           errors.push(`Option[${i}] contains invalid compound suffixes: '${opt}'`);
         }
       }
+
+      // Contextless / mutually interchangeable fill-in-the-blank guard (prevents e.g. "这杯茶很好喝，____也很喜欢。" with [我/你/他/她])
+      if (typeof q.stem === 'string' && q.stem.includes('____') && q.options.length >= 3) {
+        const stemHanziCount = (q.stem.match(/[\u4e00-\u9fa5]/g) || []).length;
+        if (stemHanziCount <= 24) {
+          const cleanOpts = q.options.map((o) =>
+            typeof o === 'string' ? o.replace(/^[A-F]\.\s*/i, '').trim() : ''
+          );
+          const interchangeableGroups: Array<{ label: string; set: Set<string>; exemptIfStemMatches?: RegExp }> = [
+            {
+              label: 'personal pronouns',
+              set: new Set(['我', '你', '他', '她', '它', '您', '我们', '你们', '他们', '她们']),
+              exemptIfStemMatches: /(?:爸爸|妈妈|姐姐|妹妹|哥哥|弟弟|先生|女士|小姐|爷爷|奶奶|小猫|小狗|猫|狗|自己|老师|男|女|都)/,
+            },
+            {
+              label: 'arbitrary numbers',
+              set: new Set(['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '两']),
+              exemptIfStemMatches: /(?:加|减|乘|除|一共|等于|一共是|双|半|第|两[个本张辆只条位家次天年]|二[十百千万月号楼])/,
+            },
+            {
+              label: 'colors without visual clue',
+              set: new Set(['红', '蓝', '白', '黑', '黄', '绿', '红色', '蓝色', '白色', '黑色', '黄色', '绿色']),
+              exemptIfStemMatches: /(?:雪|天空|草|树叶|太阳|草莓|香蕉|煤炭|牛奶|国旗|血|苹果|西瓜)/,
+            },
+            {
+              label: 'interchangeable park/leisure activities',
+              set: new Set(['跑步', '游泳', '踢足球', '打篮球', '唱歌', '跳舞', '散步']),
+              exemptIfStemMatches: /(?:水|泳池|海边|球场|足球|篮球|歌|音乐|舞|慢慢|饭后|操场|鞋|球)/,
+            },
+          ];
+          for (const grp of interchangeableGroups) {
+            const hitCount = cleanOpts.filter((o) => grp.set.has(o)).length;
+            if (hitCount >= 3 && (!grp.exemptIfStemMatches || !grp.exemptIfStemMatches.test(q.stem))) {
+              errors.push(
+                `Options contain ${hitCount} mutually interchangeable ${grp.label} without sufficient disambiguating context in stem`
+              );
+              break;
+            }
+          }
+        }
+      }
     }
   }
 

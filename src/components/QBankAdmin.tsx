@@ -778,20 +778,8 @@ export const QBankAdmin: React.FC = () => {
   };
   const isExplanationOpen = (id: string) => !expandedExplanationIds.has(id);
 
-  // Milestone M2 & M4: 4-mode Import Switcher & OCR Image Ingestion state
-  const [importMode, setImportMode] = useState<'file' | 'text' | 'prompt' | 'ocr'>('file');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileDragActive, setFileDragActive] = useState<boolean>(false);
-  const [fileProcessingStep, setFileProcessingStep] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Milestone M4: OCR Image Ingestion pipeline state
-  const [ocrState, setOcrState] = useState<'idle' | 'reading' | 'ocr' | 'parsing' | 'done'>('idle');
-  const [ocrProgressMsg, setOcrProgressMsg] = useState<string>('');
-  const [ocrPreviewImage, setOcrPreviewImage] = useState<string | null>(null);
-  const [ocrExtractedText, setOcrExtractedText] = useState<string>('');
-  const [isOcrDragging, setIsOcrDragging] = useState<boolean>(false);
-  const ocrFileInputRef = useRef<HTMLInputElement>(null);
+  // 2-step External AI Import Switcher ('prompt' -> copy to model -> 'text' paste result)
+  const [importMode, setImportMode] = useState<'prompt' | 'text'>('prompt');
 
   // Milestone M2: Multi-format Exam Export modal state
   const [exportModalOpen, setExportModalOpen] = useState<boolean>(false);
@@ -2392,7 +2380,7 @@ export const QBankAdmin: React.FC = () => {
         const examSet = createCustomExamSet({
           title: resolvedTitle,
           level: importLevel,
-          sourceLabel: 'Nhập đề đa nguồn AI',
+          sourceLabel: 'Nhập đề AI',
           difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
           rawQuestions,
         });
@@ -2444,267 +2432,6 @@ export const QBankAdmin: React.FC = () => {
 
     setIsImporting(false);
   };
-
-  /**
-   * Handle File Selection with validation
-   */
-  const handleSelectFile = (file: File) => {
-    const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    const allowed = ['xlsx', 'xls', 'csv', 'docx', 'pdf', 'txt', 'json'];
-    if (!allowed.includes(ext)) {
-      setImportError(`Định dạng file .${ext} không được hỗ trợ. Vui lòng chọn file .xlsx, .xls, .csv, .docx, .pdf, .txt hoặc .json.`);
-      return;
-    }
-    setSelectedFile(file);
-    setImportError(null);
-    setImportResult(null);
-    setShowExtractedRawText(false);
-  };
-
-  /**
-   * Handle File Upload & 6-Gate Quality Verification (POST /api/qbank/upload-file)
-   */
-  const handleUploadAndProcessFile = async () => {
-    if (!selectedFile) return;
-
-    setIsImporting(true);
-    setImportError(null);
-    setFileProcessingStep('Đang đọc tệp tin từ thiết bị...');
-
-    try {
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const res = reader.result as string;
-          resolve(res.includes(',') ? res.split(',')[1] : res);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
-      });
-
-      setFileProcessingStep('Đang bóc tách câu hỏi, Pinyin và các lựa chọn A–E...');
-
-      const ext = selectedFile.name.split('.').pop()?.toLowerCase() || 'xlsx';
-      const payload = {
-        file_name: selectedFile.name,
-        file_type: ext,
-        file_base64: base64Data,
-        default_level: importLevel,
-        default_skill: importSkill,
-        default_part_type: importPartType,
-        default_topic: importTopic.trim() || null,
-      };
-
-      setFileProcessingStep('Đang kiểm duyệt qua 6 Cổng Chất Lượng...');
-
-      const res = await safeApiCall<any>('/api/qbank/upload-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.statusCode === 401 || res.statusCode === 403) {
-        promptTokenModal(() => handleUploadAndProcessFile());
-        setIsImporting(false);
-        return;
-      }
-
-      if (res.success && res.data) {
-        setImportResult(res.data);
-        if (res.data.accepted_count > 0) {
-          setActionSuccessMsg(`Đã nạp thành công ${res.data.accepted_count} câu hỏi đạt chuẩn 6 Cổng từ file "${selectedFile.name}"!`);
-          setTimeout(() => setActionSuccessMsg(null), 5000);
-          loadProgress();
-          loadPendingQuestions();
-          loadStats();
-        } else if (res.data.total_parsed === 0) {
-          setImportError(res.data.message || 'Không tìm thấy câu hỏi hợp lệ trong file đã tải lên.');
-        }
-      } else {
-        setImportError(res.error || 'Quá trình trích xuất và kiểm duyệt file thất bại.');
-      }
-    } catch (err: any) {
-      setImportError(err.message || 'Lỗi khi đọc file trên trình duyệt.');
-    } finally {
-      setIsImporting(false);
-      setFileProcessingStep(null);
-    }
-  };
-
-  /**
-   * Milestone M4: Downsample image on client canvas to <= 2048px preserving aspect ratio
-   */
-  const downsampleImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh'));
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        if (typeof window === 'undefined' || typeof Image === 'undefined') {
-          resolve(result);
-          return;
-        }
-        const img = new Image();
-        img.onerror = () => resolve(result);
-        img.onload = () => {
-          try {
-            const maxDim = 2048;
-            let w = img.width;
-            let h = img.height;
-            if (w > maxDim || h > maxDim) {
-              if (w > h) {
-                h = Math.round((h * maxDim) / w);
-                w = maxDim;
-              } else {
-                w = Math.round((w * maxDim) / h);
-                h = maxDim;
-              }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              resolve(result);
-              return;
-            }
-            ctx.drawImage(img, 0, 0, w, h);
-            const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-            resolve(canvas.toDataURL(mime, 0.9));
-          } catch {
-            resolve(result);
-          }
-        };
-        img.src = result;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  /**
-   * Milestone M4: Handle OCR Image Processing & Ingestion
-   */
-  const processOcrImageFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setImportError('Vui lòng chọn hoặc dán tệp hình ảnh (.png, .jpeg, .webp).');
-      return;
-    }
-    setImportError(null);
-    setOcrExtractedText('');
-    setOcrState('reading');
-    setOcrProgressMsg('1. Đang tối ưu hình ảnh...');
-
-    try {
-      const dataUrl = await downsampleImage(file);
-      setOcrPreviewImage(dataUrl);
-
-      setOcrState('ocr');
-      setOcrProgressMsg('2. Đang nhận diện chữ Hán (OCR)...');
-
-      const res = await safeApiCall<any>('/api/qbank/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: dataUrl,
-          target_level: importLevel,
-          default_level: importLevel,
-          default_skill: importSkill,
-          default_part_type: importPartType,
-          default_topic: importTopic.trim() || undefined,
-          auto_parse: true,
-        }),
-      });
-
-      if (res.statusCode === 401 || res.statusCode === 403) {
-        promptTokenModal(() => processOcrImageFile(file));
-        setOcrState('idle');
-        return;
-      }
-
-      if (!res.success || !res.data) {
-        setOcrState('idle');
-        setImportError(res.error || 'Nhận diện hình ảnh thất bại. Hình ảnh có thể quá mờ hoặc thiếu chữ Hán.');
-        return;
-      }
-
-      setOcrState('parsing');
-      setOcrProgressMsg('3. Đang bóc tách câu hỏi & 6 cổng...');
-
-      setOcrExtractedText(res.data.text || res.data.extracted_text || '');
-      setImportResult(res.data);
-
-      const count = res.data.count ?? res.data.accepted_count ?? (res.data.questions?.length || 0);
-
-      setOcrState('done');
-      setOcrProgressMsg(`4. Đã nạp thành công ${count} câu hỏi vào hàng chờ!`);
-
-      if (count > 0) {
-        setActionSuccessMsg(`Đã nhận diện OCR và nạp thành công ${count} câu hỏi đạt chuẩn vào hàng chờ duyệt!`);
-        setTimeout(() => setActionSuccessMsg(null), 5000);
-        loadProgress();
-        loadPendingQuestions();
-        loadStats();
-      } else if (res.data.total_parsed === 0) {
-        setImportError('Đã nhận diện văn bản nhưng không tìm thấy cấu trúc câu hỏi (A, B, C, D hoặc Bảng đáp án). Bạn có thể xem văn bản nhận diện được bên dưới.');
-      }
-    } catch (err: any) {
-      setOcrState('idle');
-      setImportError(`Lỗi khi xử lý hình ảnh OCR: ${err.message || 'Lỗi không xác định'}`);
-    }
-  };
-
-  const handleOcrFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processOcrImageFile(e.target.files[0]);
-    }
-  };
-
-  const handleOcrDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsOcrDragging(true);
-  };
-
-  const handleOcrDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsOcrDragging(false);
-  };
-
-  const handleOcrDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsOcrDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processOcrImageFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleOcrPaste = useCallback((e: React.ClipboardEvent | ClipboardEvent) => {
-    const items = (e as any).clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.type && item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) {
-          processOcrImageFile(file);
-          e.preventDefault();
-          break;
-        }
-      }
-    }
-  }, [importLevel, importSkill, importPartType, importTopic]);
-
-  useEffect(() => {
-    if (importMode !== 'ocr') return;
-    const globalPasteListener = (e: ClipboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        return;
-      }
-      handleOcrPaste(e);
-    };
-    window.addEventListener('paste', globalPasteListener);
-    return () => window.removeEventListener('paste', globalPasteListener);
-  }, [importMode, handleOcrPaste]);
 
   // Real-time client-side search filtering
   const filteredQuestions = useMemo(() => {
@@ -3377,7 +3104,7 @@ export const QBankAdmin: React.FC = () => {
               }`}
             >
               <Upload className="w-4 h-4 shrink-0" />
-              <span className="truncate">Nhập đề đa nguồn</span>
+              <span className="truncate">Nhập đề AI</span>
             </button>
 
             <button
@@ -4558,7 +4285,7 @@ export const QBankAdmin: React.FC = () => {
                   </p>
                   <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                     {totalPendingCount > 0
-                      ? 'Bấm Làm mới, hoặc nới bộ lọc Cấp độ / Kỹ năng / Trạng thái. Nếu vẫn trống, mở tab Nhập đề đa nguồn để bổ sung thêm câu hỏi.'
+                      ? 'Bấm Làm mới, hoặc nới bộ lọc Cấp độ / Kỹ năng / Trạng thái. Nếu vẫn trống, mở tab Nhập đề AI để bổ sung thêm câu hỏi.'
                       : 'Không có câu nào khớp bộ lọc, hoặc tất cả đã được duyệt. Nhập thêm đề mới khi cần:'}
                   </p>
                 </div>
@@ -4572,7 +4299,7 @@ export const QBankAdmin: React.FC = () => {
                     className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-xs hover:bg-[var(--color-primary-dark)] shadow-sm transition-all cursor-pointer"
                   >
                     <Upload className="w-4 h-4" />
-                    <span>Mở Nhập đề đa nguồn</span>
+                    <span>Mở Nhập đề AI</span>
                   </button>
                   <button
                     type="button"
@@ -6140,20 +5867,20 @@ export const QBankAdmin: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4-MODE IMPORT SWITCHER — Balanced 4-Column Symmetrical Bar */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-1.5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+              {/* 2-STEP AI IMPORT SWITCHER */}
+              <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                 <button
                   type="button"
-                  data-testid="tab-import-mode-file"
-                  onClick={() => setImportMode('file')}
+                  data-testid="tab-import-mode-prompt"
+                  onClick={() => setImportMode('prompt')}
                   className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    importMode === 'file'
+                    importMode === 'prompt'
                       ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
                   }`}
                 >
-                  <UploadCloud className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Tải tệp (.xlsx, .docx, .pdf)</span>
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <span className="truncate">1. Tạo Prompt Mẫu</span>
                 </button>
 
                 <button
@@ -6167,35 +5894,7 @@ export const QBankAdmin: React.FC = () => {
                   }`}
                 >
                   <FileText className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Dán văn bản thô / JSON</span>
-                </button>
-
-                <button
-                  type="button"
-                  data-testid="tab-import-mode-prompt"
-                  onClick={() => setImportMode('prompt')}
-                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    importMode === 'prompt'
-                      ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Tạo Prompt Mẫu 1-Click</span>
-                </button>
-
-                <button
-                  type="button"
-                  data-testid="tab-import-ocr"
-                  onClick={() => setImportMode('ocr')}
-                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    importMode === 'ocr'
-                      ? 'bg-[var(--color-primary)] text-white shadow-[0_6px_16px_-4px_rgba(20,184,166,0.45)]'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]/80'
-                  }`}
-                >
-                  <Camera className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Quét Ảnh / OCR</span>
+                  <span className="truncate">2. Dán kết quả AI / JSON</span>
                 </button>
               </div>
 
@@ -6285,131 +5984,7 @@ export const QBankAdmin: React.FC = () => {
                 </div>
               )}
 
-              {/* MODE 1: FILE DROP ZONE */}
-              {importMode === 'file' && (
-                <div className="space-y-4">
-                  <div
-                    onDragEnter={(e) => {
-                      e.preventDefault();
-                      setFileDragActive(true);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      setFileDragActive(false);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setFileDragActive(true);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setFileDragActive(false);
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        handleSelectFile(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                      fileDragActive
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[0.99]'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 bg-[var(--color-background)]/50'
-                    }`}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      data-testid="input-qbank-file-upload"
-                      accept=".xlsx,.xls,.csv,.docx,.pdf,.txt,.json"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleSelectFile(e.target.files[0]);
-                          e.target.value = '';
-                        }
-                      }}
-                    />
-
-                    <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center mb-3">
-                      <UploadCloud className="w-7 h-7" />
-                    </div>
-
-                    <h3 className="text-sm sm:text-base font-bold text-[var(--color-text-primary)]">
-                      Kéo thả file đề thi vào đây hoặc <span className="text-[var(--color-primary)] underline">chọn file</span>
-                    </h3>
-
-                    {/* Format badges */}
-                    <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] font-semibold">
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                        Excel (.xlsx, .csv)
-                      </span>
-                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        Word (.docx)
-                      </span>
-                      <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                        PDF (.pdf)
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Selected File Card */}
-                  {selectedFile && (
-                    <div className="p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-bold">
-                          <FileSpreadsheet className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs sm:text-sm font-bold text-[var(--color-text-primary)] truncate max-w-xs sm:max-w-md">
-                            {selectedFile.name}
-                          </p>
-                          <p className="text-[11px] text-[var(--color-text-secondary)]">
-                            {(selectedFile.size / 1024).toFixed(1)} KB • Định dạng: {selectedFile.name.split('.').pop()?.toUpperCase()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFile(null)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-500/10 cursor-pointer"
-                        >
-                          Hủy chọn
-                        </button>
-                        <button
-                          type="button"
-                          data-testid="btn-upload-file-process"
-                          onClick={handleUploadAndProcessFile}
-                          disabled={isImporting}
-                          className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] shadow-sm transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
-                        >
-                          {isImporting ? (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              <span>Đang xử lý...</span>
-                            </>
-                          ) : (
-                            <>
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                              <span>Phân tích & Kiểm duyệt 6 Cổng</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Progress status during file processing */}
-                  {isImporting && fileProcessingStep && (
-                    <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-3 animate-pulse">
-                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-                      <span className="font-semibold">{fileProcessingStep}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* MODE 2: TEXT & JSON INPUT */}
+              {/* MODE: TEXT & JSON INPUT */}
               {importMode === 'text' && (
                 <div className="space-y-4">
                   {importSkill === 'listening' && (
@@ -6738,129 +6313,6 @@ export const QBankAdmin: React.FC = () => {
                 </div>
               )}
 
-              {/* MODE 4: OCR IMAGE INGESTION (M4 - R4) */}
-              {importMode === 'ocr' && (
-                <div
-                  className="space-y-4 p-4 sm:p-5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_6px_22px_-10px_rgba(0,0,0,0.3)]"
-                  data-testid="ocr-paste-zone"
-                  onPaste={handleOcrPaste}
-                  tabIndex={0}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-[var(--color-primary)]" />
-                      <span>Quét ảnh đề thi (OCR) — Kéo thả hoặc dán Ctrl+V</span>
-                    </h3>
-                  </div>
-
-                  {/* Hidden File Input */}
-                  <input
-                    ref={ocrFileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    data-testid="input-ocr-file"
-                    onChange={handleOcrFileSelect}
-                    className="hidden"
-                  />
-
-                  {/* Drag-and-Drop Image Dropzone */}
-                  <div
-                    data-testid="ocr-dropzone"
-                    onDragOver={handleOcrDragOver}
-                    onDragLeave={handleOcrDragLeave}
-                    onDrop={handleOcrDrop}
-                    onClick={() => ocrFileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                      isOcrDragging
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 bg-[var(--color-surface)]'
-                    }`}
-                  >
-                    <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] mb-3 shadow-xs">
-                      <Camera className="w-7 h-7" />
-                    </div>
-                    <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                      Kéo thả hình ảnh vào đây, hoặc <span className="text-[var(--color-primary)] underline">bấm để chọn ảnh</span>
-                    </p>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-1.5 flex items-center gap-2">
-                      <span>Hỗ trợ PNG, JPEG, WebP</span>
-                      <span>•</span>
-                      <span>Hoặc nhấn <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-background)] border border-[var(--color-border)] font-mono text-[10px]">Ctrl + V</kbd> để dán ảnh trực tiếp</span>
-                    </p>
-                  </div>
-
-                  {/* 4-Step Progress Indicator */}
-                  {ocrState !== 'idle' && (
-                    <div className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-3">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-[var(--color-text-primary)] flex items-center gap-2">
-                          {ocrState === 'done' ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4 animate-spin text-[var(--color-primary)]" />
-                          )}
-                          <span>{ocrProgressMsg}</span>
-                        </span>
-                        <span className="text-[var(--color-text-secondary)]">
-                          {ocrState === 'reading' && 'Bước 1/4'}
-                          {ocrState === 'ocr' && 'Bước 2/4'}
-                          {ocrState === 'parsing' && 'Bước 3/4'}
-                          {ocrState === 'done' && 'Bước 4/4'}
-                        </span>
-                      </div>
-
-                      {/* Visual progress bar steps */}
-                      <div className="grid grid-cols-4 gap-2">
-                        <div className={`h-2 rounded-full transition-all ${
-                          ['reading', 'ocr', 'parsing', 'done'].includes(ocrState) ? 'bg-[var(--color-primary)]' : 'bg-gray-200 dark:bg-gray-700'
-                        }`} />
-                        <div className={`h-2 rounded-full transition-all ${
-                          ['ocr', 'parsing', 'done'].includes(ocrState) ? 'bg-[var(--color-primary)]' : 'bg-gray-200 dark:bg-gray-700'
-                        }`} />
-                        <div className={`h-2 rounded-full transition-all ${
-                          ['parsing', 'done'].includes(ocrState) ? 'bg-[var(--color-primary)]' : 'bg-gray-200 dark:bg-gray-700'
-                        }`} />
-                        <div className={`h-2 rounded-full transition-all ${
-                          ocrState === 'done' ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'
-                        }`} />
-                      </div>
-
-                      <div className="grid grid-cols-4 text-[10px] text-center text-[var(--color-text-secondary)] gap-1">
-                        <span className={ocrState === 'reading' ? 'font-bold text-[var(--color-primary)]' : ''}>1. Tối ưu ảnh</span>
-                        <span className={ocrState === 'ocr' ? 'font-bold text-[var(--color-primary)]' : ''}>2. OCR Chữ Hán</span>
-                        <span className={ocrState === 'parsing' ? 'font-bold text-[var(--color-primary)]' : ''}>3. Bóc tách 6 cổng</span>
-                        <span className={ocrState === 'done' ? 'font-bold text-emerald-500' : ''}>4. Nạp hàng chờ</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Image Preview & Extracted Text Preview */}
-                  {(ocrPreviewImage || ocrExtractedText) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                      {ocrPreviewImage && (
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Ảnh đang xử lý:</label>
-                          <div className="rounded-xl border border-[var(--color-border)] overflow-hidden max-h-56 bg-black/5 flex items-center justify-center p-2">
-                            <img src={ocrPreviewImage} alt="OCR Preview" className="max-h-52 object-contain rounded-lg" />
-                          </div>
-                        </div>
-                      )}
-                      {ocrExtractedText && (
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Văn bản bóc tách từ ảnh:</label>
-                          <textarea
-                            readOnly
-                            rows={8}
-                            value={ocrExtractedText}
-                            className="w-full p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-mono leading-relaxed text-[var(--color-text-primary)]"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Error Banner */}
               {importError && (
                 <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs sm:text-sm flex items-start gap-3">
@@ -6946,7 +6398,7 @@ export const QBankAdmin: React.FC = () => {
                               id: lastAutoSavedExamId || undefined,
                               title: customExamTitleInput.trim() || autoTitle,
                               level: importLevel,
-                              sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn',
+                              sourceLabel: 'Nhập đề AI',
                               difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
                               rawQuestions,
                             });
@@ -6974,7 +6426,7 @@ export const QBankAdmin: React.FC = () => {
                               id: lastAutoSavedExamId || undefined,
                               title: customExamTitleInput.trim() || autoTitle,
                               level: importLevel,
-                              sourceLabel: selectedFile ? `File: ${selectedFile.name}` : 'Nhập đề đa nguồn AI',
+                              sourceLabel: 'Nhập đề AI',
                               difficultyTier: importDifficulty !== 'auto' ? importDifficulty : undefined,
                               rawQuestions,
                             });
@@ -7376,7 +6828,7 @@ export const QBankAdmin: React.FC = () => {
               {customExamSets.length === 0 ? (
                 <div className="p-6 rounded-2xl bg-[var(--color-background)] border border-dashed border-[var(--color-border)] text-center text-xs text-[var(--color-text-secondary)] space-y-3">
                   <p>
-                    Chưa có bộ đề nào trong Kho Đề Của Tôi. Hãy vào tab <strong>"Nhập đề đa nguồn"</strong> để dán đề hoặc tải file lên, hệ thống sẽ tự lưu bộ đề tại đây.
+                    Chưa có bộ đề nào trong Kho Đề Của Tôi. Vào tab <strong>"Nhập đề AI"</strong> để tạo prompt và dán đề từ model, bộ đề sẽ tự lưu tại đây.
                   </p>
                   <button
                     type="button"
@@ -7387,7 +6839,7 @@ export const QBankAdmin: React.FC = () => {
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white text-xs font-bold cursor-pointer"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Mở tab Nhập đề đa nguồn</span>
+                    <span>Mở tab Nhập đề AI</span>
                   </button>
                 </div>
               ) : (() => {

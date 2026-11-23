@@ -163,14 +163,24 @@ export function convertImportedToCbtQuestion(
  * Detects top 2-3 Vietnamese topic labels from Chinese question stems/options (0-API).
  */
 const TOPIC_KEYWORD_BUCKETS: Array<{ label: string; regex: RegExp }> = [
-  { label: 'Học tập & Trường học', regex: /学校|老师|学生|考试|作业|大学|图书馆|课|专业|毕业|学习|汉语|书/g },
-  { label: 'Công việc & Văn phòng', regex: /公司|经理|同事|会议|工作|上班|加班|老板|面试|项目|职业|办公室|客户/g },
-  { label: 'Du lịch & Giao thông', regex: /旅游|飞机|机场|火车|地铁|公交|出租车|酒店|机票|风景|景点|护照|城市|海边|爬山/g },
-  { label: 'Ẩm thực & Mua sắm', regex: /餐厅|饭馆|菜单|咖啡|水果|超市|买|打折|价格|衣服|外套|牛奶|做饭|美食|商场/g },
-  { label: 'Sức khỏe & Thể thao', regex: /医院|医生|感冒|发烧|吃药|锻炼|跑步|运动|健身|游泳|身体|健康|睡觉|休息/g },
-  { label: 'Gia đình & Bạn bè', regex: /爸爸|妈妈|父母|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|朋友|邻居|结婚|生日|聚会|孩子/g },
-  { label: 'Công nghệ & Đời sống', regex: /电脑|手机|网络|软件|网上|快递|视频|微信|信息|环保|科技|科学|环境/g },
-  { label: 'Văn hóa & Giải trí', regex: /电影|音乐会|演出|博物馆|历史|文化|画|照片|吉他|京剧|书法|茶|节日|艺术/g },
+  { label: 'Học tập & Giáo dục', regex: /学校|老师|学生|考试|作业|大学|图书馆|课程|专业|毕业|学习|汉语|教育|留学/g },
+  { label: 'Công việc & Sự nghiệp', regex: /公司|经理|同事|会议|工作|上班|加班|老板|面试|项目|职业|办公室|实习|职场/g },
+  { label: 'Du lịch & Giao thông', regex: /旅游|飞机|机场|火车|高铁|地铁|公交|出租车|酒店|机票|风景|景点|护照|旅行|自驾/g },
+  { label: 'Ẩm thực & Mua sắm', regex: /餐厅|饭馆|菜单|咖啡|水果|超市|打折|价格|衣服|外套|牛奶|做饭|美食|商场|购物/g },
+  { label: 'Sức khỏe & Y học', regex: /医院|医生|感冒|发烧|吃药|身体|健康|营养|睡眠|饮食|预防|病人|治疗|养生/g },
+  { label: 'Thể thao & Giải trí', regex: /锻炼|跑步|运动|健身|游泳|足球|篮球|爬山|电影|音乐会|演出|吉他|摄影|旅游/g },
+  { label: 'Gia đình & Bạn bè', regex: /爸爸|妈妈|父母|爷爷|奶奶|哥哥|姐姐|弟弟|妹妹|朋友|邻居|结婚|生日|聚会|家庭/g },
+  { label: 'Công nghệ & AI', regex: /电脑|手机|网络|软件|人工智能|算法|数据|智能|互联网|机器人|自动化|科技|芯片/g },
+  { label: 'Kinh doanh & Tài chính', regex: /经济|市场|消费|银行|投资|理财|创业|品牌|企业|盈利|商业|客户|成本|电商/g },
+  { label: 'Môi trường & Sinh thái', regex: /环境|环保|生态|气候|垃圾|能源|绿色|污染|森林|海洋|碳|节约|低碳|自然/g },
+  { label: 'Nhà ở & Đô thị', regex: /房子|租房|小区|社区|城市|建筑|交通|公园|广场|设施|搬家|装修|房东|都市/g },
+  { label: 'Văn hóa & Di sản', regex: /博物馆|历史|文化|文物|传统|古迹|书法|京剧|茶道|艺术|遗产|民俗|工艺/g },
+  { label: 'Lễ hội & Phong tục', regex: /春节|中秋|端午|节日|习俗|饺子|月饼|红包|过年|庆祝|假期|传统节日/g },
+  { label: 'Tâm lý & Cảm xúc', regex: /心理|压力|情绪|幸福|焦虑|自信|坚持|沟通|习惯|心态|耐心|鼓励|成长/g },
+  { label: 'Truyền thông & Đọc sách', regex: /阅读|读书|书籍|新闻|媒体|短视频|文章|出版|记者|广播|专栏|信息|深度/g },
+  { label: 'Thiên nhiên & Thú cưng', regex: /动物|小猫|小狗|宠物|植物|花|树|鸟|天气|季节|春天|秋天|下雨|阳光/g },
+  { label: 'Xã hội & Cộng đồng', regex: /社会|志愿|公益|法律|规定|政策|安全|公民|合作|养老|信任|服务|公共/g },
+  { label: 'Khoa học & Khám phá', regex: /科学|研究|实验|发现|技术|探索|太空|海洋|地理|物理|医学|创新|发明/g },
 ];
 
 export function detectExamThemesVi(questions: any[]): string {

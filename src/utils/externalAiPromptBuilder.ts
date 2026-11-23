@@ -590,9 +590,16 @@ export function buildExternalAiPrompt(config: ExternalPromptConfig): string {
   const formatType = config.formatType || 'multi_part_20q';
   const targetModel = config.targetModel || config.modelTarget || 'gemini';
   const modelMeta = EXTERNAL_MODEL_LABELS[targetModel] || EXTERNAL_MODEL_LABELS.gemini;
+  const defaultDiverseTopicByLevel =
+    level <= 2
+      ? 'Chủ đề tự do & đa dạng (AI tự sáng tạo nhiều bối cảnh đời sống khác nhau, không lặp tình huống): gia đình, bạn bè, trường lớp, nhà hàng, siêu thị, thời tiết bốn mùa, sinh nhật, sở thích, thú cưng, thể thao, khám bệnh, giao thông, cuối tuần, thuê nhà, bưu điện...'
+      : level <= 4
+      ? 'Chủ đề tự do & đa dạng (AI chủ động phối trộn nhiều lĩnh vực mới mẻ, mỗi câu/đoạn một bối cảnh riêng, tránh sáo mòn): công sở & nghề nghiệp, du lịch văn hóa, ẩm thực vùng miền, mua sắm & tiêu dùng thông minh, tài chính cá nhân, sức khỏe & thể chất, công nghệ đời sống, bảo vệ môi trường, lễ hội truyền thống, thuê nhà & cộng đồng, giáo dục & thực tập, tình nguyện...'
+      : 'Chủ đề tự do & đa dạng (AI tự do khai thác đa lĩnh vực chuyên sâu chuẩn học thuật/báo chí, mỗi bài một góc nhìn mới): kinh tế số & khởi nghiệp, tâm lý học & hành vi, đô thị hóa & kiến trúc bền vững, trí tuệ nhân tạo & thị trường lao động, y học dự phòng & dinh dưỡng, sinh thái & năng lượng sạch, truyền thông & văn hóa đọc, di sản lịch sử & khảo cổ, nghệ thuật, xã hội học & pháp luật...';
+
   const topicText = config.topic?.trim()
     ? `Chủ đề trọng tâm: "${config.topic.trim()}".`
-    : 'Chủ đề đa dạng: Đời sống hàng ngày, học tập, công việc, mua sắm, giao thông, du lịch.';
+    : defaultDiverseTopicByLevel;
   const count = config.questionCount && config.questionCount > 0
     ? config.questionCount
     : EXTERNAL_PROMPT_FORMAT_LABELS[formatType]?.defaultCount || 10;

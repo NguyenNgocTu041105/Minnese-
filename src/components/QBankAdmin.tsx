@@ -3256,9 +3256,6 @@ export const QBankAdmin: React.FC = () => {
                   <h1 className="text-xl sm:text-2xl font-bold font-serif text-[var(--color-text-primary)]">
                     Ngân Hàng Câu Hỏi HSK 3.0
                   </h1>
-                  <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mt-0.5 max-w-3xl">
-                    Duyệt câu hỏi, soạn đề thi thử và luyện kỹ năng cho học viên.
-                  </p>
                 </div>
               </div>
             </div>
@@ -3460,9 +3457,6 @@ export const QBankAdmin: React.FC = () => {
                       <span className="ml-2 text-amber-600 dark:text-amber-400 font-black">{totalPendingCount}</span>
                     ) : null}
                   </h2>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    Đọc nội dung từng câu bên dưới rồi phê duyệt hoặc từ chối. Câu đã duyệt sẽ vào Luyện tập.
-                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <button
@@ -6124,59 +6118,24 @@ export const QBankAdmin: React.FC = () => {
         {activeSubTab === 'import' && (
           <section aria-label="Universal Question Import Studio" className="space-y-6">
             <div className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)]/35 shadow-[0_12px_36px_-14px_rgba(0,0,0,0.35)] space-y-5">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-bold border border-[var(--color-primary)]/20 mb-2">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Universal Question Import & 6-Gate Verification</span>
-                  </div>
-                  <h2 className="text-lg sm:text-xl font-bold font-serif text-[var(--color-text-primary)]">
-                    Nhập Đề Đa Nguồn & Thêm Câu Hỏi Thủ Công
-                  </h2>
-                  <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mt-1">
-                    Dán văn bản thô, danh sách JSON, hoặc kịch bản tự sinh từ bất kỳ mô hình AI bên ngoài nào (Claude, ChatGPT, DeepSeek, Gemini, Groq). Hệ thống tự động bóc tách, chuẩn hóa Pinyin và kiểm duyệt qua 6 Cổng Chất Lượng trước khi lưu vào hàng chờ duyệt.
-                  </p>
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)]">
+                  Nhập đề thi
+                </h2>
 
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  {importMode === 'text' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImportInputText(
-                            `[\n  {\n    "stem": "今天天气很好，我想去____借两本书。",\n    "options": ["学校", "医院", "机场", "商店"],\n    "answer_idx": 0,\n    "explanation_vi": "Ngữ cảnh mượn sách thì địa điểm phù hợp là 学校 (trường học).",\n    "level": 1,\n    "skill": "reading",\n    "part_type": "read_fill_blank_4opt"\n  }\n]`
-                          );
-                        }}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer"
-                      >
-                        Nạp mẫu JSON
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImportInputText(
-                            `Câu 1: 他是我的____。\nA. 老师\nB. 苹果\nC. 飞机\nD. 喝水\nĐáp án: A\nGiải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh câu.\n\nCâu 2: 外面正在下雨，我们坐____去火车站吧。\nA. 出租车\nB. 自行车\nC. 飞机\nD. 火车\nĐáp án: A\nGiải thích: Trời đang mưa đi ga tàu thì đi bằng 出租车 (taxi) là tiện lợi và hợp lý nhất.`
-                          );
-                        }}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer"
-                      >
-                        Nạp mẫu Chat AI
-                      </button>
-                      {importInputText && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImportInputText('');
-                            setImportResult(null);
-                            setImportError(null);
-                          }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-500/10 cursor-pointer"
-                        >
-                          Xóa trắng
-                        </button>
-                      )}
-                    </>
+                  {importMode === 'text' && importInputText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportInputText('');
+                        setImportResult(null);
+                        setImportError(null);
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                    >
+                      Xóa trắng
+                    </button>
                   )}
                 </div>
               </div>
@@ -6245,12 +6204,12 @@ export const QBankAdmin: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.28)]">
                   {/* Level selector */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Cấp độ mặc định:</label>
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Cấp độ</label>
                     <select
                       data-testid="select-import-level"
                       value={importLevel}
                       onChange={(e) => setImportLevel(Number(e.target.value) || 1)}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                     >
                       <option value={1}>HSK 1</option>
                       <option value={2}>HSK 2</option>
@@ -6263,30 +6222,30 @@ export const QBankAdmin: React.FC = () => {
 
                   {/* Skill selector */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Kỹ năng mặc định:</label>
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Kỹ năng</label>
                     <select
                       data-testid="select-import-skill"
                       value={importSkill}
                       onChange={(e) => setImportSkill(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                     >
-                      <option value="auto">🔥 Tự động nhận diện (Đề tổng hợp Nghe + Đọc + Viết)</option>
-                      <option value="listening">🎧 Nghe hiểu (Listening)</option>
-                      <option value="reading">📖 Đọc hiểu (Reading)</option>
-                      <option value="writing">✍️ Viết (Writing)</option>
+                      <option value="auto">Tự động (Tổng hợp)</option>
+                      <option value="listening">Nghe hiểu</option>
+                      <option value="reading">Đọc hiểu</option>
+                      <option value="writing">Viết</option>
                     </select>
                   </div>
 
                   {/* Part Type selector */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Dạng bài mặc định:</label>
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Dạng bài</label>
                     <select
                       data-testid="select-import-part-type"
                       value={importPartType}
                       onChange={(e) => setImportPartType(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                     >
-                      <option value="auto">🔄 Tự động nhận diện từng phần / từng câu (Auto-Detect)</option>
+                      <option value="auto">Tự động</option>
                       {ALL_PART_TYPES.filter((pt) => importLevel >= pt.minLevel && importLevel <= pt.maxLevel).map((pt) => (
                         <option key={pt.value} value={pt.value}>
                           {pt.label}
@@ -6297,30 +6256,30 @@ export const QBankAdmin: React.FC = () => {
 
                   {/* Difficulty selector */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Độ khó bộ đề:</label>
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Độ khó</label>
                     <select
                       data-testid="select-import-difficulty"
                       value={importDifficulty}
                       onChange={(e) => setImportDifficulty(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                     >
-                      <option value="auto">🔄 Tự động chấm</option>
-                      <option value="easy">🟢 Khởi động (Vừa sức)</option>
-                      <option value="medium">🟡 Chuẩn thi thật</option>
-                      <option value="hard">🔴 Thử thách (Khó)</option>
+                      <option value="auto">Tự động chấm</option>
+                      <option value="easy">Khởi động</option>
+                      <option value="medium">Chuẩn thi</option>
+                      <option value="hard">Thử thách</option>
                     </select>
                   </div>
 
                   {/* Topic selector */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Chủ đề (Tùy chọn):</label>
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Chủ đề (Tùy chọn)</label>
                     <input
                       type="text"
                       data-testid="input-import-topic"
-                      placeholder="VD: du_lich, truong_hoc..."
+                      placeholder="Bỏ trống để tự nhận diện..."
                       value={importTopic}
                       onChange={(e) => setImportTopic(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
                     />
                   </div>
                 </div>
@@ -6375,22 +6334,19 @@ export const QBankAdmin: React.FC = () => {
                     </div>
 
                     <h3 className="text-sm sm:text-base font-bold text-[var(--color-text-primary)]">
-                      Kéo thả file đề thi vào đây hoặc <span className="text-[var(--color-primary)] underline">bấm để chọn file</span>
+                      Kéo thả file đề thi vào đây hoặc <span className="text-[var(--color-primary)] underline">chọn file</span>
                     </h3>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-1 max-w-md">
-                      Hỗ trợ đọc tự động mọi định dạng: Excel (.xlsx, .csv), Word (.docx) và PDF (.pdf). Tự động nhận diện câu hỏi Đúng/Sai (√/×), ghép nối A–E, điền khuyết và bảng biểu.
-                    </p>
 
                     {/* Format badges */}
-                    <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[11px] font-semibold">
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                        📊 Excel (.xlsx, .csv)
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-[11px] font-semibold">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        Excel (.xlsx, .csv)
                       </span>
-                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                        📝 Word (.docx)
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Word (.docx)
                       </span>
-                      <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20">
-                        📑 PDF (.pdf)
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                        PDF (.pdf)
                       </span>
                     </div>
                   </div>
@@ -6507,32 +6463,13 @@ export const QBankAdmin: React.FC = () => {
                   )}
 
                   <div className="space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-[var(--color-text-secondary)]">
-                      <span className="font-semibold">Nội dung câu hỏi (JSON hoặc Văn bản thô):</span>
-                      <button
-                        type="button"
-                        data-testid="link-open-golden-prompts"
-                        onClick={() => setIsGoldenPromptsOpen(true)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span>Chưa có đề bài? Mở Thư viện Prompt Chuẩn Vàng để lấy prompt sinh câu hỏi cho ChatGPT / Claude / Gemini</span>
-                      </button>
-                    </div>
                     <textarea
                       data-testid="textarea-import-input"
-                      rows={9}
-                      placeholder={`Dán văn bản vào đây... Ví dụ:
-Câu 1: 他是我的____。
-A. 老师
-B. 苹果
-C. 飞机
-D. 喝水
-Đáp án: A
-Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh câu.`}
+                      rows={10}
+                      placeholder="Dán nội dung đề thi vào đây (văn bản copy từ Gemini / ChatGPT / Claude / DeepSeek hoặc JSON)..."
                       value={importInputText}
                       onChange={(e) => setImportInputText(e.target.value)}
-                      className="w-full p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs sm:text-sm font-mono leading-relaxed focus:outline-hidden focus:border-[var(--color-primary)] resize-y"
+                      className="w-full p-4 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]/45 text-xs sm:text-sm font-mono leading-relaxed focus:outline-hidden focus:border-[var(--color-primary)] resize-y"
                     />
                   </div>
 
@@ -6583,19 +6520,8 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
 
               {/* MODE 3: 1-CLICK PROMPT GENERATOR (M4) */}
               {importMode === 'prompt' && (
-                <div className="space-y-4 p-5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]" data-testid="prompt-generator-panel">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                        ⚡ Trình Tạo Prompt AI Đa Mô Hình 1-Click (Gemini, DeepSeek, ChatGPT, GLM, Claude, Grok)
-                      </h3>
-                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                        Chọn cấp độ, kỹ năng và định dạng đề thi bên dưới, sau đó bấm <strong>Sao chép Prompt 1-Click</strong> để nhờ AI ngoài sinh đề chuẩn từ vựng HSK {importLevel}.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Unified 2x3 Control Grid */}
+                <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_6px_22px_-10px_rgba(0,0,0,0.3)]" data-testid="prompt-generator-panel">
+                  {/* Unified Control Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {/* 1. HSK Level Selector */}
                     <div className="space-y-1">
@@ -6763,71 +6689,51 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                       <input
                         type="text"
                         data-testid="input-import-topic"
-                        placeholder="VD: du lịch, mua sắm, công việc..."
+                        placeholder="Bỏ trống để AI tự sáng tạo đa dạng..."
                         value={importTopic}
                         onChange={(e) => setImportTopic(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
                       />
                     </div>
                   </div>
 
-                  {/* Format Badge Description */}
-                  <div className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="font-bold text-[var(--color-primary)]">
-                        {getDynamicFormatDisplay(promptFormatType, importLevel).badge}:
-                      </span>{' '}
-                      <span className="text-[var(--color-text-secondary)]">
-                        {getDynamicFormatDisplay(promptFormatType, importLevel).subtitle}
+                  {/* Live Prompt Preview Textarea + Copy Action */}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                        Xem trước Prompt (HSK {importLevel})
                       </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setImportMode('text')}
+                          className="px-3.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-bold hover:border-[var(--color-primary)] cursor-pointer text-[var(--color-text-primary)]"
+                        >
+                          Dán kết quả →
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="btn-copy-generated-prompt"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedExternalPrompt);
+                            setActionSuccessMsg(
+                              `Đã sao chép Prompt (${EXTERNAL_MODEL_LABELS[promptTargetModel].name} • HSK ${importLevel})!`
+                            );
+                            setTimeout(() => setActionSuccessMsg(null), 3500);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] shadow-xs cursor-pointer shrink-0"
+                        >
+                          📋 Sao chép Prompt
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      data-testid="btn-copy-generated-prompt"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedExternalPrompt);
-                        setActionSuccessMsg(
-                          `Đã sao chép Prompt (${EXTERNAL_MODEL_LABELS[promptTargetModel].name} • HSK ${importLevel}) vào bộ nhớ đệm!`
-                        );
-                        setTimeout(() => setActionSuccessMsg(null), 3500);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-bold hover:bg-[var(--color-primary-dark)] shadow-xs cursor-pointer shrink-0"
-                    >
-                      📋 Sao chép Prompt 1-Click
-                    </button>
-                  </div>
-
-                  {/* Live Prompt Preview Textarea */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-                      Nội dung Prompt hoàn chỉnh (tự động khóa biên giới từ vựng HSK {importLevel}):
-                    </label>
                     <textarea
                       data-testid="textarea-generated-prompt"
                       readOnly
                       rows={8}
                       value={generatedExternalPrompt}
-                      className="w-full p-3.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-mono leading-relaxed text-[var(--color-text-primary)] focus:outline-hidden"
+                      className="w-full p-3.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/45 text-xs font-mono leading-relaxed text-[var(--color-text-primary)] focus:outline-hidden"
                     />
-                  </div>
-
-                  <div className="pt-1 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setImportMode('text')}
-                      className="px-4 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-background)] cursor-pointer text-[var(--color-text-primary)]"
-                    >
-                      ← Mở Tab Dán Văn Bản Để Nhập Kết Quả Từ AI
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="btn-open-golden-prompts-prompt-tab"
-                      onClick={() => setIsGoldenPromptsOpen(true)}
-                      className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-500/20 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      <span>✨ Thư viện Prompt Chuẩn Vàng (HSK 1–6)</span>
-                    </button>
                   </div>
                 </div>
               )}
@@ -6835,21 +6741,16 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
               {/* MODE 4: OCR IMAGE INGESTION (M4 - R4) */}
               {importMode === 'ocr' && (
                 <div
-                  className="space-y-4 p-5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]"
+                  className="space-y-4 p-4 sm:p-5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_6px_22px_-10px_rgba(0,0,0,0.3)]"
                   data-testid="ocr-paste-zone"
                   onPaste={handleOcrPaste}
                   tabIndex={0}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-[var(--color-primary)]" />
-                        <span>📷 Quét Ảnh Đề Thi / Bài Tập & Bóc Tách OCR Thông Minh</span>
-                      </h3>
-                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                        Tải lên, kéo thả hoặc dán ảnh chụp đề thi (Ctrl+V) từ sách bài tập hoặc tài liệu HSK để tự động nhận diện chữ Hán, Pinyin và bóc tách câu hỏi vào hàng chờ duyệt.
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-[var(--color-primary)]" />
+                      <span>Quét ảnh đề thi (OCR) — Kéo thả hoặc dán Ctrl+V</span>
+                    </h3>
                   </div>
 
                   {/* Hidden File Input */}
@@ -7106,26 +7007,12 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                     const dupCount = importResult.results.filter((r: any) => !r.inserted && r.gates?.gate5_uniqueness?.passed === false).length;
                     const schemaOrOtherCount = importResult.rejected_count - dupCount;
                     return (
-                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
-                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                        <div className="space-y-0.5">
-                          <div className="font-bold">Lý do từ chối nạp vào Hàng chờ duyệt:</div>
-                          <div>
-                            {dupCount > 0 && (
-                              <span>
-                                <strong>{dupCount} câu bị Gate 5 (Chống trùng lặp) chặn</strong> vì câu hỏi giống đã có sẵn trong Hàng chờ duyệt / Kho câu hỏi (từ lần nhập trước hoặc đợt sinh nền).{' '}
-                              </span>
-                            )}
-                            {schemaOrOtherCount > 0 && (
-                              <span>
-                                <strong>{schemaOrOtherCount} câu không đạt chuẩn cấu trúc/lời giải</strong> (xem chi tiết từng thẻ bên dưới).{' '}
-                              </span>
-                            )}
-                            <span>
-                              Nếu bạn chỉ muốn tạo đề luyện tập/thi thử nhanh từ đúng <strong>{importResult.results.length} câu vừa dán</strong>, bấm ngay nút <strong>🖥️ Thi thử ngay trên máy</strong> hoặc <strong>💾 Lưu vào Kho Đề Của Tôi</strong> ở góc phải!
-                            </span>
-                          </div>
-                        </div>
+                      <div className="px-3.5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                        <span>
+                          {dupCount > 0 && <>Trùng lặp: <strong>{dupCount}</strong> câu{schemaOrOtherCount > 0 ? ' • ' : ''}</>}
+                          {schemaOrOtherCount > 0 && <>Chưa đạt cấu trúc/lời giải: <strong>{schemaOrOtherCount}</strong> câu (xem chi tiết bên dưới)</>}
+                        </span>
                       </div>
                     );
                   })()}
@@ -7133,7 +7020,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
                   {showExtractedRawText && importResult.raw_text_preview && (
                     <div
                       data-testid="extracted-raw-text-preview"
-                      className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs font-mono whitespace-pre-wrap max-h-60 overflow-y-auto text-[var(--color-text-secondary)]"
+                      className="p-3.5 rounded-2xl bg-[var(--color-background)] border border-[var(--color-border)]/45 text-xs font-mono whitespace-pre-wrap max-h-60 overflow-y-auto text-[var(--color-text-secondary)]"
                     >
                       {importResult.raw_text_preview}
                     </div>
@@ -7144,7 +7031,7 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
 
             {/* LIVE PREVIEW & DIAGNOSTICS RESULTS */}
             {importResult && Array.isArray(importResult.results) && importResult.results.length > 0 && (
-              <div className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xs space-y-4 animate-in fade-in">
+              <div className="p-5 sm:p-6 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)]/35 shadow-[0_12px_36px_-14px_rgba(0,0,0,0.35)] space-y-4 animate-in fade-in">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-[var(--color-text-primary)] uppercase tracking-wider flex items-center gap-2">
                     <ListChecks className="w-4 h-4 text-[var(--color-primary)]" />
@@ -7406,25 +7293,20 @@ Giải thích: 老师 có nghĩa là thầy giáo, phù hợp với ngữ cảnh
             >
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[var(--color-primary)]" />
-                      <span>Kho Đề Của Tôi ({customExamSets.length} bộ đề đã lưu • Đã phân bậc độ khó)</span>
-                    </h3>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                      Tự động đánh giá & sắp xếp từ <strong>Khởi động (Dễ)</strong> → <strong>Chuẩn thi (Vừa phải)</strong> → <strong>Thử thách (Khó)</strong> theo độ dài đoạn văn & mật độ từ vựng.
-                    </p>
-                  </div>
+                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[var(--color-primary)]" />
+                    <span>Kho Đề Của Tôi ({customExamSets.length})</span>
+                  </h3>
                   <div className="flex items-center gap-1.5 text-xs">
                     <span className="text-[var(--color-text-secondary)] font-semibold">Sắp xếp:</span>
                     <select
                       value={customExamSortMode}
                       onChange={(e) => setCustomExamSortMode(e.target.value as any)}
-                      className="px-2.5 py-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-xs font-semibold cursor-pointer"
+                      className="px-2.5 py-1 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)]/50 text-xs font-semibold cursor-pointer"
                     >
-                      <option value="easiest">Dễ → Khó (Khuyên dùng)</option>
+                      <option value="easiest">Dễ → Khó</option>
                       <option value="hardest">Khó → Dễ</option>
-                      <option value="newest">Mới tạo nhất</option>
+                      <option value="newest">Mới nhất</option>
                     </select>
                   </div>
                 </div>

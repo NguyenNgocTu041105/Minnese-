@@ -48,7 +48,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, loginWithGoogle } from '../lib/firebase';
 import { HSKIllustrationCanvas, resolveSceneKey, getBalancedImageOptionsLayout } from './HSKIllustrationCanvas';
 import { ExportExamModal, downloadExportFile } from './Admin/ExportExamModal';
-import { GoldenPromptLibraryModal } from './Admin/GoldenPromptLibraryModal';
 import { HSKMockExam } from './HSKMockExam';
 import {
   buildExternalAiPrompt,
@@ -789,7 +788,6 @@ export const QBankAdmin: React.FC = () => {
   const [exportModalQuestions, setExportModalQuestions] = useState<any[] | undefined>(undefined);
   const [exportModalFilterParams, setExportModalFilterParams] = useState<any | undefined>(undefined);
   const [exportModalDefaultTitle, setExportModalDefaultTitle] = useState<string>('De_Thi_HSK');
-  const [isGoldenPromptsOpen, setIsGoldenPromptsOpen] = useState<boolean>(false);
 
   // Milestone M4: 1-Click External AI Prompt Builder state
   const [promptTargetModel, setPromptTargetModel] = useState<ExternalAiModelTarget>('deepseek');
@@ -2989,16 +2987,6 @@ export const QBankAdmin: React.FC = () => {
 
             {/* Quick Action Buttons */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <button
-                type="button"
-                data-testid="btn-open-golden-prompts"
-                onClick={() => setIsGoldenPromptsOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all cursor-pointer shadow-xs"
-                title="Mở Thư viện Prompt Chuẩn Vàng HSK 1-6"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>✨ Thư viện Prompt Chuẩn Vàng</span>
-              </button>
               <button
                 type="button"
                 onClick={() => promptTokenModal()}
@@ -6093,82 +6081,111 @@ export const QBankAdmin: React.FC = () => {
                 </div>
               )}
 
-              {/* MODE 3: 1-CLICK PROMPT GENERATOR (M4) */}
+              {/* MODE: 1-CLICK PROMPT GENERATOR (Compact 2-Row + Slim Topic Bar) */}
               {importMode === 'prompt' && (
-                <div className="space-y-4 p-4 sm:p-5 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_6px_22px_-10px_rgba(0,0,0,0.3)]" data-testid="prompt-generator-panel">
-                  {/* Unified Control Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {/* 1. HSK Level Selector */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">1. Cấp độ HSK:</label>
-                      <select
-                        data-testid="select-import-level"
-                        value={importLevel}
-                        onChange={(e) => {
-                          const nextLvl = Number(e.target.value) || 1;
-                          setImportLevel(nextLvl);
-                          setPromptIncludePinyin(nextLvl <= 3);
-                          const effectiveSkill = nextLvl === 1 && promptSkillFilter === 'writing' ? 'all' : promptSkillFilter;
-                          if (effectiveSkill !== promptSkillFilter) {
-                            setPromptSkillFilter(effectiveSkill);
-                            setImportSkill('auto');
-                          }
-                          const validFormats = getFormatsForLevelAndSkill(nextLvl, effectiveSkill);
-                          const targetFmt =
-                            validFormats.length > 0 && !validFormats.includes(promptFormatType)
-                              ? validFormats[0]
-                              : promptFormatType;
-                          if (targetFmt !== promptFormatType) {
-                            setPromptFormatType(targetFmt);
-                          }
-                          setPromptQuestionCount(getRecommendedQuestionCount(nextLvl, targetFmt, effectiveSkill));
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
-                      >
-                        <option value={1}>HSK 1 (500 từ)</option>
-                        <option value={2}>HSK 2 (1.272 từ)</option>
-                        <option value={3}>HSK 3 (2.245 từ)</option>
-                        <option value={4}>HSK 4 (3.245 từ)</option>
-                        <option value={5}>HSK 5 (4.316 từ)</option>
-                        <option value={6}>HSK 6 (5.456 từ)</option>
-                      </select>
+                <div className="space-y-3 p-4 rounded-2xl bg-[var(--color-background)]/75 border border-[var(--color-border)]/35 shadow-[0_6px_22px_-10px_rgba(0,0,0,0.3)]" data-testid="prompt-generator-panel">
+                  {/* Row 1: 1-Click HSK Level Pills (Left) + Skill Pills (Right) */}
+                  <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+                    <div
+                      role="group"
+                      aria-label="Chọn cấp độ HSK"
+                      className="grid grid-cols-6 gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/45 lg:flex-1"
+                    >
+                      {[
+                        { lvl: 1, words: '500 từ' },
+                        { lvl: 2, words: '1.272 từ' },
+                        { lvl: 3, words: '2.245 từ' },
+                        { lvl: 4, words: '3.245 từ' },
+                        { lvl: 5, words: '4.316 từ' },
+                        { lvl: 6, words: '5.456 từ' },
+                      ].map(({ lvl, words }) => (
+                        <button
+                          key={lvl}
+                          type="button"
+                          data-testid={`btn-prompt-level-${lvl}`}
+                          title={`HSK ${lvl} (${words})`}
+                          onClick={() => {
+                            setImportLevel(lvl);
+                            setPromptIncludePinyin(lvl <= 3);
+                            const effectiveSkill = lvl === 1 && promptSkillFilter === 'writing' ? 'all' : promptSkillFilter;
+                            if (effectiveSkill !== promptSkillFilter) {
+                              setPromptSkillFilter(effectiveSkill);
+                              setImportSkill('auto');
+                            }
+                            const validFormats = getFormatsForLevelAndSkill(lvl, effectiveSkill);
+                            const targetFmt =
+                              validFormats.length > 0 && !validFormats.includes(promptFormatType)
+                                ? validFormats[0]
+                                : promptFormatType;
+                            if (targetFmt !== promptFormatType) {
+                              setPromptFormatType(targetFmt);
+                            }
+                            setPromptQuestionCount(getRecommendedQuestionCount(lvl, targetFmt, effectiveSkill));
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                            importLevel === lvl
+                              ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                              : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]/70'
+                          }`}
+                        >
+                          HSK {lvl}
+                        </button>
+                      ))}
                     </div>
 
-                    {/* 2. Skill Filter Selector */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">2. Kỹ năng cần tạo:</label>
-                      <select
-                        data-testid="select-import-skill"
-                        value={promptSkillFilter}
-                        onChange={(e) => {
-                          const nextSkill = e.target.value as 'all' | 'listening' | 'reading' | 'writing';
-                          setPromptSkillFilter(nextSkill);
-                          setImportSkill(nextSkill === 'all' ? 'auto' : nextSkill);
-                          setImportPartType('auto');
-                          const matchingFormats = getFormatsForLevelAndSkill(importLevel, nextSkill);
-                          const targetFmt =
-                            matchingFormats.length > 0 && !matchingFormats.includes(promptFormatType)
-                              ? matchingFormats[0]
-                              : promptFormatType;
-                          if (targetFmt !== promptFormatType) {
-                            setPromptFormatType(targetFmt);
-                          }
-                          setPromptQuestionCount(getRecommendedQuestionCount(importLevel, targetFmt, nextSkill));
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
-                      >
-                        <option value="all">🔥 Tất cả / Đề tổng hợp</option>
-                        <option value="listening">🎧 Nghe hiểu (Listening)</option>
-                        <option value="reading">📖 Đọc hiểu (Reading)</option>
-                        {importLevel >= 2 && <option value="writing">✍️ Viết (Writing)</option>}
-                      </select>
+                    <div
+                      role="group"
+                      aria-label="Chọn kỹ năng"
+                      className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/45 lg:w-[340px] shrink-0"
+                    >
+                      {(
+                        [
+                          { key: 'all', label: 'Trọn đề' },
+                          { key: 'listening', label: 'Nghe' },
+                          { key: 'reading', label: 'Đọc' },
+                          { key: 'writing', label: 'Viết' },
+                        ] as const
+                      ).map(({ key, label }) => {
+                        const disabled = key === 'writing' && importLevel < 2;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            data-testid={`btn-prompt-skill-${key}`}
+                            disabled={disabled}
+                            onClick={() => {
+                              setPromptSkillFilter(key);
+                              setImportSkill(key === 'all' ? 'auto' : key);
+                              setImportPartType('auto');
+                              const matchingFormats = getFormatsForLevelAndSkill(importLevel, key);
+                              const targetFmt =
+                                matchingFormats.length > 0 && !matchingFormats.includes(promptFormatType)
+                                  ? matchingFormats[0]
+                                  : promptFormatType;
+                              if (targetFmt !== promptFormatType) {
+                                setPromptFormatType(targetFmt);
+                              }
+                              setPromptQuestionCount(getRecommendedQuestionCount(importLevel, targetFmt, key));
+                            }}
+                            className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                              disabled
+                                ? 'opacity-35 cursor-not-allowed text-[var(--color-text-secondary)]'
+                                : promptSkillFilter === key
+                                  ? 'bg-[var(--color-primary)] text-white shadow-xs cursor-pointer'
+                                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-background)]/70 cursor-pointer'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
 
-                    {/* 3. Exam Format Type Selector (filtered by Skill & HSK Level) */}
+                  {/* Row 2: 4 Compact Selects (Format • Model • Count • Difficulty) */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-                        3. Định dạng cấu trúc đề (chuẩn HSK {importLevel}):
-                      </label>
+                      <label className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Dạng bài</label>
                       <select
                         data-testid="select-prompt-format"
                         value={promptFormatType}
@@ -6182,7 +6199,7 @@ export const QBankAdmin: React.FC = () => {
                           }
                           setPromptQuestionCount(getRecommendedQuestionCount(importLevel, nextFmt, promptSkillFilter));
                         }}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                        className="w-full px-2.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                       >
                         {getFormatsForLevelAndSkill(importLevel, promptSkillFilter).map((fKey) => (
                           <option key={fKey} value={fKey}>
@@ -6192,14 +6209,13 @@ export const QBankAdmin: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* 4. Model Target Selector */}
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">4. Mô hình AI đích:</label>
+                      <label className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Model AI</label>
                       <select
                         data-testid="select-prompt-model"
                         value={promptTargetModel}
                         onChange={(e) => setPromptTargetModel(e.target.value as ExternalAiModelTarget)}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                        className="w-full px-2.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                       >
                         {(Object.keys(EXTERNAL_MODEL_LABELS) as ExternalAiModelTarget[]).map((mKey) => (
                           <option key={mKey} value={mKey}>
@@ -6209,16 +6225,13 @@ export const QBankAdmin: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* 5. Question Count (dynamically filtered by HSK Level) */}
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-                        5. Số lượng câu hỏi (theo HSK {importLevel}):
-                      </label>
+                      <label className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Số câu</label>
                       <select
                         data-testid="select-prompt-count"
                         value={promptQuestionCount}
                         onChange={(e) => setPromptQuestionCount(Number(e.target.value) || 20)}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                        className="w-full px-2.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                       >
                         {getQuestionCountOptionsForLevel(importLevel).map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -6228,52 +6241,46 @@ export const QBankAdmin: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* 6. Target Difficulty Tier (synced with Import Difficulty) */}
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--color-text-secondary)]">
-                        6. Mức độ khó mục tiêu:
-                      </label>
+                      <label className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Độ khó</label>
                       <select
                         data-testid="select-prompt-difficulty"
                         value={importDifficulty}
                         onChange={(e) => setImportDifficulty(e.target.value as any)}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
+                        className="w-full px-2.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs font-semibold focus:outline-hidden focus:border-[var(--color-primary)] cursor-pointer"
                       >
-                        <option value="auto">🔄 Tự động / Mặc định</option>
-                        <option value="easy">🟢 Khởi động (Vừa sức)</option>
-                        <option value="medium">🟡 Chuẩn thi thật (CLEC/CTI)</option>
-                        <option value="hard">🔴 Thử thách (Khó / Bẫy sâu)</option>
+                        <option value="auto">Tự động</option>
+                        <option value="easy">Khởi động</option>
+                        <option value="medium">Chuẩn thi</option>
+                        <option value="hard">Thử thách</option>
                       </select>
-                    </div>
-
-                    {/* 7. Topic & Pinyin Toggle */}
-                    <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">7. Chủ đề (Tùy chọn):</label>
-                        <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            data-testid="checkbox-prompt-pinyin"
-                            checked={promptIncludePinyin}
-                            onChange={(e) => setPromptIncludePinyin(e.target.checked)}
-                            className="rounded border-gray-300 text-[var(--color-primary)]"
-                          />
-                          <span>Kèm Pinyin</span>
-                        </label>
-                      </div>
-                      <input
-                        type="text"
-                        data-testid="input-import-topic"
-                        placeholder="Bỏ trống để AI tự sáng tạo đa dạng..."
-                        value={importTopic}
-                        onChange={(e) => setImportTopic(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
-                      />
                     </div>
                   </div>
 
+                  {/* Row 3: Slim Topic Input + Pinyin Toggle */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <input
+                      type="text"
+                      data-testid="input-import-topic"
+                      placeholder="Chủ đề (tùy chọn — bỏ trống để AI tự sáng tạo đa dạng)..."
+                      value={importTopic}
+                      onChange={(e) => setImportTopic(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-xs focus:outline-hidden focus:border-[var(--color-primary)]"
+                    />
+                    <label className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/45 text-xs font-semibold text-[var(--color-text-secondary)] cursor-pointer shrink-0 select-none">
+                      <input
+                        type="checkbox"
+                        data-testid="checkbox-prompt-pinyin"
+                        checked={promptIncludePinyin}
+                        onChange={(e) => setPromptIncludePinyin(e.target.checked)}
+                        className="rounded border-gray-300 text-[var(--color-primary)]"
+                      />
+                      <span>Kèm Pinyin</span>
+                    </label>
+                  </div>
+
                   {/* Live Prompt Preview Textarea + Copy Action */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 pt-0.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
                         Xem trước Prompt (HSK {importLevel})
@@ -9204,17 +9211,6 @@ export const QBankAdmin: React.FC = () => {
         filterParams={exportModalFilterParams}
         defaultExamTitle={exportModalDefaultTitle}
         onTokenExpired={() => promptTokenModal()}
-      />
-
-      {/* MODAL: GOLDEN PROMPT LIBRARY (R3) */}
-      <GoldenPromptLibraryModal
-        isOpen={isGoldenPromptsOpen}
-        onClose={() => setIsGoldenPromptsOpen(false)}
-        initialLevel={importLevel}
-        onApplyToEditor={(promptText) => {
-          setImportMode('text');
-          setImportInputText(promptText);
-        }}
       />
     </div>
   );
